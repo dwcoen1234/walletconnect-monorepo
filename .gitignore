@@ -5,6 +5,9 @@ npm-debug.log*
 lerna-debug.log
 *.lerna_backup
 
+# Bundle
+**/bundle-stats.html
+
 # Runtime data
 pids
 *.pid
