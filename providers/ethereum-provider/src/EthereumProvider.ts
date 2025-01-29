@@ -618,7 +618,7 @@ export class EthereumProvider implements IEthereumProvider {
         const { convertWCMToAppKitOptions } = await import("./wcmToAppKit");
         const options = convertWCMToAppKitOptions({
           ...this.rpc.qrModalOptions,
-          chains: [...this.rpc.chains],
+          chains: [...new Set([...this.rpc.chains, ...this.rpc.optionalChains])],
           metadata: this.rpc.metadata,
           projectId: this.rpc.projectId,
         });
