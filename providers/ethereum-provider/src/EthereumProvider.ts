@@ -571,8 +571,8 @@ export class EthereumProvider implements IEthereumProvider {
     const rpcMap = opts?.rpcMap || this.buildRpcMap(allChains, opts.projectId);
     const qrModalOptions = opts?.qrModalOptions || undefined;
     return {
-      chains: requiredChains?.map((chain) => this.formatChainId(chain)),
-      optionalChains: optionalChains.map((chain) => this.formatChainId(chain)),
+      chains: requiredChains?.map((chain: number) => this.formatChainId(chain)),
+      optionalChains: optionalChains.map((chain: number) => this.formatChainId(chain)),
       methods: requiredMethods,
       events: requiredEvents,
       optionalMethods,
