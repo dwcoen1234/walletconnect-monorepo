@@ -1,7 +1,5 @@
-import type { AppKitOptions, CaipNetwork, CaipNetworkId } from "@reown/appkit";
+import type { AppKitOptions } from "@reown/appkit";
 import type { WalletConnectModalConfig } from "./types";
-import { defineChain } from "@reown/appkit/networks";
-import type { AppKitNetwork } from "@reown/appkit/networks";
 import type { EthereumProviderOptions } from "./EthereumProvider";
 
 function convertThemeVariables(
@@ -23,49 +21,21 @@ function convertThemeVariables(
   };
 }
 
-const mapCaipIdToAppKitCaipNetwork = (caipId: CaipNetworkId): CaipNetwork => {
-  const [namespace, chainId] = caipId.split(":");
-  const chain = defineChain({
-    id: chainId,
-    caipNetworkId: caipId,
-    chainNamespace: namespace as CaipNetwork["chainNamespace"],
-    name: "",
-    nativeCurrency: {
-      name: "",
-      symbol: "",
-      decimals: 8,
-    },
-    rpcUrls: {
-      default: { http: ["https://rpc.walletconnect.org/v1"] },
-    },
-  });
-
-  return chain as CaipNetwork;
-};
-
 export function convertWCMToAppKitOptions(
   wcmConfig: WalletConnectModalConfig & { metadata?: EthereumProviderOptions["metadata"] },
 ): AppKitOptions {
-  // Convert chains toCaipNetwork format
-  const networks: CaipNetwork[] = (wcmConfig.chains as CaipNetworkId[])
-    ?.map(mapCaipIdToAppKitCaipNetwork)
-    .filter(Boolean);
+  const networkIds = wcmConfig.chains?.map((chain) => Number(chain.split(":")[1])) as [
+    number,
+    ...number[],
+  ];
 
-  console.log(">> Networks", networks);
-  // Ensure at least one network is present
-  if (networks.length === 0) {
-    throw new Error("At least one chain must be specified");
-  }
-
-  const defaultNetwork = networks.find((network) => network.id === wcmConfig.defaultChain?.id);
   const appKitOptions: AppKitOptions = {
     projectId: wcmConfig.projectId,
-    networks: networks as [AppKitNetwork, ...AppKitNetwork[]],
+    networkIds,
     themeMode: wcmConfig.themeMode,
     themeVariables: convertThemeVariables(wcmConfig.themeVariables),
     chainImages: wcmConfig.chainImages,
     connectorImages: wcmConfig.walletImages,
-    defaultNetwork,
     metadata: {
       ...wcmConfig.metadata,
       name: wcmConfig.metadata?.name || "WalletConnect",
