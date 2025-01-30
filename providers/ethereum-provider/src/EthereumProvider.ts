@@ -614,7 +614,7 @@ export class EthereumProvider implements IEthereumProvider {
     if (this.rpc.showQrModal) {
       let appKit;
       try {
-        const { createAppKit } = await import("@reown/appkit");
+        const { createAppKit } = await import("@reown/appkit/basic");
         const { convertWCMToAppKitOptions } = await import("./wcmToAppKit");
         const options = convertWCMToAppKitOptions({
           ...this.rpc.qrModalOptions,
@@ -627,7 +627,7 @@ export class EthereumProvider implements IEthereumProvider {
           throw new Error("No networks found for WalletConnect·");
         }
 
-        appKit = createAppKit({ ...options, universalProvider: this.signer as any, basic: true });
+        appKit = createAppKit({ ...options, universalProvider: this.signer as any });
       } catch (e) {
         console.error(e);
         throw new Error("To use QR modal, please install @reown/appkit package");

@@ -2,7 +2,6 @@ import type { AppKitOptions, CaipNetwork, CaipNetworkId } from "@reown/appkit";
 import type { WalletConnectModalConfig } from "./types";
 import { defineChain } from "@reown/appkit/networks";
 import type { AppKitNetwork } from "@reown/appkit/networks";
-import * as chains from "@reown/appkit/networks";
 import type { EthereumProviderOptions } from "./EthereumProvider";
 
 function convertThemeVariables(
@@ -26,35 +25,20 @@ function convertThemeVariables(
 
 const mapCaipIdToAppKitCaipNetwork = (caipId: CaipNetworkId): CaipNetwork => {
   const [namespace, chainId] = caipId.split(":");
-  const appKitNetworks = Object.values(chains) as CaipNetwork[];
-
-  console.log(">> AppKitNetworks", appKitNetworks);
-
-  let chain: CaipNetwork | undefined = appKitNetworks.find(
-    (chainData) =>
-      (chainData.id === chainId &&
-        // Viem chains do not have the chainNamespace
-        !chainData.chainNamespace &&
-        namespace === "eip155") ||
-      chainData.chainNamespace === namespace,
-  );
-
-  if (!chain) {
-    chain = defineChain({
-      id: chainId,
-      caipNetworkId: caipId,
-      chainNamespace: namespace as CaipNetwork["chainNamespace"],
+  const chain = defineChain({
+    id: chainId,
+    caipNetworkId: caipId,
+    chainNamespace: namespace as CaipNetwork["chainNamespace"],
+    name: "",
+    nativeCurrency: {
       name: "",
-      nativeCurrency: {
-        name: "",
-        symbol: "",
-        decimals: 8,
-      },
-      rpcUrls: {
-        default: { http: ["https://rpc.walletconnect.org/v1"] },
-      },
-    });
-  }
+      symbol: "",
+      decimals: 8,
+    },
+    rpcUrls: {
+      default: { http: ["https://rpc.walletconnect.org/v1"] },
+    },
+  });
 
   return chain as CaipNetwork;
 };
@@ -63,8 +47,6 @@ export function convertWCMToAppKitOptions(
   wcmConfig: WalletConnectModalConfig & { metadata?: EthereumProviderOptions["metadata"] },
 ): AppKitOptions {
   // Convert chains toCaipNetwork format
-
-  console.log(">> WCM Networks", wcmConfig);
   const networks: CaipNetwork[] = (wcmConfig.chains as CaipNetworkId[])
     ?.map(mapCaipIdToAppKitCaipNetwork)
     .filter(Boolean);
