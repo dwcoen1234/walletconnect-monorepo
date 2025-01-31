@@ -1,6 +1,5 @@
 import type { AppKitOptions, CaipNetwork, CaipNetworkId } from "@reown/appkit";
 import type { WalletConnectModalConfig } from "./types";
-import { defineChain } from "@reown/appkit/networks";
 import type { AppKitNetwork } from "@reown/appkit/networks";
 import type { EthereumProviderOptions } from "./EthereumProvider";
 
@@ -23,9 +22,10 @@ function convertThemeVariables(
   };
 }
 
-const mapCaipIdToAppKitCaipNetwork = (caipId: CaipNetworkId): CaipNetwork => {
+const mapCaipIdToAppKitCaipNetwork = (caipId: CaipNetworkId) => {
   const [namespace, chainId] = caipId.split(":");
-  const chain = defineChain({
+
+  const caipNetwork: CaipNetwork = {
     id: chainId,
     caipNetworkId: caipId,
     chainNamespace: namespace as CaipNetwork["chainNamespace"],
@@ -38,9 +38,13 @@ const mapCaipIdToAppKitCaipNetwork = (caipId: CaipNetworkId): CaipNetwork => {
     rpcUrls: {
       default: { http: ["https://rpc.walletconnect.org/v1"] },
     },
-  });
+    // Come from defineChain in @reown/appkit/networks
+    formatters: undefined,
+    fees: undefined,
+    serializers: undefined,
+  };
 
-  return chain as CaipNetwork;
+  return caipNetwork;
 };
 
 export function convertWCMToAppKitOptions(
