@@ -18,7 +18,7 @@ function convertThemeVariables(
 
     "--w3m-font-size-master": wcmTheme["--wcm-text-medium-regular-size"],
     "--w3m-border-radius-master": wcmTheme["--wcm-container-border-radius"],
-    "--w3m-color-mix-strength": 8,
+    "--w3m-color-mix-strength": 0,
   };
 }
 
