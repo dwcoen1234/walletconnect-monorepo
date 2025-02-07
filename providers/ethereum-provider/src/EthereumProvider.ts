@@ -290,9 +290,6 @@ export class EthereumProvider implements IEthereumProvider {
       const session = await new Promise<SessionTypes.Struct | undefined>(
         async (resolve, reject) => {
           if (this.rpc.showQrModal) {
-            // to refresh the QR we have to close the modal and open it again
-            // until proper API is provided by walletconnect modal
-            this.modal?.close();
             this.modal?.open();
 
             this.modal?.subscribeState((state: { open: boolean }) => {
@@ -368,9 +365,6 @@ export class EthereumProvider implements IEthereumProvider {
       const result = await new Promise<AuthTypes.AuthenticateResponseResult>(
         async (resolve, reject) => {
           if (this.rpc.showQrModal) {
-            // to refresh the QR we have to close the modal and open it again
-            // until proper API is provided by walletconnect modal
-            this.modal?.close();
             this.modal?.open();
             this.modal?.subscribeState((state: { open: boolean }) => {
               // the modal was closed so reject the promise
