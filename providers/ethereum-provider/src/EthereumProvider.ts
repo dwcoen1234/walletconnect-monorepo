@@ -625,7 +625,11 @@ export class EthereumProvider implements IEthereumProvider {
           throw new Error("No networks found for WalletConnect·");
         }
 
-        appKit = createAppKit({ ...options, universalProvider: this.signer as any });
+        appKit = createAppKit({
+          ...options,
+          universalProvider: this.signer as any,
+          manualWCControl: true,
+        });
       } catch (e) {
         console.error(e);
         throw new Error("To use QR modal, please install @reown/appkit package");
