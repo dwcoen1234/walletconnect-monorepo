@@ -326,6 +326,7 @@ export class EthereumProvider implements IEthereumProvider {
             })
             .catch((error: Error) => {
               console.log(">> Signer.catch", error);
+              this.modal?.showErrorMessage("Unable to connect");
               reject(new Error(error.message));
             });
         },
@@ -381,7 +382,6 @@ export class EthereumProvider implements IEthereumProvider {
               }
             });
           }
-
           console.log(">> Signer.authenticate", params);
           await this.signer
             .authenticate(
@@ -397,6 +397,7 @@ export class EthereumProvider implements IEthereumProvider {
             })
             .catch((error: Error) => {
               console.log(">> Signer.authenticate.catch", error);
+              this.modal?.showErrorMessage("Unable to connect");
               reject(new Error(error.message));
             });
         },
