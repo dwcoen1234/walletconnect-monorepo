@@ -1,8 +1,14 @@
-import { hashMessage } from "@ethersproject/hash";
-import { recoverAddress } from "@ethersproject/transactions";
+import { keccak_256 } from "@noble/hashes/sha3";
+import { recoverAddress } from "viem";
 import { AuthTypes } from "@walletconnect/types";
 import { parseChainId } from "./caip";
 const DEFAULT_RPC_URL = "https://rpc.walletconnect.org/v1";
+
+export function hashEthereumMessage(message: string) {
+  const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
+  const prefixedMessage = new TextEncoder().encode(prefix + message);
+  return "0x" + Buffer.from(keccak_256(prefixedMessage)).toString("hex");
+}
 
 export async function verifySignature(
   address: string,
@@ -15,7 +21,7 @@ export async function verifySignature(
   // Determine if this signature is from an EOA or a contract.
   switch (cacaoSignature.t) {
     case "eip191":
-      return isValidEip191Signature(address, reconstructedMessage, cacaoSignature.s);
+      return await isValidEip191Signature(address, reconstructedMessage, cacaoSignature.s);
     case "eip1271":
       return await isValidEip1271Signature(
         address,
@@ -33,12 +39,15 @@ export async function verifySignature(
   }
 }
 
-export function isValidEip191Signature(
+export async function isValidEip191Signature(
   address: string,
   message: string,
   signature: string,
-): boolean {
-  const recoveredAddress = recoverAddress(hashMessage(message), signature);
+): Promise<boolean> {
+  const recoveredAddress = await recoverAddress({
+    hash: hashEthereumMessage(message) as `0x${string}`,
+    signature: signature as `0x${string}`,
+  });
   return recoveredAddress.toLowerCase() === address.toLowerCase();
 }
 
@@ -61,7 +70,7 @@ export async function isValidEip1271Signature(
     const dynamicTypeOffset = "0000000000000000000000000000000000000000000000000000000000000040";
     const dynamicTypeLength = "0000000000000000000000000000000000000000000000000000000000000041";
     const nonPrefixedSignature = signature.substring(2);
-    const nonPrefixedHashedMessage = hashMessage(reconstructedMessage).substring(2);
+    const nonPrefixedHashedMessage = hashEthereumMessage(reconstructedMessage).substring(2);
 
     const data =
       eip1271MagicValue +

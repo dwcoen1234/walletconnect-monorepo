@@ -25,11 +25,9 @@ describe("Subscriber", () => {
   beforeEach(async () => {
     core = new Core(TEST_CORE_OPTIONS);
     await core.start();
-    await core.relayer.transportOpen();
     relayer = core.relayer;
     subscriber = relayer.subscriber;
     subscriber.relayer.provider.request = () => Promise.resolve({} as any);
-    await subscriber.init();
   });
 
   afterEach(async () => {
@@ -103,6 +101,8 @@ describe("Subscriber", () => {
 
   describe("init", () => {
     it("registers event listeners", async () => {
+      expect(subscriber.clientId).to.equal("");
+
       const topic = generateRandomBytes32();
       const emitSpy = Sinon.spy();
       subscriber.events.emit = emitSpy;
@@ -114,6 +114,27 @@ describe("Subscriber", () => {
       relayer.provider.events.emit(RELAYER_PROVIDER_EVENTS.disconnect);
       expect(subscriber.subscriptions.size).to.equal(0);
       expect(subscriber.topics.length).to.equal(0);
+
+      expect(subscriber.clientId).to.not.equal("");
+    });
+
+    it("should set hasAnyTopics", async () => {
+      const topic = generateRandomBytes32();
+      expect(subscriber.hasAnyTopics).toBe(false);
+      subscriber.topicMap.set(topic, topic);
+      expect(subscriber.hasAnyTopics).toBe(true);
+      subscriber.topicMap.clear();
+      expect(subscriber.hasAnyTopics).toBe(false);
+      // @ts-expect-error - private property
+      subscriber.cached = [{ topic }];
+      expect(subscriber.hasAnyTopics).toBe(true);
+      // @ts-expect-error - private property
+      subscriber.cached = [];
+      expect(subscriber.hasAnyTopics).toBe(false);
+      subscriber.pending.set(topic, { topic });
+      expect(subscriber.hasAnyTopics).toBe(true);
+      subscriber.pending.clear();
+      expect(subscriber.hasAnyTopics).toBe(false);
     });
   });
 
@@ -121,7 +142,8 @@ describe("Subscriber", () => {
     let topic: string;
     let requestSpy: Sinon.SinonSpy;
 
-    beforeEach(() => {
+    beforeEach(async () => {
+      await relayer.connect();
       requestSpy = Sinon.spy(() => Promise.resolve(["test-id"]));
       topic = generateRandomBytes32();
       subscriber.relayer.provider.request = requestSpy;
@@ -165,7 +187,8 @@ describe("Subscriber", () => {
     let requestSpy: Sinon.SinonSpy;
     let messageDeleteSpy: Sinon.SinonSpy;
 
-    beforeEach(() => {
+    beforeEach(async () => {
+      await relayer.connect();
       requestSpy = Sinon.spy(() => Promise.resolve(["test-id"]));
       messageDeleteSpy = Sinon.spy();
       topic = generateRandomBytes32();

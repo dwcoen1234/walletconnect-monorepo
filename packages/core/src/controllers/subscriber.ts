@@ -53,14 +53,13 @@ export class Subscriber extends ISubscriber {
     super(relayer, logger);
     this.relayer = relayer;
     this.logger = generateChildLogger(logger, this.name);
-    this.clientId = ""; // assigned in init
+    this.clientId = ""; // assigned when calling this.getClientId()
   }
 
   public init: ISubscriber["init"] = async () => {
     if (!this.initialized) {
       this.logger.trace(`Initialized`);
       this.registerEventListeners();
-      this.clientId = await this.relayer.core.crypto.getClientId();
       await this.restore();
     }
     this.initialized = true;
@@ -92,6 +91,15 @@ export class Subscriber extends ISubscriber {
     return this.topicMap.topics;
   }
 
+  get hasAnyTopics() {
+    return (
+      this.topicMap.topics.length > 0 ||
+      this.pending.size > 0 ||
+      this.cached.length > 0 ||
+      this.subscriptions.size > 0
+    );
+  }
+
   public subscribe: ISubscriber["subscribe"] = async (topic, opts) => {
     this.isInitialized();
     this.logger.debug(`Subscribing Topic`);
@@ -115,7 +123,6 @@ export class Subscriber extends ISubscriber {
   };
 
   public unsubscribe: ISubscriber["unsubscribe"] = async (topic, opts) => {
-    await this.restartToComplete();
     this.isInitialized();
     if (typeof opts?.id !== "undefined") {
       await this.unsubscribeById(topic, opts.id, opts);
@@ -207,8 +214,10 @@ export class Subscriber extends ISubscriber {
   private async unsubscribeById(topic: string, id: string, opts?: RelayerTypes.UnsubscribeOptions) {
     this.logger.debug(`Unsubscribing Topic`);
     this.logger.trace({ type: "method", method: "unsubscribe", params: { topic, id, opts } });
+
     try {
       const relay = getRelayProtocolName(opts);
+      await this.restartToComplete({ topic, id, relay });
       await this.rpcUnsubscribe(topic, id, relay);
       const reason = getSdkError("USER_DISCONNECTED", `${this.name}, ${topic}`);
       await this.onUnsubscribe(topic, id, reason);
@@ -226,8 +235,8 @@ export class Subscriber extends ISubscriber {
     relay: RelayerTypes.ProtocolOptions,
     opts?: RelayerTypes.SubscribeOptions,
   ) {
-    if (opts?.transportType === TRANSPORT_TYPES.relay) {
-      await this.restartToComplete();
+    if (!opts || opts?.transportType === TRANSPORT_TYPES.relay) {
+      await this.restartToComplete({ topic, id: topic, relay });
     }
     const api = getRelayProtocolApi(relay.protocol);
     const request: RequestArguments<RelayJsonRpc.SubscribeParams> = {
@@ -240,7 +249,7 @@ export class Subscriber extends ISubscriber {
     this.logger.trace({ type: "payload", direction: "outgoing", request });
     const shouldThrow = opts?.internal?.throwOnFailedPublish;
     try {
-      const subId = this.getSubscriptionId(topic);
+      const subId = await this.getSubscriptionId(topic);
       // in link mode, allow the app to update its network state (i.e. active airplane mode) with small delay before attempting to subscribe
       if (opts?.transportType === TRANSPORT_TYPES.link_mode) {
         setTimeout(() => {
@@ -495,7 +504,11 @@ export class Subscriber extends ISubscriber {
 
     await this.rpcBatchSubscribe(subscriptions);
     this.onBatchSubscribe(
-      subscriptions.map((s) => ({ ...s, id: this.getSubscriptionId(s.topic) })),
+      await Promise.all(
+        subscriptions.map(async (s) => {
+          return { ...s, id: await this.getSubscriptionId(s.topic) };
+        }),
+      ),
     );
   }
 
@@ -556,13 +569,21 @@ export class Subscriber extends ISubscriber {
     }
   }
 
-  private async restartToComplete() {
+  private async restartToComplete(subscription: SubscriberTypes.Active) {
     if (!this.relayer.connected && !this.relayer.connecting) {
+      this.cached.push(subscription);
       await this.relayer.transportOpen();
     }
   }
 
-  private getSubscriptionId(topic: string) {
-    return hashMessage(topic + this.clientId);
+  private async getClientId() {
+    if (!this.clientId) {
+      this.clientId = await this.relayer.core.crypto.getClientId();
+    }
+    return this.clientId;
+  }
+
+  private async getSubscriptionId(topic: string) {
+    return hashMessage(topic + (await this.getClientId()));
   }
 }
