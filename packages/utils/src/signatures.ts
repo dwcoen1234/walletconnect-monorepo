@@ -1,7 +1,10 @@
 import { keccak_256 } from "@noble/hashes/sha3";
 import { recoverAddress } from "viem";
 import { AuthTypes } from "@walletconnect/types";
+import bs58 from "bs58";
+
 import { parseChainId } from "./caip";
+
 const DEFAULT_RPC_URL = "https://rpc.walletconnect.org/v1";
 
 export function hashEthereumMessage(message: string) {
@@ -105,4 +108,36 @@ export async function isValidEip1271Signature(
 
 function generateJsonRpcId() {
   return Date.now() + Math.floor(Math.random() * 1000);
+}
+
+export function extractSolanaTransactionId(solanaTransaction: string): string {
+  const binary = atob(solanaTransaction);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  // Check signature count (first byte)
+  const signatureCount = bytes[0];
+  if (signatureCount === 0) {
+    throw new Error("No signatures found");
+  }
+
+  // Verify we have enough bytes for all signatures
+  // Each signature is 64 bytes
+  const signatureEndPos = 1 + signatureCount * 64;
+  if (bytes.length < signatureEndPos) {
+    throw new Error("Transaction data too short for claimed signature count");
+  }
+
+  // A transaction must have at least some minimum length
+  if (bytes.length < 100) {
+    throw new Error("Transaction too short");
+  }
+
+  const transactionBuffer = Buffer.from(solanaTransaction, "base64");
+
+  const signatureBuffer = transactionBuffer.slice(1, 65);
+
+  return bs58.encode(signatureBuffer);
 }
