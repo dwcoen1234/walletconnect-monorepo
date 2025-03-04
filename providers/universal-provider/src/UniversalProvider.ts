@@ -553,8 +553,6 @@ export class UniversalProvider implements IUniversalProvider {
   }
 
   private async getFromStore(key: string) {
-    //@ts-ignore
-    window.storage = this.client.core.storage;
     const topic = this.session?.topic || "";
     return await this.client.core.storage.getItem(`${STORAGE}/${key}${topic}`);
   }
