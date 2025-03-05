@@ -9,11 +9,13 @@ abstract class RNWalletConnectModuleSpec internal constructor(context: ReactAppl
   ReactContextBaseJavaModule(context) {
 
   abstract fun isAppInstalled(packageName: String?, promise: Promise);
+  abstract fun initialize(params: ReadableMap, promise: Promise);
   abstract fun prepare(params: ReadableMap, promise: Promise);
+  abstract fun prepareDetailed(params: ReadableMap, promise: Promise);
   abstract fun status(params: ReadableMap, promise: Promise);
   abstract fun getBridgeDetails(params: ReadableMap, promise: Promise);
-  abstract fun estimateFees(params: ReadableMap, promise: Promise);
   abstract fun getERC20Balance(params: ReadableMap, promise: Promise);
+  abstract fun execute(params: ReadableMap, promise: Promise);
 
   protected abstract fun getTypedExportedConstants(): Map<String, String>
 
@@ -21,4 +23,5 @@ abstract class RNWalletConnectModuleSpec internal constructor(context: ReactAppl
     val constants: Map<String, String> = getTypedExportedConstants()
     return constants
   }
+
 }
