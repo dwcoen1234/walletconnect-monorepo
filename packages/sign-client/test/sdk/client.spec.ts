@@ -94,6 +94,46 @@ describe("Sign Client Integration", () => {
       expect(clients.B.metadata.redirect?.universal).to.exist;
       await deleteClients(clients);
     });
+    it("should set scopedProperties in session", async () => {
+      const clients = await initTwoClients();
+      const requestedScopedProperties = {
+        [Object.keys(TEST_CONNECT_PARAMS.requiredNamespaces)[0]]: "test",
+      };
+      const approvedScopedProperties = {
+        polkadot: "approved",
+      };
+      const { uri, approval } = await clients.A.connect({
+        ...TEST_CONNECT_PARAMS,
+        scopedProperties: requestedScopedProperties,
+      });
+      if (!uri) throw new Error("URI is undefined");
+
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          clients.B.once("session_proposal", async (params) => {
+            const { scopedProperties } = params.params;
+            expect(scopedProperties).to.exist;
+            expect(scopedProperties).to.deep.equal(requestedScopedProperties);
+
+            await clients.B.approve({
+              id: params.id,
+              namespaces: TEST_NAMESPACES,
+              scopedProperties: approvedScopedProperties,
+            });
+            resolve();
+          });
+        }),
+        clients.B.pair({ uri }),
+        approval(),
+      ]);
+      const dappSession = clients.A.session.getAll()[0];
+      const walletSession = clients.B.session.getAll()[0];
+      expect(dappSession.scopedProperties).to.deep.equal(approvedScopedProperties);
+      expect(walletSession.scopedProperties).to.deep.equal(approvedScopedProperties);
+      expect(dappSession.topic).to.eq(walletSession.topic);
+
+      await deleteClients(clients);
+    });
     it("should connect with out of order URIs", async () => {
       const clients = await initTwoClients();
       // load three proposals

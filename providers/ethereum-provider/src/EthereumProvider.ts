@@ -82,6 +82,7 @@ export interface ConnectOps {
   optionalChains?: number[];
   rpcMap?: EthereumRpcMap;
   pairingTopic?: string;
+  scopedProperties?: unknown;
 }
 
 export type AuthenticateParams = {
@@ -297,6 +298,10 @@ export class EthereumProvider implements IEthereumProvider {
               }
             });
           }
+          const scopedProperties = opts?.scopedProperties
+            ? { [this.namespace]: opts.scopedProperties }
+            : undefined;
+
           await this.signer
             .connect({
               namespaces: {
@@ -310,6 +315,7 @@ export class EthereumProvider implements IEthereumProvider {
                 },
               }),
               pairingTopic: opts?.pairingTopic,
+              scopedProperties,
             })
             .then((session?: SessionTypes.Struct) => {
               resolve(session);

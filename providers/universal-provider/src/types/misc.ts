@@ -1,5 +1,5 @@
 import SignClient from "@walletconnect/sign-client";
-import { SignClientTypes, ProposalTypes, AuthTypes } from "@walletconnect/types";
+import { SignClientTypes, ProposalTypes, AuthTypes, SessionTypes } from "@walletconnect/types";
 import { JsonRpcProvider } from "@walletconnect/jsonrpc-provider";
 import { KeyValueStorageOptions, IKeyValueStorage } from "@walletconnect/keyvaluestorage";
 import { IEvents } from "@walletconnect/events";
@@ -53,7 +53,8 @@ export interface SessionNamespace extends Namespace {
 export interface ConnectParams {
   namespaces?: NamespaceConfig;
   optionalNamespaces?: NamespaceConfig;
-  sessionProperties?: ProposalTypes.Struct["sessionProperties"];
+  sessionProperties?: SessionTypes.SessionProperties;
+  scopedProperties?: SessionTypes.ScopedProperties;
   pairingTopic?: string;
   skipPairing?: boolean;
 }

@@ -45,7 +45,8 @@ export class UniversalProvider implements IUniversalProvider {
   public client!: SignClient;
   public namespaces?: NamespaceConfig;
   public optionalNamespaces?: NamespaceConfig;
-  public sessionProperties?: Record<string, string>;
+  public sessionProperties?: SessionTypes.SessionProperties;
+  public scopedProperties?: SessionTypes.ScopedProperties;
   public events: EventEmitter = new EventEmitter();
   public rpcProviders: RpcProviderMap = {};
   public session?: SessionTypes.Struct;
@@ -112,6 +113,7 @@ export class UniversalProvider implements IUniversalProvider {
         namespaces: this.namespaces,
         optionalNamespaces: this.optionalNamespaces,
         sessionProperties: this.sessionProperties,
+        scopedProperties: this.scopedProperties,
       });
     }
     const accounts = await this.requestAccounts();
@@ -190,6 +192,7 @@ export class UniversalProvider implements IUniversalProvider {
       requiredNamespaces: this.namespaces,
       optionalNamespaces: this.optionalNamespaces,
       sessionProperties: this.sessionProperties,
+      scopedProperties: this.scopedProperties,
     });
 
     if (uri) {
@@ -450,7 +453,7 @@ export class UniversalProvider implements IUniversalProvider {
   }
 
   private setNamespaces(params: ConnectParams): void {
-    const { namespaces, optionalNamespaces, sessionProperties } = params;
+    const { namespaces, optionalNamespaces, sessionProperties, scopedProperties } = params;
 
     if (namespaces && Object.keys(namespaces).length) {
       this.namespaces = namespaces;
@@ -459,6 +462,7 @@ export class UniversalProvider implements IUniversalProvider {
       this.optionalNamespaces = optionalNamespaces;
     }
     this.sessionProperties = sessionProperties;
+    this.scopedProperties = scopedProperties;
     this.persist("namespaces", namespaces);
     this.persist("optionalNamespaces", optionalNamespaces);
   }
@@ -527,6 +531,7 @@ export class UniversalProvider implements IUniversalProvider {
     this.namespaces = undefined;
     this.optionalNamespaces = undefined;
     this.sessionProperties = undefined;
+    this.scopedProperties = undefined;
     this.persist("namespaces", undefined);
     this.persist("optionalNamespaces", undefined);
     this.persist("sessionProperties", undefined);

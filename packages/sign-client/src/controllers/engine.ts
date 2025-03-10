@@ -189,8 +189,14 @@ export class Engine extends IEngine {
       optionalNamespaces: params.optionalNamespaces || {},
     };
     await this.isValidConnect(connectParams);
-    const { pairingTopic, requiredNamespaces, optionalNamespaces, sessionProperties, relays } =
-      connectParams;
+    const {
+      pairingTopic,
+      requiredNamespaces,
+      optionalNamespaces,
+      sessionProperties,
+      scopedProperties,
+      relays,
+    } = connectParams;
     let topic = pairingTopic;
     let uri: string | undefined;
     let active = false;
@@ -232,6 +238,7 @@ export class Engine extends IEngine {
       expiryTimestamp,
       pairingTopic: topic,
       ...(sessionProperties && { sessionProperties }),
+      ...(scopedProperties && { scopedProperties }),
       id: payloadId(),
     };
     const sessionConnectTarget = engineEvent("session_connect", proposal.id);
@@ -317,7 +324,8 @@ export class Engine extends IEngine {
       throw error;
     }
 
-    const { id, relayProtocol, namespaces, sessionProperties, sessionConfig } = params;
+    const { id, relayProtocol, namespaces, sessionProperties, scopedProperties, sessionConfig } =
+      params;
 
     const proposal = this.client.proposal.get(id);
 
@@ -353,6 +361,7 @@ export class Engine extends IEngine {
       controller: { publicKey: selfPublicKey, metadata: this.client.metadata },
       expiry: calcExpiry(SESSION_EXPIRY),
       ...(sessionProperties && { sessionProperties }),
+      ...(scopedProperties && { scopedProperties }),
       ...(sessionConfig && { sessionConfig }),
     };
     const transportType = TRANSPORT_TYPES.relay;
@@ -1919,8 +1928,15 @@ export class Engine extends IEngine {
     const { id, params } = payload;
     try {
       this.isValidSessionSettleRequest(params);
-      const { relay, controller, expiry, namespaces, sessionProperties, sessionConfig } =
-        payload.params;
+      const {
+        relay,
+        controller,
+        expiry,
+        namespaces,
+        sessionProperties,
+        scopedProperties,
+        sessionConfig,
+      } = payload.params;
       const pendingSession = [...this.pendingSessions.values()].find(
         (s) => s.sessionTopic === topic,
       );
@@ -1950,6 +1966,7 @@ export class Engine extends IEngine {
           metadata: controller.metadata,
         },
         ...(sessionProperties && { sessionProperties }),
+        ...(scopedProperties && { scopedProperties }),
         ...(sessionConfig && { sessionConfig }),
         transportType: TRANSPORT_TYPES.relay,
       };
@@ -2454,11 +2471,13 @@ export class Engine extends IEngine {
       payload: formatJsonRpcRequest(
         "wc_sessionPropose",
         {
+          ...proposal,
           requiredNamespaces: proposal.requiredNamespaces,
           optionalNamespaces: proposal.optionalNamespaces,
           relays: proposal.relays,
           proposer: proposal.proposer,
           sessionProperties: proposal.sessionProperties,
+          scopedProperties: proposal.scopedProperties,
         },
         proposal.id,
       ),
@@ -2570,8 +2589,14 @@ export class Engine extends IEngine {
       );
       throw new Error(message);
     }
-    const { pairingTopic, requiredNamespaces, optionalNamespaces, sessionProperties, relays } =
-      params;
+    const {
+      pairingTopic,
+      requiredNamespaces,
+      optionalNamespaces,
+      sessionProperties,
+      scopedProperties,
+      relays,
+    } = params;
     if (!isUndefined(pairingTopic)) await this.isValidPairingTopic(pairingTopic);
 
     if (!isValidRelays(relays, true)) {
@@ -2593,6 +2618,24 @@ export class Engine extends IEngine {
     if (!isUndefined(sessionProperties)) {
       this.validateSessionProps(sessionProperties, "sessionProperties");
     }
+
+    if (!isUndefined(scopedProperties)) {
+      this.validateSessionProps(scopedProperties, "scopedProperties");
+
+      const requestedNamespaces = Object.keys(requiredNamespaces || {}).concat(
+        Object.keys(optionalNamespaces || {}),
+      );
+
+      const scopedNamespaces = Object.keys(scopedProperties);
+      const valid = scopedNamespaces.every((ns) => requestedNamespaces.includes(ns));
+      if (!valid) {
+        throw new Error(
+          `Scoped properties must be a subset of required/optional namespaces, received: ${JSON.stringify(
+            scopedProperties,
+          )}, required/optional namespaces: ${JSON.stringify(requestedNamespaces)}`,
+        );
+      }
+    }
   };
 
   private validateNamespaces = (
@@ -2608,7 +2651,7 @@ export class Engine extends IEngine {
       throw new Error(
         getInternalError("MISSING_OR_INVALID", `approve() params: ${params}`).message,
       );
-    const { id, namespaces, relayProtocol, sessionProperties } = params;
+    const { id, namespaces, relayProtocol, sessionProperties, scopedProperties } = params;
 
     this.checkRecentlyDeleted(id);
     await this.isValidProposalId(id);
@@ -2631,6 +2674,23 @@ export class Engine extends IEngine {
 
     if (!isUndefined(sessionProperties)) {
       this.validateSessionProps(sessionProperties, "sessionProperties");
+    }
+
+    if (!isUndefined(scopedProperties)) {
+      this.validateSessionProps(scopedProperties, "scopedProperties");
+
+      const approvedNamespaces = new Set(Object.keys(namespaces));
+      const scopedNamespaces = Object.keys(scopedProperties);
+
+      // the approved scoped namespaces must be a subset of the approved namespaces
+      const valid = scopedNamespaces.every((ns) => approvedNamespaces.has(ns));
+      if (!valid) {
+        throw new Error(
+          `Scoped properties must be a subset of approved namespaces, received: ${JSON.stringify(
+            scopedProperties,
+          )}, approved namespaces: ${Array.from(approvedNamespaces).join(", ")}`,
+        );
+      }
     }
   };
 
@@ -2889,12 +2949,14 @@ export class Engine extends IEngine {
     return context;
   };
 
-  private validateSessionProps = (properties: ProposalTypes.SessionProperties, type: string) => {
-    Object.values(properties).forEach((property) => {
-      if (!isValidString(property, false)) {
+  private validateSessionProps = (properties: SessionTypes.ScopedProperties, type: string) => {
+    Object.values(properties).forEach((property, index) => {
+      if (property === null || property === undefined) {
         const { message } = getInternalError(
           "MISSING_OR_INVALID",
-          `${type} must be in Record<string, string> format. Received: ${JSON.stringify(property)}`,
+          `${type} must contain an existing value for each key. Received: ${property} for key ${
+            Object.keys(properties)[index]
+          }`,
         );
         throw new Error(message);
       }
