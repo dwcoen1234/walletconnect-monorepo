@@ -283,7 +283,6 @@ class RNWalletConnectModuleModule internal constructor(context: ReactApplication
               initialTxnSig = initialSignedTransaction,
             )
           }
-
         val gson = Gson()
         val resultJson: JsonElement = gson.toJsonTree(result)
         promise.resolve(gson.toJson(resultJson))
