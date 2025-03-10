@@ -98,6 +98,7 @@ import {
   isReactNative,
   isTestRun,
   isValidArray,
+  extractSolanaTransactionId,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -3055,10 +3056,14 @@ export class Engine extends IEngine {
       }
 
       // result = { key: [0x...] } or { key: 0x... }
-      const hashes = result[methodConfig.key];
+      const hashes: string[] = result[methodConfig.key];
 
       // result = { key: [0x...] }
       if (isValidArray(hashes)) {
+        if (method === "solana_signAllTransactions") {
+          return hashes.map((hash) => extractSolanaTransactionId(hash));
+        }
+
         return hashes;
 
         // result = { key: 0x... }
