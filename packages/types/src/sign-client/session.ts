@@ -18,6 +18,9 @@ export declare namespace SessionTypes {
 
   type Namespaces = Record<string, Namespace>;
 
+  type SessionProperties = ProposalTypes.SessionProperties;
+  type ScopedProperties = ProposalTypes.ScopedProperties;
+
   interface SessionConfig {
     disableDeepLink?: boolean;
   }
@@ -32,7 +35,8 @@ export declare namespace SessionTypes {
     namespaces: Namespaces;
     requiredNamespaces: ProposalTypes.RequiredNamespaces;
     optionalNamespaces: ProposalTypes.OptionalNamespaces;
-    sessionProperties?: ProposalTypes.SessionProperties;
+    sessionProperties?: SessionProperties;
+    scopedProperties?: ScopedProperties;
     sessionConfig?: SessionConfig;
     self: {
       publicKey: string;
