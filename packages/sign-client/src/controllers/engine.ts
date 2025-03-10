@@ -2949,7 +2949,7 @@ export class Engine extends IEngine {
     return context;
   };
 
-  private validateSessionProps = (properties: ProposalTypes.SessionProperties, type: string) => {
+  private validateSessionProps = (properties: SessionTypes.ScopedProperties, type: string) => {
     Object.values(properties).forEach((property, index) => {
       if (property === null || property === undefined) {
         const { message } = getInternalError(
