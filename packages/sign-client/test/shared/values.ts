@@ -12,6 +12,9 @@ export const TEST_RELAY_URL_AP = "wss://ap-southeast-1.relay.walletconnect.com";
 
 // See https://github.com/WalletConnect/push-webhook-test-server
 export const TEST_WEBHOOK_ENDPOINT = "https://webhook-push-test.walletconnect.com/";
+export const TEST_WEBHOOK_DELAY_MS = process.env.TEST_WEBHOOK_DELAY_MS
+  ? process.env.TEST_WEBHOOK_DELAY_MS
+  : 1000;
 
 export const TEST_PROJECT_ID = process.env.TEST_PROJECT_ID
   ? process.env.TEST_PROJECT_ID
