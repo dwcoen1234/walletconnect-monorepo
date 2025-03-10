@@ -2679,16 +2679,16 @@ export class Engine extends IEngine {
     if (!isUndefined(scopedProperties)) {
       this.validateSessionProps(scopedProperties, "scopedProperties");
 
-      const approvedNamespaces = Object.keys(namespaces);
-      const scopedNamespaces = new Set(Object.keys(scopedProperties));
+      const approvedNamespaces = new Set(Object.keys(namespaces));
+      const scopedNamespaces = Object.keys(scopedProperties);
 
       // the approved scoped namespaces must be a subset of the approved namespaces
-      const valid = approvedNamespaces.every((ns) => scopedNamespaces.has(ns));
+      const valid = scopedNamespaces.every((ns) => approvedNamespaces.has(ns));
       if (!valid) {
         throw new Error(
           `Scoped properties must be a subset of approved namespaces, received: ${JSON.stringify(
             scopedProperties,
-          )}, approved namespaces: ${JSON.stringify(approvedNamespaces)}`,
+          )}, approved namespaces: ${Array.from(approvedNamespaces).join(", ")}`,
         );
       }
     }

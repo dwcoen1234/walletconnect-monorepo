@@ -100,7 +100,6 @@ describe("Sign Client Integration", () => {
         [Object.keys(TEST_CONNECT_PARAMS.requiredNamespaces)[0]]: "test",
       };
       const approvedScopedProperties = {
-        eip155: "approved",
         polkadot: "approved",
       };
       const { uri, approval } = await clients.A.connect({
@@ -133,7 +132,6 @@ describe("Sign Client Integration", () => {
       expect(walletSession.scopedProperties).to.deep.equal(approvedScopedProperties);
       expect(dappSession.topic).to.eq(walletSession.topic);
 
-      console.log("dappSession", dappSession.scopedProperties);
       await deleteClients(clients);
     });
     it("should connect with out of order URIs", async () => {
