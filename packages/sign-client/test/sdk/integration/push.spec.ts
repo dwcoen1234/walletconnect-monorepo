@@ -2,6 +2,7 @@ import axios from "axios";
 import {
   deleteClients,
   TEST_EMIT_PARAMS,
+  TEST_WEBHOOK_DELAY_MS,
   TEST_WEBHOOK_ENDPOINT,
   throttle,
   Clients,
@@ -29,7 +30,7 @@ describe("Push", () => {
 
     // Relay processes webhooks in background
     // Extend some time to relay to process it
-    await throttle(1000);
+    await throttle(TEST_WEBHOOK_DELAY_MS);
 
     const url = `${TEST_WEBHOOK_ENDPOINT}/${await clients.B.core.crypto.getClientId()}`.replace(
       "did:key:",
