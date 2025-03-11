@@ -334,7 +334,7 @@ export class Pairing implements IPairing {
           await this.onRelayEventResponse({ topic, payload });
           this.core.history.delete(topic, payload.id);
         }
-        this.core.relayer.messages.ack(topic, message);
+        await this.core.relayer.messages.ack(topic, message);
       } catch (error) {
         this.logger.error(error);
       }
