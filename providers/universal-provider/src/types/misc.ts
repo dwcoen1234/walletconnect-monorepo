@@ -6,6 +6,9 @@ import { IEvents } from "@walletconnect/events";
 import { Logger } from "@walletconnect/logger";
 import { IProvider } from "./providers";
 
+/**
+ * @param session - The session to use. If not provided, the provider will create a new session.
+ */
 export interface UniversalProviderOpts extends SignClientTypes.Options {
   projectId?: string;
   metadata?: Metadata;
@@ -16,6 +19,7 @@ export interface UniversalProviderOpts extends SignClientTypes.Options {
   storage?: IKeyValueStorage;
   name?: string;
   disableProviderPing?: boolean;
+  session?: SessionTypes.Struct;
 }
 
 export type Metadata = SignClientTypes.Metadata;

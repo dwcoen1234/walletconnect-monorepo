@@ -361,20 +361,20 @@ describe("UniversalProvider", function () {
   describe("persistence", () => {
     describe("after restart", () => {
       it("clients can ping each other", async () => {
+        const dappDbName = getDbName(`dappDB-${Date.now()}`);
+        const walletDbName = getDbName(`walletDB-${Date.now()}`);
         const dapp = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
           name: "dapp",
-          storageOptions: { database: getDbName("dappDB") },
+          storageOptions: { database: dappDbName },
         });
         const wallet = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
           name: "wallet",
-          storageOptions: { database: getDbName("walletDB") },
+          storageOptions: { database: walletDbName },
         });
         const chains = [`eip155:${CHAIN_ID}`, `eip155:${CHAIN_ID_B}`];
-        const {
-          sessionA: { topic },
-        } = await testConnectMethod(
+        const { sessionA } = await testConnectMethod(
           {
             dapp,
             wallet,
@@ -392,6 +392,8 @@ describe("UniversalProvider", function () {
             },
           },
         );
+        wallet.session = sessionA;
+        const topic = sessionA.topic;
 
         await Promise.all([
           new Promise((resolve) => {
@@ -417,17 +419,16 @@ describe("UniversalProvider", function () {
         const addresses = (await dapp.request({ method: "eth_accounts" })) as string[];
         // delete
         await deleteProviders({ A: dapp, B: wallet });
-
         // restart
         const afterDapp = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
           name: "dapp",
-          storageOptions: { database: getDbName("dappDB") },
+          storageOptions: { database: dappDbName },
         });
         const afterWallet = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
           name: "wallet",
-          storageOptions: { database: getDbName("walletDB") },
+          storageOptions: { database: walletDbName },
         });
 
         // ping
@@ -445,15 +446,17 @@ describe("UniversalProvider", function () {
       });
 
       it("should reload provider data after restart", async () => {
+        const dappDbName = getDbName(`dappDB-${Date.now()}`);
+        const walletDbName = getDbName(`walletDB-${Date.now()}`);
         const dapp = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
           name: "dapp",
-          storageOptions: { database: getDbName("dappDB") },
+          storageOptions: { database: dappDbName },
         });
         const wallet = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
           name: "wallet",
-          storageOptions: { database: getDbName("walletDB") },
+          storageOptions: { database: walletDbName },
         });
 
         const {
@@ -474,7 +477,7 @@ describe("UniversalProvider", function () {
         const afterDapp = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
           name: "afterDapp",
-          storageOptions: { database: getDbName("dappDB") },
+          storageOptions: { database: dappDbName },
         });
 
         // load the provider in ethers without new pairing
@@ -769,9 +772,10 @@ describe("UniversalProvider", function () {
     });
     describe("caip validation", () => {
       it("should reload after restart", async () => {
+        const dappDbName = getDbName(`dappDB-${Date.now()}`);
         const dapp = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
-          storageOptions: { database: getDbName("dappDB") },
+          storageOptions: { database: dappDbName },
           name: "dapp",
         });
         const wallet = await UniversalProvider.init({
@@ -814,7 +818,7 @@ describe("UniversalProvider", function () {
         // restart
         const afterDapp = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
-          storageOptions: { database: getDbName("dappDB") },
+          storageOptions: { database: dappDbName },
           name: "dapp",
         });
 
@@ -826,9 +830,10 @@ describe("UniversalProvider", function () {
         });
       });
       it("should reload after restart with correct chain", async () => {
+        const dappDbName = getDbName(`dappDB-${Date.now()}`);
         const dapp = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
-          storageOptions: { database: getDbName("dappDB") },
+          storageOptions: { database: dappDbName },
           name: "dapp",
         });
         const wallet = await UniversalProvider.init({
@@ -876,7 +881,7 @@ describe("UniversalProvider", function () {
         // restart
         const afterDapp = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
-          storageOptions: { database: getDbName("dappDB") },
+          storageOptions: { database: dappDbName },
           name: "dapp",
         });
 
