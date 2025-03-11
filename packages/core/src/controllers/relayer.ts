@@ -448,16 +448,16 @@ export class Relayer extends IRelayer {
 
   private resetPingTimeout = () => {
     if (!isNode()) return;
-    try {
-      clearTimeout(this.pingTimeout);
-      this.pingTimeout = setTimeout(() => {
+    clearTimeout(this.pingTimeout);
+    this.pingTimeout = setTimeout(() => {
+      try {
         this.logger.debug({}, "pingTimeout: Connection stalled, terminating...");
         //@ts-expect-error
-        this.provider?.connection?.socket?.terminate();
-      }, this.heartBeatTimeout);
-    } catch (e) {
-      this.logger.warn(e, (e as Error)?.message);
-    }
+        this.provider?.connection?.socket?.terminate?.();
+      } catch (e) {
+        this.logger.warn(e, (e as Error)?.message);
+      }
+    }, this.heartBeatTimeout);
   };
 
   private async createProvider() {
