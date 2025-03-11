@@ -11,7 +11,11 @@ import {
   TEST_SIGN_CLIENT_OPTIONS_B,
   TEST_SIGN_CLIENT_OPTIONS_A,
   TEST_NAMESPACES,
+  TEST_APP_METADATA_A,
+  TEST_SIGN_CLIENT_NAME_A,
 } from "../shared";
+import { Core, RELAYER_EVENTS } from "@walletconnect/core";
+import { RelayerTypes } from "@walletconnect/types";
 
 const generateClientDbName = (prefix: string) =>
   `./test/tmp/${prefix}_${generateRandomBytes32()}.db`;
@@ -385,6 +389,72 @@ describe("Sign Client Persistence", () => {
       expect(lastAccountEvent).toEqual(lastAccountsChangedValue);
 
       await deleteClients(clients);
+    });
+    /**
+     * this test simulates a case where `Core` receives a message mid initialization
+     * before the implementing client (sign-client) is ready to process it
+     * the message should be queued and processed after the client is ready
+     */
+    it("should process pending messages after restart", async () => {
+      const db_a = generateClientDbName("client_a");
+      const clients = await initTwoClients(
+        {
+          storageOptions: { database: db_a },
+        },
+        {},
+      );
+      const {
+        sessionA: { topic },
+      } = await testConnectMethod(clients);
+      let messageEvent: RelayerTypes.MessageEvent;
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          clients.A.core.relayer.once(
+            RELAYER_EVENTS.message,
+            (event: RelayerTypes.MessageEvent) => {
+              messageEvent = event;
+              resolve();
+            },
+          );
+        }),
+        clients.B.ping({ topic }),
+      ]);
+      await clients.A.core.relayer.transportClose();
+      await throttle(1000);
+      const core = new Core({
+        storageOptions: { database: db_a },
+        projectId: process.env.TEST_PROJECT_ID,
+      });
+      let onMessageEventTimestamp: number;
+      core.relayer.on(RELAYER_EVENTS.connect, async () => {
+        // delete the message from the relayer so it can be processed again
+        await core.relayer.messages.del(topic);
+        // @ts-expect-error - private method
+        await core.relayer.onMessageEvent(messageEvent);
+        onMessageEventTimestamp = Date.now();
+        if (core.relayer.messages.messagesWithoutClientAck.size !== 1) {
+          throw new Error("message not queued for processing");
+        }
+      });
+
+      const wallet = await SignClient.init({
+        name: TEST_SIGN_CLIENT_NAME_A,
+        metadata: TEST_APP_METADATA_A,
+        core,
+      });
+      const walletInitTimestamp = Date.now();
+
+      // validate that the message was received before the wallet was initialized
+      expect(walletInitTimestamp).toBeGreaterThan(onMessageEventTimestamp);
+      // validate that the message was processed by the wallet even though it was received before the wallet was initialized
+      await new Promise<void>((resolve) => {
+        wallet.on("session_ping", () => {
+          resolve();
+        });
+      });
+      await throttle(1000);
+      expect(core.relayer.messages.messagesWithoutClientAck.size).toBe(0);
+      await deleteClients({ A: wallet, B: clients.B });
     });
   });
 });
