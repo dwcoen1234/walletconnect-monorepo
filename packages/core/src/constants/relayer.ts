@@ -43,3 +43,8 @@ export const TRANSPORT_TYPES = {
   link_mode: "link_mode",
   relay: "relay",
 } as const;
+
+export const MESSAGE_DIRECTION = {
+  inbound: "inbound",
+  outbound: "outbound",
+} as const;
