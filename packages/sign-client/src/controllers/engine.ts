@@ -171,12 +171,38 @@ export class Engine extends IEngine {
       await this.registerLinkModeListeners();
       this.client.core.pairing.register({ methods: Object.keys(ENGINE_RPC_OPTS) });
       this.initialized = true;
-      setTimeout(() => {
+      setTimeout(async () => {
+        await this.processPendingMessageEvents();
+
         this.sessionRequestQueue.queue = this.getPendingSessionRequests();
         this.processSessionRequestQueue();
       }, toMiliseconds(this.requestQueueDelay));
     }
   };
+
+  private async processPendingMessageEvents() {
+    try {
+      const topics = this.client.session.keys;
+      const pendingMessages = this.client.core.relayer.messages.getWithoutAck(topics);
+      for (const [topic, messages] of Object.entries(pendingMessages)) {
+        for (const message of messages) {
+          try {
+            await this.onProviderMessageEvent({
+              topic,
+              message,
+              publishedAt: Date.now(),
+            });
+          } catch (error) {
+            this.client.logger.warn(
+              `Error processing pending message event for topic: ${topic}, message: ${message}`,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      this.client.logger.warn("processPendingMessageEvents failed", error);
+    }
+  }
 
   // ---------- Public ------------------------------------------------ //
 
@@ -1657,14 +1683,18 @@ export class Engine extends IEngine {
 
   private registerRelayerEvents() {
     this.client.core.relayer.on(RELAYER_EVENTS.message, (event: RelayerTypes.MessageEvent) => {
-      // capture any messages that arrive before the client is initialized so we can process them after initialization is complete
-      if (!this.initialized || this.relayMessageCache.length > 0) {
-        this.relayMessageCache.push(event);
-      } else {
-        this.onRelayMessage(event);
-      }
+      this.onProviderMessageEvent(event);
     });
   }
+
+  private onProviderMessageEvent = async (event: RelayerTypes.MessageEvent) => {
+    // capture any messages that arrive before the client is initialized so we can process them after initialization is complete
+    if (!this.initialized || this.relayMessageCache.length > 0) {
+      this.relayMessageCache.push(event);
+    } else {
+      await this.onRelayMessage(event);
+    }
+  };
 
   private async onRelayMessage(event: RelayerTypes.MessageEvent) {
     const { topic, message, attestation, transportType } = event;
@@ -1674,14 +1704,15 @@ export class Engine extends IEngine {
       ? this.client.auth.authKeys.get(AUTH_PUBLIC_KEY_NAME)
       : ({ responseTopic: undefined, publicKey: undefined } as any);
 
-    const payload = await this.client.core.crypto.decode(topic, message, {
-      receiverPublicKey: publicKey,
-      encoding: transportType === TRANSPORT_TYPES.link_mode ? BASE64URL : BASE64,
-    });
     try {
+      const payload = await this.client.core.crypto.decode(topic, message, {
+        receiverPublicKey: publicKey,
+        encoding: transportType === TRANSPORT_TYPES.link_mode ? BASE64URL : BASE64,
+      });
+
       if (isJsonRpcRequest(payload)) {
         this.client.core.history.set(topic, payload);
-        this.onRelayEventRequest({
+        await this.onRelayEventRequest({
           topic,
           payload,
           attestation,
@@ -1693,8 +1724,9 @@ export class Engine extends IEngine {
         await this.onRelayEventResponse({ topic, payload, transportType });
         this.client.core.history.delete(topic, payload.id);
       } else {
-        this.onRelayEventUnknownPayload({ topic, payload, transportType });
+        await this.onRelayEventUnknownPayload({ topic, payload, transportType });
       }
+      await this.client.core.relayer.messages.ack(topic, message);
     } catch (error) {
       this.client.logger.error(error);
     }
@@ -2141,13 +2173,15 @@ export class Engine extends IEngine {
   private onSessionPingResponse: EnginePrivate["onSessionPingResponse"] = (_topic, payload) => {
     const { id } = payload;
     const target = engineEvent("session_ping", id);
-    const listeners = this.events.listenerCount(target);
-    if (listeners === 0) {
-      throw new Error(`emitting ${target} without any listeners`);
-    }
+
     // put at the end of the stack to avoid a race condition
     // where session_ping listener is not yet initialized
     setTimeout(() => {
+      const listeners = this.events.listenerCount(target);
+      if (listeners === 0) {
+        throw new Error(`emitting ${target} without any listeners 2176`);
+      }
+
       if (isJsonRpcResult(payload)) {
         this.events.emit(engineEvent("session_ping", id), {});
       } else if (isJsonRpcError(payload)) {

@@ -76,6 +76,8 @@ export abstract class ISubscriber extends IEvents {
 
   public abstract isSubscribed(topic: string): Promise<boolean>;
 
+  public abstract isKnownTopic(topic: string): Promise<boolean>;
+
   public abstract start(): Promise<void>;
 
   public abstract stop(): Promise<void>;

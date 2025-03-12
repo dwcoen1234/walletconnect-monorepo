@@ -74,6 +74,8 @@ export declare namespace RelayerTypes {
     txHashes?: string[];
     contractAddresses?: string[];
   }
+
+  export type MessageDirection = "inbound" | "outbound";
 }
 
 export interface RelayerOptions {

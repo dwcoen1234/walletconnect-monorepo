@@ -60,6 +60,7 @@ import {
   SUBSCRIBER_EVENTS,
   RELAYER_RECONNECT_TIMEOUT,
   TRANSPORT_TYPES,
+  MESSAGE_DIRECTION,
 } from "../constants";
 import { MessageTracker } from "./messages";
 import { Publisher } from "./publisher";
@@ -157,13 +158,16 @@ export class Relayer extends IRelayer {
   public async publish(topic: string, message: string, opts?: RelayerTypes.PublishOptions) {
     this.isInitialized();
     await this.publisher.publish(topic, message, opts);
-    await this.recordMessageEvent({
-      topic,
-      message,
-      // We don't have `publishedAt` from the relay server on outgoing, so use current time to satisfy type.
-      publishedAt: Date.now(),
-      transportType: TRANSPORT_TYPES.relay,
-    });
+    await this.recordMessageEvent(
+      {
+        topic,
+        message,
+        // We don't have `publishedAt` from the relay server on outgoing, so use current time to satisfy type.
+        publishedAt: Date.now(),
+        transportType: TRANSPORT_TYPES.relay,
+      },
+      MESSAGE_DIRECTION.outbound,
+    );
   }
 
   public async subscribe(topic: string, opts?: RelayerTypes.SubscribeOptions) {
@@ -343,7 +347,7 @@ export class Relayer extends IRelayer {
     }
 
     this.events.emit(RELAYER_EVENTS.message, messageEvent);
-    await this.recordMessageEvent(messageEvent);
+    await this.recordMessageEvent(messageEvent, MESSAGE_DIRECTION.inbound);
   }
 
   // ---------- Private ----------------------------------------------- //
@@ -484,9 +488,12 @@ export class Relayer extends IRelayer {
     this.registerProviderListeners();
   }
 
-  private async recordMessageEvent(messageEvent: RelayerTypes.MessageEvent) {
+  private async recordMessageEvent(
+    messageEvent: RelayerTypes.MessageEvent,
+    direction?: RelayerTypes.MessageDirection,
+  ) {
     const { topic, message } = messageEvent;
-    await this.messages.set(topic, message);
+    await this.messages.set(topic, message, direction);
   }
 
   private async shouldIgnoreMessageEvent(
@@ -500,9 +507,9 @@ export class Relayer extends IRelayer {
       return true;
     }
 
-    // Ignore if `topic` is not subscribed to.
-    if (!(await this.subscriber.isSubscribed(topic))) {
-      this.logger.warn(`Ignoring message for non-subscribed topic ${topic}`);
+    // Ignore if `topic` is not known to the subscriber.
+    if (!(await this.subscriber.isKnownTopic(topic))) {
+      this.logger.warn(`Ignoring message for unknown topic ${topic}`);
       return true;
     }
 
@@ -542,8 +549,8 @@ export class Relayer extends IRelayer {
     if (await this.shouldIgnoreMessageEvent(messageEvent)) {
       return;
     }
+    await this.recordMessageEvent(messageEvent, MESSAGE_DIRECTION.inbound);
     this.events.emit(RELAYER_EVENTS.message, messageEvent);
-    await this.recordMessageEvent(messageEvent);
   }
 
   private async acknowledgePayload(payload: JsonRpcPayload) {
