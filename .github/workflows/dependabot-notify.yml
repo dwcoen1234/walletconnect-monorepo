@@ -24,9 +24,9 @@ jobs:
           # Get repo path from GitHub context
           REPO="${GITHUB_REPOSITORY}"
           
-          # Query for high and critical severity alerts using a fine-grained token
+          # Query for high and critical severity alerts using the custom PAT
           echo "Fetching Dependabot alerts from GitHub API..."
-          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.DEPENDABOT_NOTIFY_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${REPO}/dependabot/alerts?state=open")
           
