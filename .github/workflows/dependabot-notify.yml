@@ -50,7 +50,10 @@ jobs:
           
           # Format alerts for Slack message
           if [ "$COUNT" -gt 0 ]; then
-            FORMATTED=$(echo "$ALERTS" | jq -r '.[] | "• *\(.security_advisory.severity)* severity: \(.security_advisory.summary) in \(.dependency.package.name) \(.dependency.manifest_path)"')
+            # Create JSON-safe formatted alerts (properly escaped)
+            FORMATTED=$(echo "$ALERTS" | jq -r '[.[] | "• *\(.security_advisory.severity)* severity: \(.security_advisory.summary) in \(.dependency.package.name) \(.dependency.manifest_path)"] | join("\n")')
+            
+            # Store as outputs
             echo "alert_count=$COUNT" >> $GITHUB_OUTPUT
             echo "formatted_alerts<<EOF" >> $GITHUB_OUTPUT
             echo "$FORMATTED" >> $GITHUB_OUTPUT
@@ -63,7 +66,7 @@ jobs:
         if: steps.check.outputs.alert_count != '0'
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          payload: |
+          payload: >
             {
               "blocks": [
                 {
