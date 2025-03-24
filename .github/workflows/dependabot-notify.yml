@@ -1,0 +1,86 @@
+name: Notify Dependabot Alerts to Slack
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  check_dependabot_alerts:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: read  # Required to access Dependabot alerts
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Check for high/critical Dependabot alerts
+        id: check
+        run: |
+          # Get repo path from GitHub context
+          REPO="${GITHUB_REPOSITORY}"
+          
+          # Query for high and critical severity alerts
+          ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${REPO}/dependabot/alerts?state=open" | \
+            jq '[.[] | select(.security_advisory.severity=="high" or .security_advisory.severity=="critical")]')
+          
+          # Count the alerts
+          COUNT=$(echo $ALERTS | jq 'length')
+          
+          # Format alerts for Slack message
+          if [ "$COUNT" -gt 0 ]; then
+            FORMATTED=$(echo $ALERTS | jq -r '.[] | "• *\(.security_advisory.severity)* severity: \(.security_advisory.summary) in \(.dependency.package.name) \(.dependency.manifest_path)"')
+            echo "alert_count=$COUNT" >> $GITHUB_OUTPUT
+            echo "formatted_alerts<<EOF" >> $GITHUB_OUTPUT
+            echo "$FORMATTED" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "alert_count=0" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Notify Slack
+        if: steps.check.outputs.alert_count != '0'
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "⚠️ Dependabot Security Alerts",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*${{ steps.check.outputs.alert_count }}* high/critical severity alerts found in *${{ github.repository }}*:"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ steps.check.outputs.formatted_alerts }}"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "Triggered by: ${{ github.actor }} | <${{ github.server_url }}/${{ github.repository }}/security/dependabot|View all alerts>"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.DEPENDABOT_NOTIFY_SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK 
