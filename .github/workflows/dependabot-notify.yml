@@ -50,8 +50,8 @@ jobs:
           
           # Format alerts for Slack message
           if [ "$COUNT" -gt 0 ]; then
-            # Create JSON-safe formatted alerts (properly escaped)
-            FORMATTED=$(echo "$ALERTS" | jq -r '[.[] | "• *\(.security_advisory.severity)* severity: \(.security_advisory.summary) in \(.dependency.package.name) \(.dependency.manifest_path)"] | join("\n")')
+            # Create JSON-safe formatted alerts with proper escaping
+            FORMATTED=$(echo "$ALERTS" | jq -r '[.[] | "• *\(.security_advisory.severity)* severity: \(.security_advisory.summary) in \(.dependency.package.name) - \(.dependency.manifest_path)"] | join("\\n")')
             
             # Store as outputs
             echo "alert_count=$COUNT" >> $GITHUB_OUTPUT
@@ -66,42 +66,8 @@ jobs:
         if: steps.check.outputs.alert_count != '0'
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          payload: >
-            {
-              "blocks": [
-                {
-                  "type": "header",
-                  "text": {
-                    "type": "plain_text",
-                    "text": "⚠️ Dependabot Security Alerts",
-                    "emoji": true
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*${{ steps.check.outputs.alert_count }}* high/critical severity alerts found in *${{ github.repository }}*:"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "${{ steps.check.outputs.formatted_alerts }}"
-                  }
-                },
-                {
-                  "type": "context",
-                  "elements": [
-                    {
-                      "type": "mrkdwn",
-                      "text": "Triggered by: ${{ github.actor }} | <${{ github.server_url }}/${{ github.repository }}/security/dependabot|View all alerts>"
-                    }
-                  ]
-                }
-              ]
-            }
+          payload: |
+            {"blocks":[{"type":"header","text":{"type":"plain_text","text":"⚠️ Dependabot Security Alerts","emoji":true}},{"type":"section","text":{"type":"mrkdwn","text":"*${{ steps.check.outputs.alert_count }}* high/critical severity alerts found in *${{ github.repository }}*:"}},{"type":"section","text":{"type":"mrkdwn","text":"${{ steps.check.outputs.formatted_alerts }}"}},{"type":"context","elements":[{"type":"mrkdwn","text":"Triggered by: ${{ github.actor }} | <${{ github.server_url }}/${{ github.repository }}/security/dependabot|View all alerts>"}]}]}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.DEPENDABOT_NOTIFY_SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK 
