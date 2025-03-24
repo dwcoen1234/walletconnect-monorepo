@@ -5,11 +5,14 @@ on:
     branches: ['**']
   workflow_dispatch:  # Allow manual triggering
 
+# Add top-level permissions
+permissions:
+  security-events: read
+  contents: read
+
 jobs:
   check_dependabot_alerts:
     runs-on: ubuntu-latest
-    permissions:
-      security-events: read  # Required to access Dependabot alerts
     
     steps:
       - name: Checkout repository
@@ -21,7 +24,7 @@ jobs:
           # Get repo path from GitHub context
           REPO="${GITHUB_REPOSITORY}"
           
-          # Query for high and critical severity alerts
+          # Query for high and critical severity alerts using a fine-grained token
           echo "Fetching Dependabot alerts from GitHub API..."
           RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
