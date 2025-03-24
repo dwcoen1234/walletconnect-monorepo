@@ -22,17 +22,32 @@ jobs:
           REPO="${GITHUB_REPOSITORY}"
           
           # Query for high and critical severity alerts
-          ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          echo "Fetching Dependabot alerts from GitHub API..."
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${REPO}/dependabot/alerts?state=open" | \
-            jq '[.[] | select(.security_advisory.severity=="high" or .security_advisory.severity=="critical")]')
+            "https://api.github.com/repos/${REPO}/dependabot/alerts?state=open")
+          
+          # Debug: Check API response structure
+          echo "API Response structure:"
+          echo "$RESPONSE" | jq 'type'
+          
+          # Check if response is valid JSON array
+          if ! echo "$RESPONSE" | jq -e 'if type=="array" then true elif type=="object" and has("message") then false else false end' > /dev/null; then
+            echo "Error: Invalid response from GitHub API"
+            echo "Response: $RESPONSE"
+            echo "alert_count=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Filter alerts by severity
+          ALERTS=$(echo "$RESPONSE" | jq '[.[] | select(has("security_advisory") and (.security_advisory.severity=="high" or .security_advisory.severity=="critical"))]')
           
           # Count the alerts
-          COUNT=$(echo $ALERTS | jq 'length')
+          COUNT=$(echo "$ALERTS" | jq 'length')
           
           # Format alerts for Slack message
           if [ "$COUNT" -gt 0 ]; then
-            FORMATTED=$(echo $ALERTS | jq -r '.[] | "• *\(.security_advisory.severity)* severity: \(.security_advisory.summary) in \(.dependency.package.name) \(.dependency.manifest_path)"')
+            FORMATTED=$(echo "$ALERTS" | jq -r '.[] | "• *\(.security_advisory.severity)* severity: \(.security_advisory.summary) in \(.dependency.package.name) \(.dependency.manifest_path)"')
             echo "alert_count=$COUNT" >> $GITHUB_OUTPUT
             echo "formatted_alerts<<EOF" >> $GITHUB_OUTPUT
             echo "$FORMATTED" >> $GITHUB_OUTPUT
