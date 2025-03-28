@@ -290,7 +290,6 @@ export class EthereumProvider implements IEthereumProvider {
       const session = await new Promise<SessionTypes.Struct | undefined>(
         async (resolve, reject) => {
           if (this.rpc.showQrModal) {
-            await this.loadWalletConnectModal();
             this.modal?.subscribeModal((state: { open: boolean }) => {
               // the modal was closed so reject the promise
               if (!state.open && !this.signer.session) {
@@ -337,7 +336,7 @@ export class EthereumProvider implements IEthereumProvider {
       this.signer.logger.error(error);
       throw error;
     } finally {
-      if (this.modal) this.modal.closeModal();
+      if (this.rpc.showQrModal) this.modal?.closeModal();
     }
   }
 
@@ -357,7 +356,6 @@ export class EthereumProvider implements IEthereumProvider {
       const result = await new Promise<AuthTypes.AuthenticateResponseResult>(
         async (resolve, reject) => {
           if (this.rpc.showQrModal) {
-            await this.loadWalletConnectModal();
             this.modal?.subscribeModal((state: { open: boolean }) => {
               // the modal was closed so reject the promise
               if (!state.open && !this.signer.session) {
@@ -396,7 +394,7 @@ export class EthereumProvider implements IEthereumProvider {
       this.signer.logger.error(error);
       throw error;
     } finally {
-      if (this.modal) this.modal.closeModal();
+      if (this.rpc.showQrModal) this.modal?.closeModal();
     }
   }
 
@@ -611,13 +609,12 @@ export class EthereumProvider implements IEthereumProvider {
     });
     this.registerEventListeners();
     await this.loadPersistedSession();
-    if (this.rpc.showQrModal) {
-      await this.loadWalletConnectModal();
-    }
+    await this.loadWalletConnectModal();
   }
 
   protected async loadWalletConnectModal() {
     if (this.modal) return;
+    // old try catch block from the time the modal was optional
     let WalletConnectModalClass;
     try {
       const { WalletConnectModal } = await import("@walletconnect/modal");
