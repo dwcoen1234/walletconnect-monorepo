@@ -122,9 +122,38 @@ describe("Sign Client Validation", () => {
       expect(connect).toHaveProperty("uri");
       expect(connect.uri).to.be.string;
     });
+    it("should reject connect with scopedProperties when not defined in requiredNamespaces or optionalNamespaces", async () => {
+      await expect(
+        clients.A.connect({
+          scopedProperties: {
+            "eip155:1": {},
+          },
+        }),
+      ).rejects.toThrowError(
+        `Scoped properties must be a subset of required/optional namespaces, received: {"eip155:1":{}}, required/optional namespaces: []`,
+      );
+    });
   });
 
   describe("approve", () => {
+    it("should reject approve with scopedProperties when not defined in namespaces", async () => {
+      const proposalId = await clients.A.connect(TEST_CONNECT_PARAMS).then(() => {
+        return clients.A.proposal.keys[0];
+      });
+      await expect(
+        clients.A.approve({
+          id: proposalId,
+          namespaces: TEST_APPROVE_PARAMS.namespaces,
+          scopedProperties: {
+            solana: "test",
+          },
+        }),
+      ).rejects.toThrowError(
+        `Scoped properties must be a subset of approved namespaces, received: {"solana":"test"}, approved namespaces: ${Object.keys(
+          TEST_APPROVE_PARAMS.namespaces,
+        ).join(", ")}`,
+      );
+    });
     it("throws when no params are passed", async () => {
       await expect(clients.A.approve()).rejects.toThrowError(
         "Missing or invalid. proposal id should be a number: undefined",

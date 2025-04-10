@@ -45,7 +45,8 @@ export class UniversalProvider implements IUniversalProvider {
   public client!: SignClient;
   public namespaces?: NamespaceConfig;
   public optionalNamespaces?: NamespaceConfig;
-  public sessionProperties?: Record<string, string>;
+  public sessionProperties?: SessionTypes.SessionProperties;
+  public scopedProperties?: SessionTypes.ScopedProperties;
   public events: EventEmitter = new EventEmitter();
   public rpcProviders: RpcProviderMap = {};
   public session?: SessionTypes.Struct;
@@ -112,6 +113,7 @@ export class UniversalProvider implements IUniversalProvider {
         namespaces: this.namespaces,
         optionalNamespaces: this.optionalNamespaces,
         sessionProperties: this.sessionProperties,
+        scopedProperties: this.scopedProperties,
       });
     }
     const accounts = await this.requestAccounts();
@@ -158,7 +160,7 @@ export class UniversalProvider implements IUniversalProvider {
       // assign namespaces from session if not already defined
       const approved = populateNamespacesChains(this.session.namespaces) as NamespaceConfig;
       this.namespaces = mergeRequiredOptionalNamespaces(this.namespaces, approved);
-      this.persist("namespaces", this.namespaces);
+      await this.persist("namespaces", this.namespaces);
       this.onConnect();
     }
     return result;
@@ -190,6 +192,7 @@ export class UniversalProvider implements IUniversalProvider {
       requiredNamespaces: this.namespaces,
       optionalNamespaces: this.optionalNamespaces,
       sessionProperties: this.sessionProperties,
+      scopedProperties: this.scopedProperties,
     });
 
     if (uri) {
@@ -202,7 +205,8 @@ export class UniversalProvider implements IUniversalProvider {
     // assign namespaces from session if not already defined
     const approved = populateNamespacesChains(session.namespaces) as NamespaceConfig;
     this.namespaces = mergeRequiredOptionalNamespaces(this.namespaces, approved);
-    this.persist("namespaces", this.namespaces);
+    await this.persist("namespaces", this.namespaces);
+    await this.persist("optionalNamespaces", this.optionalNamespaces);
 
     this.onConnect();
     return this.session;
@@ -250,13 +254,9 @@ export class UniversalProvider implements IUniversalProvider {
   // ---------- Private ----------------------------------------------- //
 
   private async checkStorage() {
-    this.namespaces = await this.getFromStore("namespaces");
-    this.optionalNamespaces = (await this.getFromStore("optionalNamespaces")) || {};
-    if (this.client.session.length) {
-      const lastKeyIndex = this.client.session.keys.length - 1;
-      this.session = this.client.session.get(this.client.session.keys[lastKeyIndex]);
-      this.createProviders();
-    }
+    this.namespaces = (await this.getFromStore(`namespaces`)) || {};
+    this.optionalNamespaces = (await this.getFromStore(`optionalNamespaces`)) || {};
+    if (this.session) this.createProviders();
   }
 
   private async initialize() {
@@ -282,6 +282,19 @@ export class UniversalProvider implements IUniversalProvider {
         telemetryEnabled: this.providerOpts.telemetryEnabled,
       }));
 
+    if (this.providerOpts.session) {
+      try {
+        this.session = this.client.session.get(this.providerOpts.session.topic);
+      } catch (error) {
+        this.logger.error("Failed to get session", error);
+        throw new Error(
+          `The provided session: ${this.providerOpts?.session?.topic} doesn't exist in the Sign client`,
+        );
+      }
+    } else {
+      const sessions = this.client.session.getAll();
+      this.session = sessions[0];
+    }
     this.logger.trace(`SignClient Initialized`);
   }
 
@@ -386,11 +399,14 @@ export class UniversalProvider implements IUniversalProvider {
     }
 
     this.client.on("session_ping", (args) => {
+      const { topic } = args;
+      if (topic !== this.session?.topic) return;
       this.events.emit("session_ping", args);
     });
 
     this.client.on("session_event", (args) => {
-      const { params } = args;
+      const { params, topic } = args;
+      if (topic !== this.session?.topic) return;
       const { event } = params;
       if (event.name === "accountsChanged") {
         const accounts = event.data;
@@ -416,6 +432,7 @@ export class UniversalProvider implements IUniversalProvider {
     });
 
     this.client.on("session_update", ({ topic, params }) => {
+      if (topic !== this.session?.topic) return;
       const { namespaces } = params;
       const _session = this.client?.session.get(topic);
       this.session = { ..._session, namespaces } as SessionTypes.Struct;
@@ -424,6 +441,7 @@ export class UniversalProvider implements IUniversalProvider {
     });
 
     this.client.on("session_delete", async (payload) => {
+      if (payload.topic !== this.session?.topic) return;
       await this.cleanup();
       this.events.emit("session_delete", payload);
       this.events.emit("disconnect", {
@@ -450,7 +468,7 @@ export class UniversalProvider implements IUniversalProvider {
   }
 
   private setNamespaces(params: ConnectParams): void {
-    const { namespaces, optionalNamespaces, sessionProperties } = params;
+    const { namespaces, optionalNamespaces, sessionProperties, scopedProperties } = params;
 
     if (namespaces && Object.keys(namespaces).length) {
       this.namespaces = namespaces;
@@ -459,8 +477,7 @@ export class UniversalProvider implements IUniversalProvider {
       this.optionalNamespaces = optionalNamespaces;
     }
     this.sessionProperties = sessionProperties;
-    this.persist("namespaces", namespaces);
-    this.persist("optionalNamespaces", optionalNamespaces);
+    this.scopedProperties = scopedProperties;
   }
 
   private validateChain(chain?: string): [string, string] {
@@ -493,28 +510,72 @@ export class UniversalProvider implements IUniversalProvider {
     return await this.getProvider(namespace).requestAccounts();
   }
 
-  private onChainChanged(caip2Chain: string, internal = false): void {
+  private async onChainChanged(caip2Chain: string, internal = false): Promise<void> {
     if (!this.namespaces) return;
 
     const [namespace, chainId] = this.validateChain(caip2Chain);
 
     if (!chainId) return;
 
+    this.updateNamespaceChain(namespace, chainId);
+
+    this.events.emit("chainChanged", chainId);
+
+    const previousChainId = this.getProvider(namespace).getDefaultChain();
     if (!internal) {
       this.getProvider(namespace).setDefaultChain(chainId);
     }
 
-    if (this.namespaces[namespace]) {
-      this.namespaces[namespace].defaultChain = chainId;
-    } else if (this.namespaces[`${namespace}:${chainId}`]) {
-      this.namespaces[`${namespace}:${chainId}`].defaultChain = chainId;
-    } else {
-      // @ts-ignore
-      this.namespaces[`${namespace}:${chainId}`] = { defaultChain: chainId };
-    }
+    this.emitAccountsChangedOnChainChange({ namespace, previousChainId, newChainId: caip2Chain });
+    await this.persist("namespaces", this.namespaces);
+  }
 
-    this.persist("namespaces", this.namespaces);
-    this.events.emit("chainChanged", chainId);
+  /**
+   * Emits `accountsChanged` event when a chain is changed and there are new accounts on the new chain
+   */
+  private emitAccountsChangedOnChainChange({
+    namespace,
+    previousChainId,
+    newChainId,
+  }: {
+    namespace: string;
+    previousChainId: string;
+    newChainId: string;
+  }): void {
+    try {
+      if (previousChainId === newChainId) {
+        return;
+      }
+
+      const accounts = this.session?.namespaces[namespace]?.accounts;
+      if (!accounts) return;
+      const newChainIdAccounts = accounts
+        .filter((account) => account.includes(`${newChainId}:`))
+        .map(parseCaip10Account);
+      if (!isValidArray(newChainIdAccounts)) return;
+      this.events.emit("accountsChanged", newChainIdAccounts);
+    } catch (error) {
+      this.logger.warn("Failed to emit accountsChanged on chain change", error);
+    }
+  }
+
+  private updateNamespaceChain(namespace: string, chainId: string): void {
+    if (!this.namespaces) return;
+
+    const namespaceKey = this.namespaces[namespace] ? namespace : `${namespace}:${chainId}`;
+
+    const defaultNamespace = {
+      chains: [],
+      methods: [],
+      events: [],
+      defaultChain: chainId,
+    };
+
+    if (!this.namespaces[namespaceKey]) {
+      this.namespaces[namespaceKey] = defaultNamespace;
+    } else if (this.namespaces[namespaceKey]) {
+      this.namespaces[namespaceKey].defaultChain = chainId;
+    }
   }
 
   private onConnect() {
@@ -523,22 +584,48 @@ export class UniversalProvider implements IUniversalProvider {
   }
 
   private async cleanup() {
-    this.session = undefined;
     this.namespaces = undefined;
     this.optionalNamespaces = undefined;
     this.sessionProperties = undefined;
-    this.persist("namespaces", undefined);
-    this.persist("optionalNamespaces", undefined);
-    this.persist("sessionProperties", undefined);
+    await this.deleteFromStore("namespaces");
+    await this.deleteFromStore("optionalNamespaces");
+    await this.deleteFromStore("sessionProperties");
+    // reset the session after removing from store as the topic is used there
+    this.session = undefined;
     await this.cleanupPendingPairings({ deletePairings: true });
+    await this.cleanupStorage();
   }
 
-  private persist(key: string, data: unknown) {
-    this.client.core.storage.setItem(`${STORAGE}/${key}`, data);
+  private async persist(key: string, data: unknown) {
+    const topic = this.session?.topic || "";
+    await this.client.core.storage.setItem(`${STORAGE}/${key}${topic}`, data);
   }
 
   private async getFromStore(key: string) {
-    return await this.client.core.storage.getItem(`${STORAGE}/${key}`);
+    const topic = this.session?.topic || "";
+    return await this.client.core.storage.getItem(`${STORAGE}/${key}${topic}`);
+  }
+
+  private async deleteFromStore(key: string) {
+    const topic = this.session?.topic || "";
+    await this.client.core.storage.removeItem(`${STORAGE}/${key}${topic}`);
+  }
+
+  // remove all storage items if there are no sessions left
+  private async cleanupStorage() {
+    try {
+      if (this.client?.session.length > 0) {
+        return;
+      }
+      const keys = await this.client.core.storage.getKeys();
+      for (const key of keys) {
+        if (key.startsWith(STORAGE)) {
+          await this.client.core.storage.removeItem(key);
+        }
+      }
+    } catch (error) {
+      this.logger.warn("Failed to cleanup storage", error);
+    }
   }
 }
 export default UniversalProvider;

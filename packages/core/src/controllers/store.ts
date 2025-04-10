@@ -7,7 +7,7 @@ import {
   isUndefined,
 } from "@walletconnect/utils";
 import { CORE_STORAGE_PREFIX, STORE_STORAGE_VERSION } from "../constants";
-import isEqual from "lodash.isequal";
+import { isEqual } from "es-toolkit/compat";
 
 export class Store<Key, Data extends Record<string, any>> extends IStore<Key, Data> {
   public map = new Map<Key, Data>();

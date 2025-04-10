@@ -323,34 +323,35 @@ export class Pairing implements IPairing {
       // messages of certain types should be ignored as they are handled by their respective SDKs
       if (this.ignoredPayloadTypes.includes(this.core.crypto.getPayloadType(message))) return;
 
-      const payload = await this.core.crypto.decode(topic, message);
-
       try {
+        const payload = await this.core.crypto.decode(topic, message);
+
         if (isJsonRpcRequest(payload)) {
           this.core.history.set(topic, payload);
-          this.onRelayEventRequest({ topic, payload });
+          await this.onRelayEventRequest({ topic, payload });
         } else if (isJsonRpcResponse(payload)) {
           await this.core.history.resolve(payload);
           await this.onRelayEventResponse({ topic, payload });
           this.core.history.delete(topic, payload.id);
         }
+        await this.core.relayer.messages.ack(topic, message);
       } catch (error) {
         this.logger.error(error);
       }
     });
   }
 
-  private onRelayEventRequest: IPairingPrivate["onRelayEventRequest"] = (event) => {
+  private onRelayEventRequest: IPairingPrivate["onRelayEventRequest"] = async (event) => {
     const { topic, payload } = event;
     const reqMethod = payload.method as PairingJsonRpcTypes.WcMethod;
 
     switch (reqMethod) {
       case "wc_pairingPing":
-        return this.onPairingPingRequest(topic, payload);
+        return await this.onPairingPingRequest(topic, payload);
       case "wc_pairingDelete":
-        return this.onPairingDeleteRequest(topic, payload);
+        return await this.onPairingDeleteRequest(topic, payload);
       default:
-        return this.onUnknownRpcMethodRequest(topic, payload);
+        return await this.onUnknownRpcMethodRequest(topic, payload);
     }
   };
 

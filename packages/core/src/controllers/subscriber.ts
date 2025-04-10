@@ -3,7 +3,7 @@ import { HEARTBEAT_EVENTS } from "@walletconnect/heartbeat";
 import { ErrorResponse, RequestArguments } from "@walletconnect/jsonrpc-types";
 import { generateChildLogger, getLoggerContext, Logger } from "@walletconnect/logger";
 import { RelayJsonRpc } from "@walletconnect/relay-api";
-import { ONE_SECOND, ONE_MINUTE, Watch, toMiliseconds } from "@walletconnect/time";
+import { ONE_SECOND, ONE_MINUTE, toMiliseconds } from "@walletconnect/time";
 import {
   IRelayer,
   ISubscriber,
@@ -25,7 +25,6 @@ import {
   SUBSCRIBER_CONTEXT,
   SUBSCRIBER_EVENTS,
   SUBSCRIBER_STORAGE_VERSION,
-  PENDING_SUB_RESOLUTION_TIMEOUT,
   RELAYER_EVENTS,
   TRANSPORT_TYPES,
 } from "../constants";
@@ -41,8 +40,6 @@ export class Subscriber extends ISubscriber {
 
   private cached: SubscriberTypes.Active[] = [];
   private initialized = false;
-  private pendingSubscriptionWatchLabel = "pending_sub_watch_label";
-  private pollingInterval = 20;
   private storagePrefix = CORE_STORAGE_PREFIX;
   private subscribeTimeout = toMiliseconds(ONE_MINUTE);
   private initialSubscribeTimeout = toMiliseconds(ONE_SECOND * 15);
@@ -131,31 +128,26 @@ export class Subscriber extends ISubscriber {
     }
   };
 
-  public isSubscribed: ISubscriber["isSubscribed"] = async (topic: string) => {
-    // topic subscription is already resolved
-    if (this.topics.includes(topic)) return true;
-    const label = `${this.pendingSubscriptionWatchLabel}_${topic}`;
-    // wait for the subscription to resolve
-    const exists = await new Promise<boolean>((resolve, reject) => {
-      const watch = new Watch();
-      watch.start(label);
-      const interval = setInterval(() => {
-        if (
-          (!this.pending.has(topic) && this.topics.includes(topic)) ||
-          this.cached.some((s) => s.topic === topic)
-        ) {
-          clearInterval(interval);
-          watch.stop(label);
-          resolve(true);
-        }
-        if (watch.elapsed(label) >= PENDING_SUB_RESOLUTION_TIMEOUT) {
-          clearInterval(interval);
-          watch.stop(label);
-          reject(new Error("Subscription resolution timeout"));
-        }
-      }, this.pollingInterval);
-    }).catch(() => false);
-    return exists;
+  /**
+   * returns `true` only if the topic is actively subscribed to i.e. not pending or cached
+   */
+  public isSubscribed: ISubscriber["isSubscribed"] = (topic: string) => {
+    return new Promise((resolve) => {
+      resolve(this.topicMap.topics.includes(topic));
+    });
+  };
+
+  /**
+   * returns `true` if the topic is known to the subscriber i.e. it is actively subscribed, pending, cached or in the topic map
+   */
+  public isKnownTopic: ISubscriber["isKnownTopic"] = (topic: string) => {
+    return new Promise((resolve) => {
+      resolve(
+        this.topicMap.topics.includes(topic) ||
+          this.pending.has(topic) ||
+          this.cached.some((s) => s.topic === topic),
+      );
+    });
   };
 
   public on: ISubscriber["on"] = (event, listener) => {

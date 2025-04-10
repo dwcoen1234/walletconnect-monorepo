@@ -36,7 +36,8 @@ describe("Canary", () => {
         `Client A (${await handshakeClient.core.crypto.getClientId()}) initialized in ${initLatencyMs}ms`,
       );
       const handshakeStart = Date.now();
-      await handshakeClient.core.relayer.transportOpen();
+      //@ts-expect-error
+      await handshakeClient.core.relayer.connect();
       const handshakeLatencyMs = Date.now() - handshakeStart;
       log(
         `Client A (${await handshakeClient.core.crypto.getClientId()}) initialized in ${handshakeLatencyMs}ms`,

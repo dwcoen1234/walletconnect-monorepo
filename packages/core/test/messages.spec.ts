@@ -6,6 +6,7 @@ import {
   Core,
   CORE_DEFAULT,
   CORE_STORAGE_PREFIX,
+  MESSAGE_DIRECTION,
   MESSAGES_CONTEXT,
   MESSAGES_STORAGE_VERSION,
   MessageTracker,
@@ -49,10 +50,12 @@ describe("Messages", () => {
     });
     it("sets an entry on the messages map for a new topic-message pair", async () => {
       const mockMessage = "test message";
-      await messageTracker.set(topic, mockMessage);
+      await messageTracker.set(topic, mockMessage, MESSAGE_DIRECTION.inbound);
       const key = hashMessage(mockMessage);
       const message = messageTracker.messages.get(topic) ?? {};
       expect(message[key]).to.equal(mockMessage);
+      const messagesWithoutClientAck = messageTracker.messagesWithoutClientAck.get(topic) ?? {};
+      expect(messagesWithoutClientAck[key]).to.equal(mockMessage);
     });
   });
 
@@ -67,8 +70,10 @@ describe("Messages", () => {
     });
     it("returns the expected message based on the topic", async () => {
       const mockMessage = "test message";
-      await messageTracker.set(topic, mockMessage);
+      await messageTracker.set(topic, mockMessage, MESSAGE_DIRECTION.inbound);
       expect(messageTracker.get(topic)).to.deep.equal({ [hashMessage(mockMessage)]: mockMessage });
+      const messagesWithoutClientAck = messageTracker.messagesWithoutClientAck.get(topic) ?? {};
+      expect(messagesWithoutClientAck[hashMessage(mockMessage)]).to.equal(mockMessage);
     });
   });
 
@@ -95,10 +100,93 @@ describe("Messages", () => {
       await expect(invalidMessageTracker.del(topic)).rejects.toThrow("Not initialized. messages");
     });
     it("removes the matching topic-message pair for the provided topic", async () => {
-      await messageTracker.set(topic, "message");
+      await messageTracker.set(topic, "message", MESSAGE_DIRECTION.inbound);
       expect(messageTracker.messages.size).to.equal(1);
+      expect(messageTracker.messagesWithoutClientAck.size).to.equal(1);
       await messageTracker.del(topic);
       expect(messageTracker.messages.size).to.equal(0);
+      expect(messageTracker.messagesWithoutClientAck.size).to.equal(0);
+    });
+  });
+
+  describe("ack", () => {
+    it("throws if not initialized", async () => {
+      const invalidMessageTracker = new MessageTracker(logger, new Core(TEST_CORE_OPTIONS));
+      await expect(invalidMessageTracker.ack(topic, "message")).rejects.toThrow(
+        "Not initialized. messages",
+      );
+    });
+    it("removes the the topic-message pair from `messagesWithoutClientAck` when acknowledged", async () => {
+      await messageTracker.set(topic, "message", MESSAGE_DIRECTION.inbound);
+      await messageTracker.ack(topic, "message");
+      expect(messageTracker.messages.size).to.equal(1);
+      expect(messageTracker.messagesWithoutClientAck.size).to.equal(0);
+    });
+
+    it("doesn't store outbound messages in `messagesWithoutClientAck`", async () => {
+      await messageTracker.set(topic, "message", MESSAGE_DIRECTION.outbound);
+      expect(messageTracker.messages.size).to.equal(1);
+      expect(messageTracker.messagesWithoutClientAck.size).to.equal(0);
+    });
+
+    it("doesn't throw if the topic-message pair doesn't exist", async () => {
+      expect(await messageTracker.ack(topic, "message")).to.be.undefined;
+    });
+  });
+
+  describe("getWithoutAck", () => {
+    it("returns an empty map if no topics are provided", () => {
+      expect(messageTracker.getWithoutAck([])).to.deep.equal({});
+    });
+
+    it("returns empty map if no messages are available for the provided topic", () => {
+      expect(messageTracker.getWithoutAck([topic])).to.deep.equal({ [topic]: [] });
+    });
+    it("returns correct messages for the provided topic", async () => {
+      const mockMessage = "test message";
+      await messageTracker.set(topic, mockMessage, MESSAGE_DIRECTION.inbound);
+      expect(messageTracker.getWithoutAck([topic])).to.deep.equal({
+        [topic]: [mockMessage],
+      });
+    });
+    it("returns correct messages for multiple provided topics", async () => {
+      const mockMessage = "test message";
+      const topic2 = generateRandomBytes32();
+      await messageTracker.set(topic, mockMessage, MESSAGE_DIRECTION.inbound);
+      await messageTracker.set(topic2, mockMessage, MESSAGE_DIRECTION.inbound);
+      expect(messageTracker.getWithoutAck([topic, topic2])).to.deep.equal({
+        [topic]: [mockMessage],
+        [topic2]: [mockMessage],
+      });
+    });
+    it("returns correct messages for multiple provided topics. Test 2", async () => {
+      const mockMessage = "test message";
+      const mockMessage2 = "test message 2";
+      const mockMessage3 = "test message 3";
+      const topic2 = generateRandomBytes32();
+      const topic3 = generateRandomBytes32();
+      await messageTracker.set(topic, mockMessage, MESSAGE_DIRECTION.inbound);
+      await messageTracker.set(topic2, mockMessage2, MESSAGE_DIRECTION.inbound);
+      await messageTracker.set(topic3, mockMessage3, MESSAGE_DIRECTION.inbound);
+      expect(messageTracker.getWithoutAck([topic2, topic3])).to.deep.equal({
+        [topic2]: [mockMessage2],
+        [topic3]: [mockMessage3],
+      });
+    });
+    it("returns correct messages for multiple provided topics. Test 3", async () => {
+      const mockMessage = "test message";
+      const mockMessage2 = "test message 2";
+      const mockMessage3 = "test message 3";
+      const topic2 = generateRandomBytes32();
+      const topic3 = generateRandomBytes32();
+      await messageTracker.set(topic, mockMessage, MESSAGE_DIRECTION.inbound);
+      await messageTracker.set(topic, mockMessage2, MESSAGE_DIRECTION.inbound);
+      await messageTracker.set(topic2, mockMessage3, MESSAGE_DIRECTION.inbound);
+      expect(messageTracker.getWithoutAck([topic, topic2, topic3])).to.deep.equal({
+        [topic]: [mockMessage, mockMessage2],
+        [topic2]: [mockMessage3],
+        [topic3]: [],
+      });
     });
   });
 });

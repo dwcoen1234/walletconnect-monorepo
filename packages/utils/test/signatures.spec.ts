@@ -1,6 +1,6 @@
 import { AuthTypes } from "@walletconnect/types";
 import { describe, expect, it } from "vitest";
-import { isValidEip191Signature, verifySignature } from "../src";
+import { extractSolanaTransactionId, isValidEip191Signature, verifySignature } from "../src";
 
 describe("utils/signature", () => {
   describe("EIP-1271 signatures", () => {
@@ -116,6 +116,20 @@ Expiration Time: 2022-10-11T23:03:35.700Z`;
       const message = `Hello AppKit! 0xyadayada`;
       const signature = "0xd7ec09eb8ecb1ba9af45380e14d3ef1a1ec2376e0adfc0a9b591e";
       await expect(isValidEip191Signature(address, message, signature)).rejects.toThrow();
+    });
+
+    it("should extract the transaction id from a solana transaction", () => {
+      const transaction =
+        "AeJw688VKMWEeOHsYhe03By/2rqJHTQeq6W4L1ZLdbT2l/Nim8ctL3erMyH9IWPsQP73uaarRmiVfanEJHx7uQ4BAAIDb3ObYkq6BFd46JrMFy1h0Q+dGmyRGtpelqTKkIg82isAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMGRm/lIRcy/+ytunLDm+e8jOW7xfcSayxDmzpAAAAAtIy17v5fs39LuoitzpBhVrg8ZIQF/3ih1N9dQ+X3shEDAgAFAlgCAAABAgAADAIAAACghgEAAAAAAAIACQMjTgAAAAAAAA==";
+      const expectedTransactionId =
+        "5XanD5KnkqzH3RjyqHzPCSRrNXYW2ADH4bge4oMi9KnDBrkFvugagH3LytFZFmBhZEEcyxPsZqeyF4cgLpEXVFR7";
+      const transactionId = extractSolanaTransactionId(transaction);
+      expect(transactionId).toBe(expectedTransactionId);
+    });
+    it("should fail to extract the transaction id from an invalid solana transaction", () => {
+      const transaction =
+        "+dGmyRGtpelqTKkIg82isAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMGRm/lIRcy/+ytunLDm+e8jOW7xfcSayxDmzpAAAAAtIy17v5fs39LuoitzpBhVrg8ZIQF/3ih1N9dQ+X3shEDAgAFAlgCAAABAgAADAIAAACghgEAAAAAAAIACQMjTgAAAAAAAA==";
+      expect(() => extractSolanaTransactionId(transaction)).to.throw();
     });
   });
 });

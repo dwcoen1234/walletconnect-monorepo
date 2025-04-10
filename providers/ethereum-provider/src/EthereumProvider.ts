@@ -82,6 +82,7 @@ export interface ConnectOps {
   optionalChains?: number[];
   rpcMap?: EthereumRpcMap;
   pairingTopic?: string;
+  scopedProperties?: unknown;
 }
 
 export type AuthenticateParams = {
@@ -302,7 +303,10 @@ export class EthereumProvider implements IEthereumProvider {
               }
             });
           }
-          console.log(">> Signer.connect", required, optional);
+          const scopedProperties = opts?.scopedProperties
+            ? { [this.namespace]: opts.scopedProperties }
+            : undefined;
+
           await this.signer
             .connect({
               namespaces: {
@@ -316,6 +320,7 @@ export class EthereumProvider implements IEthereumProvider {
                 },
               }),
               pairingTopic: opts?.pairingTopic,
+              scopedProperties,
             })
             .then((session?: SessionTypes.Struct) => {
               console.log(">> Signer.then", session);
@@ -472,6 +477,11 @@ export class EthereumProvider implements IEthereumProvider {
         this.events.emit(event.name as any, event.data);
       }
       this.events.emit("session_event", payload);
+    });
+
+    this.signer.on("accountsChanged", (accounts: string[]) => {
+      this.accounts = this.parseAccounts(accounts);
+      this.events.emit("accountsChanged", this.accounts);
     });
 
     this.signer.on("chainChanged", (chainId: string) => {

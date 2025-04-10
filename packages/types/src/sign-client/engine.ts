@@ -61,6 +61,7 @@ export declare namespace EngineTypes {
     requiredNamespaces?: ProposalTypes.RequiredNamespaces;
     optionalNamespaces?: ProposalTypes.OptionalNamespaces;
     sessionProperties?: ProposalTypes.SessionProperties;
+    scopedProperties?: ProposalTypes.ScopedProperties;
     pairingTopic?: string;
     relays?: RelayerTypes.ProtocolOptions[];
   }
@@ -73,6 +74,7 @@ export declare namespace EngineTypes {
     id: number;
     namespaces: SessionTypes.Namespaces;
     sessionProperties?: ProposalTypes.SessionProperties;
+    scopedProperties?: ProposalTypes.ScopedProperties;
     sessionConfig?: SessionTypes.SessionConfig;
     relayProtocol?: string;
   }

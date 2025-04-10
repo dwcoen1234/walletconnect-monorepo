@@ -120,7 +120,7 @@ export interface IPairingPrivate {
 
   sendError(id: number, topic: string, error: PairingJsonRpcTypes.Error): Promise<void>;
 
-  onRelayEventRequest(event: PairingJsonRpcTypes.EventCallback<JsonRpcRequest>): void;
+  onRelayEventRequest(event: PairingJsonRpcTypes.EventCallback<JsonRpcRequest>): Promise<void>;
 
   onRelayEventResponse(event: PairingJsonRpcTypes.EventCallback<JsonRpcResponse>): Promise<void>;
 

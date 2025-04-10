@@ -98,6 +98,7 @@ import {
   isReactNative,
   isTestRun,
   isValidArray,
+  extractSolanaTransactionId,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -170,12 +171,38 @@ export class Engine extends IEngine {
       await this.registerLinkModeListeners();
       this.client.core.pairing.register({ methods: Object.keys(ENGINE_RPC_OPTS) });
       this.initialized = true;
-      setTimeout(() => {
+      setTimeout(async () => {
+        await this.processPendingMessageEvents();
+
         this.sessionRequestQueue.queue = this.getPendingSessionRequests();
         this.processSessionRequestQueue();
       }, toMiliseconds(this.requestQueueDelay));
     }
   };
+
+  private async processPendingMessageEvents() {
+    try {
+      const topics = this.client.session.keys;
+      const pendingMessages = this.client.core.relayer.messages.getWithoutAck(topics);
+      for (const [topic, messages] of Object.entries(pendingMessages)) {
+        for (const message of messages) {
+          try {
+            await this.onProviderMessageEvent({
+              topic,
+              message,
+              publishedAt: Date.now(),
+            });
+          } catch (error) {
+            this.client.logger.warn(
+              `Error processing pending message event for topic: ${topic}, message: ${message}`,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      this.client.logger.warn("processPendingMessageEvents failed", error);
+    }
+  }
 
   // ---------- Public ------------------------------------------------ //
 
@@ -188,8 +215,14 @@ export class Engine extends IEngine {
       optionalNamespaces: params.optionalNamespaces || {},
     };
     await this.isValidConnect(connectParams);
-    const { pairingTopic, requiredNamespaces, optionalNamespaces, sessionProperties, relays } =
-      connectParams;
+    const {
+      pairingTopic,
+      requiredNamespaces,
+      optionalNamespaces,
+      sessionProperties,
+      scopedProperties,
+      relays,
+    } = connectParams;
     let topic = pairingTopic;
     let uri: string | undefined;
     let active = false;
@@ -231,6 +264,7 @@ export class Engine extends IEngine {
       expiryTimestamp,
       pairingTopic: topic,
       ...(sessionProperties && { sessionProperties }),
+      ...(scopedProperties && { scopedProperties }),
       id: payloadId(),
     };
     const sessionConnectTarget = engineEvent("session_connect", proposal.id);
@@ -316,7 +350,8 @@ export class Engine extends IEngine {
       throw error;
     }
 
-    const { id, relayProtocol, namespaces, sessionProperties, sessionConfig } = params;
+    const { id, relayProtocol, namespaces, sessionProperties, scopedProperties, sessionConfig } =
+      params;
 
     const proposal = this.client.proposal.get(id);
 
@@ -352,6 +387,7 @@ export class Engine extends IEngine {
       controller: { publicKey: selfPublicKey, metadata: this.client.metadata },
       expiry: calcExpiry(SESSION_EXPIRY),
       ...(sessionProperties && { sessionProperties }),
+      ...(scopedProperties && { scopedProperties }),
       ...(sessionConfig && { sessionConfig }),
     };
     const transportType = TRANSPORT_TYPES.relay;
@@ -1647,14 +1683,18 @@ export class Engine extends IEngine {
 
   private registerRelayerEvents() {
     this.client.core.relayer.on(RELAYER_EVENTS.message, (event: RelayerTypes.MessageEvent) => {
-      // capture any messages that arrive before the client is initialized so we can process them after initialization is complete
-      if (!this.initialized || this.relayMessageCache.length > 0) {
-        this.relayMessageCache.push(event);
-      } else {
-        this.onRelayMessage(event);
-      }
+      this.onProviderMessageEvent(event);
     });
   }
+
+  private onProviderMessageEvent = async (event: RelayerTypes.MessageEvent) => {
+    // capture any messages that arrive before the client is initialized so we can process them after initialization is complete
+    if (!this.initialized || this.relayMessageCache.length > 0) {
+      this.relayMessageCache.push(event);
+    } else {
+      await this.onRelayMessage(event);
+    }
+  };
 
   private async onRelayMessage(event: RelayerTypes.MessageEvent) {
     const { topic, message, attestation, transportType } = event;
@@ -1664,14 +1704,15 @@ export class Engine extends IEngine {
       ? this.client.auth.authKeys.get(AUTH_PUBLIC_KEY_NAME)
       : ({ responseTopic: undefined, publicKey: undefined } as any);
 
-    const payload = await this.client.core.crypto.decode(topic, message, {
-      receiverPublicKey: publicKey,
-      encoding: transportType === TRANSPORT_TYPES.link_mode ? BASE64URL : BASE64,
-    });
     try {
+      const payload = await this.client.core.crypto.decode(topic, message, {
+        receiverPublicKey: publicKey,
+        encoding: transportType === TRANSPORT_TYPES.link_mode ? BASE64URL : BASE64,
+      });
+
       if (isJsonRpcRequest(payload)) {
         this.client.core.history.set(topic, payload);
-        this.onRelayEventRequest({
+        await this.onRelayEventRequest({
           topic,
           payload,
           attestation,
@@ -1683,8 +1724,9 @@ export class Engine extends IEngine {
         await this.onRelayEventResponse({ topic, payload, transportType });
         this.client.core.history.delete(topic, payload.id);
       } else {
-        this.onRelayEventUnknownPayload({ topic, payload, transportType });
+        await this.onRelayEventUnknownPayload({ topic, payload, transportType });
       }
+      await this.client.core.relayer.messages.ack(topic, message);
     } catch (error) {
       this.client.logger.error(error);
     }
@@ -1918,8 +1960,15 @@ export class Engine extends IEngine {
     const { id, params } = payload;
     try {
       this.isValidSessionSettleRequest(params);
-      const { relay, controller, expiry, namespaces, sessionProperties, sessionConfig } =
-        payload.params;
+      const {
+        relay,
+        controller,
+        expiry,
+        namespaces,
+        sessionProperties,
+        scopedProperties,
+        sessionConfig,
+      } = payload.params;
       const pendingSession = [...this.pendingSessions.values()].find(
         (s) => s.sessionTopic === topic,
       );
@@ -1949,6 +1998,7 @@ export class Engine extends IEngine {
           metadata: controller.metadata,
         },
         ...(sessionProperties && { sessionProperties }),
+        ...(scopedProperties && { scopedProperties }),
         ...(sessionConfig && { sessionConfig }),
         transportType: TRANSPORT_TYPES.relay,
       };
@@ -2123,13 +2173,15 @@ export class Engine extends IEngine {
   private onSessionPingResponse: EnginePrivate["onSessionPingResponse"] = (_topic, payload) => {
     const { id } = payload;
     const target = engineEvent("session_ping", id);
-    const listeners = this.events.listenerCount(target);
-    if (listeners === 0) {
-      throw new Error(`emitting ${target} without any listeners`);
-    }
+
     // put at the end of the stack to avoid a race condition
     // where session_ping listener is not yet initialized
     setTimeout(() => {
+      const listeners = this.events.listenerCount(target);
+      if (listeners === 0) {
+        throw new Error(`emitting ${target} without any listeners 2176`);
+      }
+
       if (isJsonRpcResult(payload)) {
         this.events.emit(engineEvent("session_ping", id), {});
       } else if (isJsonRpcError(payload)) {
@@ -2453,11 +2505,13 @@ export class Engine extends IEngine {
       payload: formatJsonRpcRequest(
         "wc_sessionPropose",
         {
+          ...proposal,
           requiredNamespaces: proposal.requiredNamespaces,
           optionalNamespaces: proposal.optionalNamespaces,
           relays: proposal.relays,
           proposer: proposal.proposer,
           sessionProperties: proposal.sessionProperties,
+          scopedProperties: proposal.scopedProperties,
         },
         proposal.id,
       ),
@@ -2569,8 +2623,14 @@ export class Engine extends IEngine {
       );
       throw new Error(message);
     }
-    const { pairingTopic, requiredNamespaces, optionalNamespaces, sessionProperties, relays } =
-      params;
+    const {
+      pairingTopic,
+      requiredNamespaces,
+      optionalNamespaces,
+      sessionProperties,
+      scopedProperties,
+      relays,
+    } = params;
     if (!isUndefined(pairingTopic)) await this.isValidPairingTopic(pairingTopic);
 
     if (!isValidRelays(relays, true)) {
@@ -2592,6 +2652,24 @@ export class Engine extends IEngine {
     if (!isUndefined(sessionProperties)) {
       this.validateSessionProps(sessionProperties, "sessionProperties");
     }
+
+    if (!isUndefined(scopedProperties)) {
+      this.validateSessionProps(scopedProperties, "scopedProperties");
+
+      const requestedNamespaces = Object.keys(requiredNamespaces || {}).concat(
+        Object.keys(optionalNamespaces || {}),
+      );
+
+      const scopedNamespaces = Object.keys(scopedProperties);
+      const valid = scopedNamespaces.every((ns) => requestedNamespaces.includes(ns));
+      if (!valid) {
+        throw new Error(
+          `Scoped properties must be a subset of required/optional namespaces, received: ${JSON.stringify(
+            scopedProperties,
+          )}, required/optional namespaces: ${JSON.stringify(requestedNamespaces)}`,
+        );
+      }
+    }
   };
 
   private validateNamespaces = (
@@ -2607,7 +2685,7 @@ export class Engine extends IEngine {
       throw new Error(
         getInternalError("MISSING_OR_INVALID", `approve() params: ${params}`).message,
       );
-    const { id, namespaces, relayProtocol, sessionProperties } = params;
+    const { id, namespaces, relayProtocol, sessionProperties, scopedProperties } = params;
 
     this.checkRecentlyDeleted(id);
     await this.isValidProposalId(id);
@@ -2630,6 +2708,23 @@ export class Engine extends IEngine {
 
     if (!isUndefined(sessionProperties)) {
       this.validateSessionProps(sessionProperties, "sessionProperties");
+    }
+
+    if (!isUndefined(scopedProperties)) {
+      this.validateSessionProps(scopedProperties, "scopedProperties");
+
+      const approvedNamespaces = new Set(Object.keys(namespaces));
+      const scopedNamespaces = Object.keys(scopedProperties);
+
+      // the approved scoped namespaces must be a subset of the approved namespaces
+      const valid = scopedNamespaces.every((ns) => approvedNamespaces.has(ns));
+      if (!valid) {
+        throw new Error(
+          `Scoped properties must be a subset of approved namespaces, received: ${JSON.stringify(
+            scopedProperties,
+          )}, approved namespaces: ${Array.from(approvedNamespaces).join(", ")}`,
+        );
+      }
     }
   };
 
@@ -2888,12 +2983,14 @@ export class Engine extends IEngine {
     return context;
   };
 
-  private validateSessionProps = (properties: ProposalTypes.SessionProperties, type: string) => {
-    Object.values(properties).forEach((property) => {
-      if (!isValidString(property, false)) {
+  private validateSessionProps = (properties: SessionTypes.ScopedProperties, type: string) => {
+    Object.values(properties).forEach((property, index) => {
+      if (property === null || property === undefined) {
         const { message } = getInternalError(
           "MISSING_OR_INVALID",
-          `${type} must be in Record<string, string> format. Received: ${JSON.stringify(property)}`,
+          `${type} must contain an existing value for each key. Received: ${property} for key ${
+            Object.keys(properties)[index]
+          }`,
         );
         throw new Error(message);
       }
@@ -3055,10 +3152,14 @@ export class Engine extends IEngine {
       }
 
       // result = { key: [0x...] } or { key: 0x... }
-      const hashes = result[methodConfig.key];
+      const hashes: string[] = result[methodConfig.key];
 
       // result = { key: [0x...] }
       if (isValidArray(hashes)) {
+        if (method === "solana_signAllTransactions") {
+          return hashes.map((hash) => extractSolanaTransactionId(hash));
+        }
+
         return hashes;
 
         // result = { key: 0x... }

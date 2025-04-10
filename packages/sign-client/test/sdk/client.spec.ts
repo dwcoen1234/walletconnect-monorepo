@@ -94,6 +94,46 @@ describe("Sign Client Integration", () => {
       expect(clients.B.metadata.redirect?.universal).to.exist;
       await deleteClients(clients);
     });
+    it("should set scopedProperties in session", async () => {
+      const clients = await initTwoClients();
+      const requestedScopedProperties = {
+        [Object.keys(TEST_CONNECT_PARAMS.requiredNamespaces)[0]]: "test",
+      };
+      const approvedScopedProperties = {
+        polkadot: "approved",
+      };
+      const { uri, approval } = await clients.A.connect({
+        ...TEST_CONNECT_PARAMS,
+        scopedProperties: requestedScopedProperties,
+      });
+      if (!uri) throw new Error("URI is undefined");
+
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          clients.B.once("session_proposal", async (params) => {
+            const { scopedProperties } = params.params;
+            expect(scopedProperties).to.exist;
+            expect(scopedProperties).to.deep.equal(requestedScopedProperties);
+
+            await clients.B.approve({
+              id: params.id,
+              namespaces: TEST_NAMESPACES,
+              scopedProperties: approvedScopedProperties,
+            });
+            resolve();
+          });
+        }),
+        clients.B.pair({ uri }),
+        approval(),
+      ]);
+      const dappSession = clients.A.session.getAll()[0];
+      const walletSession = clients.B.session.getAll()[0];
+      expect(dappSession.scopedProperties).to.deep.equal(approvedScopedProperties);
+      expect(walletSession.scopedProperties).to.deep.equal(approvedScopedProperties);
+      expect(dappSession.topic).to.eq(walletSession.topic);
+
+      await deleteClients(clients);
+    });
     it("should connect with out of order URIs", async () => {
       const clients = await initTwoClients();
       // load three proposals
@@ -835,8 +875,17 @@ describe("Sign Client Integration", () => {
                 expect(id).toEqual(args.id);
 
                 const result = formatJsonRpcResult(id, {
-                  transactions: ["0xtx1", "0xtx2", "0xtx3"],
+                  transactions: [
+                    "AeJw688VKMWEeOHsYhe03By/2rqJHTQeq6W4L1ZLdbT2l/Nim8ctL3erMyH9IWPsQP73uaarRmiVfanEJHx7uQ4BAAIDb3ObYkq6BFd46JrMFy1h0Q+dGmyRGtpelqTKkIg82isAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMGRm/lIRcy/+ytunLDm+e8jOW7xfcSayxDmzpAAAAAtIy17v5fs39LuoitzpBhVrg8ZIQF/3ih1N9dQ+X3shEDAgAFAlgCAAABAgAADAIAAACghgEAAAAAAAIACQMjTgAAAAAAAA==",
+                    "AeJw688VKMWEeOHsYhe03By/2rqJHTQeq6W4L1ZLdbT2l/Nim8ctL3erMyH9IWPsQP73uaarRmiVfanEJHx7uQ4BAAIDb3ObYkq6BFd46JrMFy1h0Q+dGmyRGtpelqTKkIg82isAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMGRm/lIRcy/+ytunLDm+e8jOW7xfcSayxDmzpAAAAAtIy17v5fs39LuoitzpBhVrg8ZIQF/3ih1N9dQ+X3shEDAgAFAlgCAAABAgAADAIAAACghgEAAAAAAAIACQMjTgAAAAAAAA==",
+                    "AeJw688VKMWEeOHsYhe03By/2rqJHTQeq6W4L1ZLdbT2l/Nim8ctL3erMyH9IWPsQP73uaarRmiVfanEJHx7uQ4BAAIDb3ObYkq6BFd46JrMFy1h0Q+dGmyRGtpelqTKkIg82isAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMGRm/lIRcy/+ytunLDm+e8jOW7xfcSayxDmzpAAAAAtIy17v5fs39LuoitzpBhVrg8ZIQF/3ih1N9dQ+X3shEDAgAFAlgCAAABAgAADAIAAACghgEAAAAAAAIACQMjTgAAAAAAAA==",
+                  ],
                 });
+                const expectedTxHashes = [
+                  "5XanD5KnkqzH3RjyqHzPCSRrNXYW2ADH4bge4oMi9KnDBrkFvugagH3LytFZFmBhZEEcyxPsZqeyF4cgLpEXVFR7",
+                  "5XanD5KnkqzH3RjyqHzPCSRrNXYW2ADH4bge4oMi9KnDBrkFvugagH3LytFZFmBhZEEcyxPsZqeyF4cgLpEXVFR7",
+                  "5XanD5KnkqzH3RjyqHzPCSRrNXYW2ADH4bge4oMi9KnDBrkFvugagH3LytFZFmBhZEEcyxPsZqeyF4cgLpEXVFR7",
+                ];
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                   const tvf = publishPayload.tvf;
@@ -846,7 +895,7 @@ describe("Sign Client Integration", () => {
                   if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
                     return console.error("tvf is missing required fields");
                   }
-                  if (tvf.txHashes.join(",") !== result.result.transactions.join(",")) {
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
                     return console.error(
                       "txHashes do not match: transactions",
                       tvf.txHashes,
