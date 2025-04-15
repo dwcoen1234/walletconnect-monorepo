@@ -1,5 +1,22 @@
 # @walletconnect/ethereum-provider
 
+## 2.20.0
+
+### Minor Changes
+
+- [#5564](https://github.com/WalletConnect/walletconnect-monorepo/pull/5564) [`ba1199abb51d0b3845a127e2d155aa1a623b6dad`](https://github.com/WalletConnect/walletconnect-monorepo/commit/ba1199abb51d0b3845a127e2d155aa1a623b6dad) Thanks [@tomiir](https://github.com/tomiir)! - Replace WalletConnectModal with AppKitCore.
+  For those using EthereumProvider with `showQrModal: true` the UI is now re-skinned.
+
+  EthereumProvider must now be strictly isolated to client-side components in SSR frameworks like Next.js; see https://www.npmjs.com/package/@walletconnect/ethereum-provider for implementation details.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @walletconnect/utils@2.20.0
+  - @walletconnect/sign-client@2.20.0
+  - @walletconnect/types@2.20.0
+  - @walletconnect/universal-provider@2.20.0
+
 ## 2.19.4
 
 ### Patch Changes
