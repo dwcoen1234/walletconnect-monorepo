@@ -15,6 +15,7 @@ import { EthereumProvider } from "@walletconnect/ethereum-provider";
 
 const provider = await EthereumProvider.init({
   projectId, // REQUIRED your projectId
+  chains, // DEPRECATED, use `optionalChains` instead
   optionalChains, // REQUIRED optional chain ids e.g. 1 (Ethereum), 10 (Optimism), 42161 (Arbitrum)
   showQrModal, // REQUIRED set to "true" to use @walletconnect/modal,
   methods, // OPTIONAL ethereum methods
