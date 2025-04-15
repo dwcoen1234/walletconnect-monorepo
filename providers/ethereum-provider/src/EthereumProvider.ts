@@ -581,9 +581,6 @@ export class EthereumProvider implements IEthereumProvider {
   protected async initialize(opts: EthereumProviderOptions) {
     this.rpc = this.getRpcConfig(opts);
 
-    // eslint-disable-next-line no-console
-    console.log("@ethereum-provider initialized with", this.rpc);
-
     this.chainId = this.rpc.chains.length
       ? getEthereumChainId(this.rpc.chains)
       : getEthereumChainId(this.rpc.optionalChains);
