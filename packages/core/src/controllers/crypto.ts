@@ -34,7 +34,11 @@ export class Crypto implements ICrypto {
 
   private initialized = false;
 
-  constructor(public core: ICore, public logger: Logger, keychain?: IKeyChain) {
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+    keychain?: IKeyChain,
+  ) {
     this.core = core;
     this.logger = generateChildLogger(logger, this.name);
     this.keychain = keychain || new KeyChain(this.core, this.logger);

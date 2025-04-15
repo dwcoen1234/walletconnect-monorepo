@@ -2,6 +2,7 @@ import esbuild from "rollup-plugin-esbuild";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
+import visualizer from "rollup-plugin-visualizer";
 
 const input = "./src/index.ts";
 const plugins = [
@@ -15,6 +16,7 @@ const plugins = [
       ".json": "json",
     },
   }),
+  visualizer(),
 ];
 
 export default function createConfig(

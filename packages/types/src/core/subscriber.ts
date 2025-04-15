@@ -61,7 +61,10 @@ export abstract class ISubscriber extends IEvents {
 
   public abstract readonly context: string;
 
-  constructor(public relayer: IRelayer, public logger: Logger) {
+  constructor(
+    public relayer: IRelayer,
+    public logger: Logger,
+  ) {
     super();
   }
 

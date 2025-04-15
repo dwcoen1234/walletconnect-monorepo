@@ -290,7 +290,9 @@ export class EthereumProvider implements IEthereumProvider {
       const session = await new Promise<SessionTypes.Struct | undefined>(
         async (resolve, reject) => {
           if (this.rpc.showQrModal) {
-            this.modal?.subscribeModal((state: { open: boolean }) => {
+            this.modal?.open();
+
+            this.modal?.subscribeState((state: { open: boolean }) => {
               // the modal was closed so reject the promise
               if (!state.open && !this.signer.session) {
                 this.signer.abortPairingAttempt();
@@ -321,10 +323,12 @@ export class EthereumProvider implements IEthereumProvider {
               resolve(session);
             })
             .catch((error: Error) => {
+              this.modal?.showErrorMessage("Unable to connect");
               reject(new Error(error.message));
             });
         },
       );
+
       if (!session) return;
 
       const accounts = getAccountsFromNamespaces(session.namespaces, [this.namespace]);
@@ -336,7 +340,7 @@ export class EthereumProvider implements IEthereumProvider {
       this.signer.logger.error(error);
       throw error;
     } finally {
-      if (this.modal) this.modal.closeModal();
+      this.modal?.close();
     }
   }
 
@@ -356,7 +360,8 @@ export class EthereumProvider implements IEthereumProvider {
       const result = await new Promise<AuthTypes.AuthenticateResponseResult>(
         async (resolve, reject) => {
           if (this.rpc.showQrModal) {
-            this.modal?.subscribeModal((state: { open: boolean }) => {
+            this.modal?.open();
+            this.modal?.subscribeState((state: { open: boolean }) => {
               // the modal was closed so reject the promise
               if (!state.open && !this.signer.session) {
                 this.signer.abortPairingAttempt();
@@ -376,6 +381,7 @@ export class EthereumProvider implements IEthereumProvider {
               resolve(result);
             })
             .catch((error: Error) => {
+              this.modal?.showErrorMessage("Unable to connect");
               reject(new Error(error.message));
             });
         },
@@ -387,14 +393,16 @@ export class EthereumProvider implements IEthereumProvider {
         // if no required chains are set, use the approved accounts to fetch chainIds as both contain <namespace>:<chainId>
         this.setChainIds(this.rpc.chains.length ? this.rpc.chains : accounts);
         this.setAccounts(accounts);
+
         this.events.emit("connect", { chainId: toHexChainId(this.chainId) });
       }
+
       return result;
     } catch (error) {
       this.signer.logger.error(error);
       throw error;
     } finally {
-      if (this.modal) this.modal.closeModal();
+      this.modal?.close();
     }
   }
 
@@ -483,12 +491,6 @@ export class EthereumProvider implements IEthereumProvider {
     );
 
     this.signer.on("display_uri", (uri: string) => {
-      if (this.rpc.showQrModal) {
-        // to refresh the QR we have to close the modal and open it again
-        // until proper API is provided by walletconnect modal
-        this.modal?.closeModal();
-        this.modal?.openModal({ uri });
-      }
       this.events.emit("display_uri", uri);
     });
   }
@@ -556,8 +558,8 @@ export class EthereumProvider implements IEthereumProvider {
     const rpcMap = opts?.rpcMap || this.buildRpcMap(allChains, opts.projectId);
     const qrModalOptions = opts?.qrModalOptions || undefined;
     return {
-      chains: requiredChains?.map((chain) => this.formatChainId(chain)),
-      optionalChains: optionalChains.map((chain) => this.formatChainId(chain)),
+      chains: requiredChains?.map((chain: number) => this.formatChainId(chain)),
+      optionalChains: optionalChains.map((chain: number) => this.formatChainId(chain)),
       methods: requiredMethods,
       events: requiredEvents,
       optionalMethods,
@@ -598,19 +600,32 @@ export class EthereumProvider implements IEthereumProvider {
     this.registerEventListeners();
     await this.loadPersistedSession();
     if (this.rpc.showQrModal) {
-      let WalletConnectModalClass;
+      let appKit;
       try {
-        const { WalletConnectModal } = await import("@walletconnect/modal");
-        WalletConnectModalClass = WalletConnectModal;
-      } catch {
-        throw new Error("To use QR modal, please install @walletconnect/modal package");
+        const { createAppKit } = await import("@reown/appkit/core");
+        const { convertWCMToAppKitOptions } = await import("./wcmToAppKit");
+        const options = convertWCMToAppKitOptions({
+          ...this.rpc.qrModalOptions,
+          chains: [...new Set([...this.rpc.chains, ...this.rpc.optionalChains])],
+          metadata: this.rpc.metadata,
+          projectId: this.rpc.projectId,
+        });
+
+        if (!options.networks.length) {
+          throw new Error("No networks found for WalletConnect·");
+        }
+
+        appKit = createAppKit({
+          ...options,
+          universalProvider: this.signer as any,
+          manualWCControl: true,
+        });
+      } catch (e) {
+        throw new Error("To use QR modal, please install @reown/appkit package");
       }
-      if (WalletConnectModalClass) {
+      if (appKit) {
         try {
-          this.modal = new WalletConnectModalClass({
-            projectId: this.rpc.projectId,
-            ...this.rpc.qrModalOptions,
-          });
+          this.modal = appKit;
         } catch (e) {
           this.signer.logger.error(e);
           throw new Error("Could not generate WalletConnectModal Instance");

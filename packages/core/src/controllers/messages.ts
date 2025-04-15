@@ -22,7 +22,10 @@ export class MessageTracker extends IMessageTracker {
   private initialized = false;
   private storagePrefix = CORE_STORAGE_PREFIX;
 
-  constructor(public logger: Logger, public core: ICore) {
+  constructor(
+    public logger: Logger,
+    public core: ICore,
+  ) {
     super(logger, core);
     this.logger = generateChildLogger(logger, this.name);
     this.core = core;

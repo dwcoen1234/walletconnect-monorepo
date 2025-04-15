@@ -11,7 +11,10 @@ export abstract class IMessageTracker {
 
   public abstract readonly context: string;
 
-  constructor(public logger: Logger, public core: ICore) {}
+  constructor(
+    public logger: Logger,
+    public core: ICore,
+  ) {}
 
   public abstract init(): Promise<void>;
 

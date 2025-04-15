@@ -4,7 +4,10 @@ import { ICore, PendingRequestTypes } from "@walletconnect/types";
 import { REQUEST_CONTEXT, SIGN_CLIENT_STORAGE_PREFIX } from "../constants";
 
 export class PendingRequest extends Store<number, PendingRequestTypes.Struct> {
-  constructor(public core: ICore, public logger: Logger) {
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+  ) {
     super(
       core,
       logger,

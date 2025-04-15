@@ -28,7 +28,11 @@ export declare namespace EventClientTypes {
 export abstract class IEventClient {
   public abstract readonly context: string;
 
-  constructor(public core: ICore, public logger: Logger, public telemetryEnabled: boolean) {}
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+    public telemetryEnabled: boolean,
+  ) {}
 
   public abstract init(): Promise<void>;
 

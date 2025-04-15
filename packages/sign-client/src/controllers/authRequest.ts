@@ -5,7 +5,10 @@ import { AuthTypes, ICore } from "@walletconnect/types";
 import { AUTH_STORAGE_PREFIX, AUTH_REQUEST_CONTEXT } from "../constants";
 
 export class AuthRequest extends Store<number, AuthTypes.PendingRequest> {
-  constructor(public core: ICore, public logger: Logger) {
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+  ) {
     super(
       core,
       logger,

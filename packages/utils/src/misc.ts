@@ -237,6 +237,7 @@ export function getHttpUrl(url: string) {
 // -- assert ------------------------------------------------- //
 
 export function assertType(obj: any, key: string, type: string) {
+  // eslint-disable-next-line valid-typeof
   if (!obj[key] || typeof obj[key] !== type) {
     throw new Error(`Missing or invalid "${key}" param`);
   }

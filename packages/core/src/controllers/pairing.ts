@@ -64,7 +64,10 @@ export class Pairing implements IPairing {
   private ignoredPayloadTypes = [TYPE_1];
   private registeredMethods: string[] = [];
 
-  constructor(public core: ICore, public logger: Logger) {
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+  ) {
     this.core = core;
     this.logger = generateChildLogger(logger, this.name);
     this.pairings = new Store(this.core, this.logger, this.name, this.storagePrefix);
