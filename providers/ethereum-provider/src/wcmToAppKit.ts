@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import type { AppKitOptions, CaipNetwork, CaipNetworkId } from "@reown/appkit";
 import type { WalletConnectModalConfig } from "./types";
 import { defineChain } from "@reown/appkit/networks";
