@@ -51,7 +51,6 @@ export function convertWCMToAppKitOptions(
     ?.map(mapCaipIdToAppKitCaipNetwork)
     .filter(Boolean);
 
-  console.log(">> Networks", networks);
   // Ensure at least one network is present
   if (networks.length === 0) {
     throw new Error("At least one chain must be specified");

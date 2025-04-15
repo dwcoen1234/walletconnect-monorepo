@@ -280,7 +280,6 @@ export class EthereumProvider implements IEthereumProvider {
   }
 
   public async connect(opts?: ConnectOps): Promise<void> {
-    console.log(">> Provider.connect");
     if (!this.signer.client) {
       throw new Error("Provider not initialized. Call init() first");
     }
@@ -295,8 +294,6 @@ export class EthereumProvider implements IEthereumProvider {
 
             this.modal?.subscribeState((state: { open: boolean }) => {
               // the modal was closed so reject the promise
-              console.log(">> Modal State2", state);
-              console.log(">> SEssion2", this.signer.session);
               if (!state.open && !this.signer.session) {
                 this.signer.abortPairingAttempt();
                 reject(new Error("Connection request reset. Please try again."));
@@ -323,33 +320,26 @@ export class EthereumProvider implements IEthereumProvider {
               scopedProperties,
             })
             .then((session?: SessionTypes.Struct) => {
-              console.log(">> Signer.then", session);
               resolve(session);
             })
             .catch((error: Error) => {
-              console.log(">> Signer.catch", error);
               this.modal?.showErrorMessage("Unable to connect");
               reject(new Error(error.message));
             });
         },
       );
 
-      console.log(">> Session", session);
       if (!session) return;
 
       const accounts = getAccountsFromNamespaces(session.namespaces, [this.namespace]);
-      console.log(">> Accounts", this.accounts);
       // if no required chains are set, use the approved accounts to fetch chainIds
       this.setChainIds(this.rpc.chains.length ? this.rpc.chains : accounts);
-      console.log(">> ChainId", this.chainId);
       this.setAccounts(accounts);
       this.events.emit("connect", { chainId: toHexChainId(this.chainId) });
     } catch (error) {
-      console.log(">> Error", error);
       this.signer.logger.error(error);
       throw error;
     } finally {
-      console.log(">> Closing Modal", this.modal);
       this.modal?.close();
     }
   }
@@ -373,15 +363,12 @@ export class EthereumProvider implements IEthereumProvider {
             this.modal?.open();
             this.modal?.subscribeState((state: { open: boolean }) => {
               // the modal was closed so reject the promise
-              console.log(">> Modal State", state);
-              console.log(">> SEssion", this.signer.session);
               if (!state.open && !this.signer.session) {
                 this.signer.abortPairingAttempt();
                 reject(new Error("Connection request reset. Please try again."));
               }
             });
           }
-          console.log(">> Signer.authenticate", params);
           await this.signer
             .authenticate(
               {
@@ -391,11 +378,9 @@ export class EthereumProvider implements IEthereumProvider {
               walletUniversalLink,
             )
             .then((result: AuthTypes.AuthenticateResponseResult) => {
-              console.log(">> Signer.authenticate.then", result);
               resolve(result);
             })
             .catch((error: Error) => {
-              console.log(">> Signer.authenticate.catch", error);
               this.modal?.showErrorMessage("Unable to connect");
               reject(new Error(error.message));
             });
@@ -404,25 +389,19 @@ export class EthereumProvider implements IEthereumProvider {
 
       const session = result.session;
       if (session) {
-        console.log(">> Got Session", session);
         const accounts = getAccountsFromNamespaces(session.namespaces, [this.namespace]);
-
-        console.log(">> Accounts", this.accounts);
         // if no required chains are set, use the approved accounts to fetch chainIds as both contain <namespace>:<chainId>
         this.setChainIds(this.rpc.chains.length ? this.rpc.chains : accounts);
         this.setAccounts(accounts);
-        console.log(">> ChainId", this.chainId);
+
         this.events.emit("connect", { chainId: toHexChainId(this.chainId) });
       }
 
-      console.log(">> Returning Result", result);
       return result;
     } catch (error) {
-      console.log(">> Error", error);
       this.signer.logger.error(error);
       throw error;
     } finally {
-      console.log(">> Closing Modal", this.modal);
       this.modal?.close();
     }
   }
@@ -642,7 +621,6 @@ export class EthereumProvider implements IEthereumProvider {
           manualWCControl: true,
         });
       } catch (e) {
-        console.error(e);
         throw new Error("To use QR modal, please install @reown/appkit package");
       }
       if (appKit) {
@@ -657,7 +635,6 @@ export class EthereumProvider implements IEthereumProvider {
   }
 
   protected loadConnectOpts(opts?: ConnectOps) {
-    console.log(">> LoadConnectOpts", opts);
     if (!opts) return;
     const { chains, optionalChains, rpcMap } = opts;
     if (chains && isValidArray(chains)) {
