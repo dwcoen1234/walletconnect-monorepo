@@ -1,6 +1,6 @@
 {
   "changelog": ["@changesets/changelog-github", { "repo": "WalletConnect/walletconnect-monorepo" }],
-  "commit": true,
+  "commit": false,
   "fixed": [
     [
       "@walletconnect/utils",
