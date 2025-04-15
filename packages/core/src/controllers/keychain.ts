@@ -12,7 +12,10 @@ export class KeyChain implements IKeyChain {
   private initialized = false;
   private storagePrefix = CORE_STORAGE_PREFIX;
 
-  constructor(public core: ICore, public logger: Logger) {
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+  ) {
     this.core = core;
     this.logger = generateChildLogger(logger, this.name);
   }

@@ -316,6 +316,7 @@ export function isValidId(input: any) {
 }
 
 export function isValidParams(input: any) {
+  // eslint-disable-next-line valid-typeof
   return typeof input !== "undefined" && typeof input !== null;
 }
 

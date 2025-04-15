@@ -36,7 +36,11 @@ export class Verify extends IVerify {
   private publicKey?: Jwk;
   private fetchPromise?: Promise<Jwk>;
 
-  constructor(public core: ICore, public logger: Logger, public store: IKeyValueStorage) {
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+    public store: IKeyValueStorage,
+  ) {
     super(core, logger, store);
     this.logger = generateChildLogger(logger, this.name);
     this.abortController = new AbortController();

@@ -8,7 +8,10 @@ export abstract class IKeyChain {
 
   public abstract readonly context: string;
 
-  constructor(public core: ICore, public logger: Logger) {}
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+  ) {}
 
   public abstract init(): Promise<void>;
 

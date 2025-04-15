@@ -4,7 +4,10 @@ import { ECHO_CONTEXT, ECHO_URL } from "../constants";
 
 export class EchoClient extends IEchoClient {
   public readonly context = ECHO_CONTEXT;
-  constructor(public projectId: string, public logger: Logger) {
+  constructor(
+    public projectId: string,
+    public logger: Logger,
+  ) {
     super(projectId, logger);
     this.logger = generateChildLogger(logger, this.context);
   }

@@ -36,7 +36,10 @@ export abstract class IExpirer extends IEvents {
 
   public abstract readonly values: ExpirerTypes.Expiration[];
 
-  constructor(public core: ICore, public logger: Logger) {
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+  ) {
     super();
   }
 

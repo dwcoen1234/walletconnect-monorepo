@@ -22,7 +22,10 @@ export class Expirer extends IExpirer {
 
   private storagePrefix = CORE_STORAGE_PREFIX;
 
-  constructor(public core: ICore, public logger: Logger) {
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+  ) {
     super(core, logger);
     this.logger = generateChildLogger(logger, this.name);
   }

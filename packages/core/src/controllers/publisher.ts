@@ -28,7 +28,10 @@ export class Publisher extends IPublisher {
   private initialPublishTimeout = toMiliseconds(ONE_SECOND * 15);
   private needsTransportRestart = false;
 
-  constructor(public relayer: IRelayer, public logger: Logger) {
+  constructor(
+    public relayer: IRelayer,
+    public logger: Logger,
+  ) {
     super(relayer, logger);
     this.relayer = relayer;
     this.logger = generateChildLogger(logger, this.name);

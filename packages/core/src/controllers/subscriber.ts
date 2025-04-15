@@ -46,7 +46,10 @@ export class Subscriber extends ISubscriber {
   private clientId: string;
   private batchSubscribeTopicsLimit = 500;
 
-  constructor(public relayer: IRelayer, public logger: Logger) {
+  constructor(
+    public relayer: IRelayer,
+    public logger: Logger,
+  ) {
     super(relayer, logger);
     this.relayer = relayer;
     this.logger = generateChildLogger(logger, this.name);

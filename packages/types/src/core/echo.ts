@@ -10,7 +10,10 @@ export declare namespace EchoClientTypes {
 }
 export abstract class IEchoClient {
   public abstract readonly context: string;
-  constructor(public projectId: string, public logger: Logger) {}
+  constructor(
+    public projectId: string,
+    public logger: Logger,
+  ) {}
 
   public abstract registerDeviceToken(
     params: EchoClientTypes.RegisterDeviceTokenParams,

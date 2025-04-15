@@ -7,6 +7,7 @@ lerna-debug.log
 
 # Bundle
 **/bundle-stats.html
+**/stats.html
 
 # Runtime data
 pids

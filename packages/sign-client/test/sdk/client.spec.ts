@@ -139,9 +139,8 @@ describe("Sign Client Integration", () => {
       // load three proposals
       const { uri: uriOne, approval: approvalOne } = await clients.A.connect(TEST_CONNECT_PARAMS);
       const { uri: uriTwo, approval: approvalTwo } = await clients.A.connect(TEST_CONNECT_PARAMS);
-      const { uri: uriThree, approval: approvalThree } = await clients.A.connect(
-        TEST_CONNECT_PARAMS,
-      );
+      const { uri: uriThree, approval: approvalThree } =
+        await clients.A.connect(TEST_CONNECT_PARAMS);
 
       if (!uriOne || !uriTwo || !uriThree) throw new Error("URI is undefined");
 

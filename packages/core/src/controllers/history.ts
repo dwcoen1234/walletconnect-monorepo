@@ -22,7 +22,10 @@ export class JsonRpcHistory extends IJsonRpcHistory {
   private initialized = false;
   private storagePrefix = CORE_STORAGE_PREFIX;
 
-  constructor(public core: ICore, public logger: Logger) {
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+  ) {
     super(core, logger);
     this.logger = generateChildLogger(logger, this.name);
   }

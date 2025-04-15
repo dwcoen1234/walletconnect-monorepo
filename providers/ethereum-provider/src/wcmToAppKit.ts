@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import type { AppKitOptions, CaipNetwork, CaipNetworkId } from "@reown/appkit";
 import type { WalletConnectModalConfig } from "./types";
 import { defineChain } from "@reown/appkit/networks";
@@ -79,15 +80,15 @@ export function convertWCMToAppKitOptions(
       wcmConfig.explorerRecommendedWalletIds === "NONE"
         ? []
         : Array.isArray(wcmConfig.explorerRecommendedWalletIds)
-        ? wcmConfig.explorerRecommendedWalletIds
-        : [],
+          ? wcmConfig.explorerRecommendedWalletIds
+          : [],
 
     excludeWalletIds:
       wcmConfig.explorerExcludedWalletIds === "ALL"
         ? []
         : Array.isArray(wcmConfig.explorerExcludedWalletIds)
-        ? wcmConfig.explorerExcludedWalletIds
-        : [],
+          ? wcmConfig.explorerExcludedWalletIds
+          : [],
 
     // Additional AppKit-specific options that don't have direct WCM equivalents
     enableEIP6963: false, // Disable 6963 by default

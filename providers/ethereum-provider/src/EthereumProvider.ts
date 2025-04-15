@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { EventEmitter } from "events";
 import { getAccountsFromNamespaces, getSdkError, isValidArray } from "@walletconnect/utils";
 import { KeyValueStorageOptions } from "@walletconnect/keyvaluestorage";

@@ -9,7 +9,10 @@ export class AuthStore {
   public pairingTopics: IAuth["pairingTopics"];
   public requests: IAuth["requests"];
 
-  constructor(public core: ICore, public logger: Logger) {
+  constructor(
+    public core: ICore,
+    public logger: Logger,
+  ) {
     this.authKeys = new AuthKey(this.core, this.logger);
     this.pairingTopics = new AuthPairingTopic(this.core, this.logger);
     this.requests = new AuthRequest(this.core, this.logger);

@@ -63,7 +63,10 @@ export abstract class IPairing {
   public abstract events: EventEmitter;
   public abstract pairings: IPairingStore;
 
-  constructor(public logger: Logger, public core: ICore) {}
+  constructor(
+    public logger: Logger,
+    public core: ICore,
+  ) {}
 
   public abstract init(): Promise<void>;
 
