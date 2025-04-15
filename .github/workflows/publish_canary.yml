@@ -20,6 +20,14 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch }}
 
+      - name: Validate canary version format 🔍
+        run: |
+          VERSION="${{ github.event.inputs.canaryVersion }}"
+          if [[ ! "$VERSION" =~ -canary- ]]; then
+            echo "❌ Invalid version: '$VERSION'. It must include '-canary-'."
+            exit 1
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -30,7 +38,6 @@ jobs:
         run: npm ci && npm run build
 
       - name: Set version using Lerna 📦
-        if: ${{ github.event.inputs.canaryVersion }}
         run: npx lerna version ${{ github.event.inputs.canaryVersion }} --no-push --no-git-tag-version --yes
 
       - name: Rebuild after version change 🔁
