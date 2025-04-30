@@ -619,6 +619,7 @@ export class EthereumProvider implements IEthereumProvider {
           ...options,
           universalProvider: this.signer as any,
           manualWCControl: true,
+          enableNetworkSwitch: false,
         });
       } catch (e) {
         throw new Error("To use QR modal, please install @reown/appkit package");
