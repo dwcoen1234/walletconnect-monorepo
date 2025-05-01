@@ -1,5 +1,13 @@
 # @walletconnect/types
 
+## 2.20.2
+
+### Patch Changes
+
+- [#6279](https://github.com/WalletConnect/walletconnect-monorepo/pull/6279) [`f2847e2511243846a422ec0495f9d56a88376a1c`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f2847e2511243846a422ec0495f9d56a88376a1c) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - fixed auto bumping relayer version on release
+
+- [#6282](https://github.com/WalletConnect/walletconnect-monorepo/pull/6282) [`060eb7cc8d9d03c224a0dc29c9ce71d15763d544`](https://github.com/WalletConnect/walletconnect-monorepo/commit/060eb7cc8d9d03c224a0dc29c9ce71d15763d544) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - fixed changeset release script
+
 ## 2.20.1
 
 ### Patch Changes
