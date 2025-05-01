@@ -81,6 +81,20 @@ describe("Subscriber", () => {
         ),
       ).to.be.true;
     });
+
+    it("should keep cached subscriptions when onDisable is called multiple times", async () => {
+      const topic = generateRandomBytes32();
+      await subscriber.subscribe(topic);
+      expect(subscriber.subscriptions.size).to.equal(1);
+      expect(subscriber.topics.length).to.equal(1);
+      subscriber.onDisable();
+      expect(subscriber.cached.length).to.equal(1);
+      expect(subscriber.cached[0].topic).to.equal(topic);
+      subscriber.onDisable();
+      expect(subscriber.cached.length).to.equal(1);
+      subscriber.onDisable();
+      expect(subscriber.cached.length).to.equal(1);
+    });
   });
 
   describe("storageKey", () => {
