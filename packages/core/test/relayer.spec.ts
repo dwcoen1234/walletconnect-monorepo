@@ -386,6 +386,50 @@ describe("Relayer", () => {
         await relayer.transportClose();
         expect(relayer.connected).to.be.false;
       });
+      it("should not run into a race condition when reconnecting if toEstablishConnection is called while connecting is in progress", async () => {
+        const relayer = new Relayer({
+          core,
+          relayUrl: TEST_CORE_OPTIONS.relayUrl,
+          projectId: TEST_CORE_OPTIONS.projectId,
+        });
+        await relayer.init();
+        relayer.subscriber.subscriptions.set(randomTopic, {
+          topic: randomTopic,
+          id: randomTopic,
+          relay: { protocol: "irn" },
+        });
+
+        // artificially slow down the connect method
+        // and call `toEstablishConnection` multiple times while connecting is in progress
+        // to ensure `connect` is called only once
+        const originalConnect = relayer.connect.bind(relayer);
+        let connectCalled = 0;
+        vi.spyOn(relayer, "connect").mockImplementation(() => {
+          return new Promise<void>((resolve) => {
+            connectCalled++;
+            setTimeout(async () => {
+              await originalConnect();
+              resolve();
+            }, 2000);
+          });
+        });
+
+        await Promise.all([
+          relayer.transportOpen(),
+          new Promise<void>(async (resolve) => {
+            await throttle(500);
+            const a = Array.from(Array(10).keys()).map(() => {
+              relayer.toEstablishConnection();
+            });
+            await Promise.all(a);
+            resolve();
+          }),
+        ]);
+
+        await throttle(1000);
+        expect(connectCalled).to.eq(1);
+        await relayer.transportClose();
+      });
     });
   });
   describe("packageName and bundleId validations", () => {
