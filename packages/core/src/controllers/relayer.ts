@@ -651,10 +651,6 @@ export class Relayer extends IRelayer {
   private async toEstablishConnection() {
     await this.confirmOnlineStateOrThrow();
     if (this.connected) return;
-    if (this.connectPromise) {
-      await this.connectPromise;
-      return;
-    }
     await this.connect();
   }
 }
