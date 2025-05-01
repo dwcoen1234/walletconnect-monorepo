@@ -386,7 +386,7 @@ describe("Relayer", () => {
         await relayer.transportClose();
         expect(relayer.connected).to.be.false;
       });
-      it("should not run into a race condition when reconnecting if toEstablishConnection is called while connecting is in progress", async () => {
+      it("should not run into a race condition when `toEstablishConnection` is called while connecting is in progress", async () => {
         const relayer = new Relayer({
           core,
           relayUrl: TEST_CORE_OPTIONS.relayUrl,
