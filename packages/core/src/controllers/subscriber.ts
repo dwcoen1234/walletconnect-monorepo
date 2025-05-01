@@ -196,7 +196,11 @@ export class Subscriber extends ISubscriber {
   }
 
   private onDisable() {
-    this.cached = this.values;
+    // only write to this.cached if there are active subscriptions
+    // as this.cached can be overridden if onDisable is called multiple times
+    if (this.values.length > 0) {
+      this.cached = this.values;
+    }
     this.subscriptions.clear();
     this.topicMap.clear();
   }
