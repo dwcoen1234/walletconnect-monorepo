@@ -82,7 +82,7 @@ describe("metadata", () => {
     expect(populated.url).to.eql(mockedMetadata.url);
   });
 
-  it("should not replace url if metadata.url hostname is the same as the actual page url", () => {
+  it("should not replace url if metadata.url hostname is the same as the actual page url with a trailing slash", () => {
     const metadata: SignClientTypes.Metadata = {
       name: "Mocked App Name",
       description: "Mocked App Description",
@@ -97,8 +97,8 @@ describe("metadata", () => {
     const metadata: SignClientTypes.Metadata = {
       name: "Mocked App Name",
       description: "Mocked App Description",
-      url: "https://mocked-app.com/",
-      icons: ["https://mocked-app.com/icon.png"],
+      url: mockedMetadata.url,
+      icons: mockedMetadata.icons,
     };
     const populated = populateAppMetadata(metadata);
     expect(populated.url).to.eql(metadata.url);
