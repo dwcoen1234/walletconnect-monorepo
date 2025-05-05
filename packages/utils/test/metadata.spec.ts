@@ -70,4 +70,26 @@ describe("metadata", () => {
     expect(populated.url).to.eql(mockedMetadata.url);
     expect(populated.icons).to.eql(mockedMetadata.icons);
   });
+
+  it("should warn if metadata.url differs from the actual page url", () => {
+    const metadata: SignClientTypes.Metadata = {
+      name: "Mocked App Name",
+      description: "Mocked App Description",
+      url: "https://something.com",
+      icons: ["https://something.com/icon.png"],
+    };
+    const populated = populateAppMetadata(metadata);
+    expect(populated.url).to.eql(mockedMetadata.url);
+  });
+
+  it("should not warn if metadata.url is the same as the actual page url", () => {
+    const metadata: SignClientTypes.Metadata = {
+      name: "Mocked App Name",
+      description: "Mocked App Description",
+      url: "https://mocked-app.com",
+      icons: ["https://mocked-app.com/icon.png"],
+    };
+    const populated = populateAppMetadata(metadata);
+    expect(populated.url).to.eql(mockedMetadata.url);
+  });
 });
