@@ -117,7 +117,7 @@ export function populateAppMetadata(metadata?: SignClientTypes.Metadata): SignCl
   const appMetadata = getAppMetadata();
   try {
     if (metadata?.url && appMetadata.url) {
-      if (metadata.url !== appMetadata.url) {
+      if (new URL(metadata.url).host !== new URL(appMetadata.url).host) {
         console.warn(
           `The configured WalletConnect 'metadata.url':${metadata.url} differs from the actual page url:${appMetadata.url}. This is probably unintended and can lead to issues.`,
         );
