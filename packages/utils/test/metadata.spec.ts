@@ -71,7 +71,7 @@ describe("metadata", () => {
     expect(populated.icons).to.eql(mockedMetadata.icons);
   });
 
-  it("should warn if metadata.url differs from the actual page url", () => {
+  it("should replace url if metadata.url differs from the actual page url", () => {
     const metadata: SignClientTypes.Metadata = {
       name: "Mocked App Name",
       description: "Mocked App Description",
@@ -82,7 +82,7 @@ describe("metadata", () => {
     expect(populated.url).to.eql(mockedMetadata.url);
   });
 
-  it("should not warn if metadata.url is the same as the actual page url", () => {
+  it("should not replace url if metadata.url is the same as the actual page url", () => {
     const metadata: SignClientTypes.Metadata = {
       name: "Mocked App Name",
       description: "Mocked App Description",
