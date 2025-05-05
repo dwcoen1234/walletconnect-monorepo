@@ -86,10 +86,10 @@ describe("metadata", () => {
     const metadata: SignClientTypes.Metadata = {
       name: "Mocked App Name",
       description: "Mocked App Description",
-      url: "https://mocked-app.com",
+      url: "https://mocked-app.com/",
       icons: ["https://mocked-app.com/icon.png"],
     };
     const populated = populateAppMetadata(metadata);
-    expect(populated.url).to.eql(mockedMetadata.url);
+    expect(populated.url).to.eql(metadata.url);
   });
 });
