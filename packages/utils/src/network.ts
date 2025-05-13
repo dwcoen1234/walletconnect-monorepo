@@ -77,7 +77,6 @@ export function isAppVisible(): boolean {
     return getDocument()?.visibilityState === "visible";
   }
   // TODO: implement reliable visibility check for react-native
-  // node.js does not have a visibilityState 
+  // node.js does not have a visibilityState
   return true;
 }
-
