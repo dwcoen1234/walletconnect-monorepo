@@ -1,8 +1,8 @@
 import type { AppKitOptions, CaipNetwork, CaipNetworkId } from "@reown/appkit";
 import type { WalletConnectModalConfig } from "./types";
-import { defineChain } from "@reown/appkit/networks";
 import type { AppKitNetwork } from "@reown/appkit/networks";
 import type { EthereumProviderOptions } from "./EthereumProvider";
+import type { Assign, ChainFormatters, Prettify } from "viem";
 
 function convertThemeVariables(
   wcmTheme?: WalletConnectModalConfig["themeVariables"],
@@ -131,4 +131,16 @@ export function convertWCMToAppKitOptions(
   }
 
   return appKitOptions;
+}
+
+export function defineChain<
+  formatters extends ChainFormatters,
+  const chain extends CaipNetwork<formatters>,
+>(chain: chain): Prettify<Assign<CaipNetwork<undefined>, chain>> {
+  return {
+    formatters: undefined,
+    fees: undefined,
+    serializers: undefined,
+    ...chain,
+  } as Assign<CaipNetwork<undefined>, chain>;
 }
