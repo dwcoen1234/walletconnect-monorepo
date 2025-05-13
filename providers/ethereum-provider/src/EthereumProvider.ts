@@ -1,5 +1,10 @@
 import { EventEmitter } from "events";
-import { getAccountsFromNamespaces, getSdkError, isValidArray } from "@walletconnect/utils";
+import {
+  getAccountsFromNamespaces,
+  getSdkError,
+  isBrowser,
+  isValidArray,
+} from "@walletconnect/utils";
 import { KeyValueStorageOptions } from "@walletconnect/keyvaluestorage";
 import {
   IEthereumProvider as IProvider,
@@ -602,25 +607,30 @@ export class EthereumProvider implements IEthereumProvider {
     if (this.rpc.showQrModal) {
       let appKit;
       try {
-        const { createAppKit } = await import("@reown/appkit/core");
-        const { convertWCMToAppKitOptions } = await import("./wcmToAppKit");
-        const options = convertWCMToAppKitOptions({
-          ...this.rpc.qrModalOptions,
-          chains: [...new Set([...this.rpc.chains, ...this.rpc.optionalChains])],
-          metadata: this.rpc.metadata,
-          projectId: this.rpc.projectId,
-        });
+        if (isBrowser()) {
+          // @rollup-ignore-next-line
+          const untouchedRequire = require;
+          const createAppkit = untouchedRequire("@reown/appkit/core").createAppKit;
+          const { convertWCMToAppKitOptions } = await import("./wcmToAppKit");
+          const options = convertWCMToAppKitOptions({
+            ...this.rpc.qrModalOptions,
+            chains: [...new Set([...this.rpc.chains, ...this.rpc.optionalChains])],
+            metadata: this.rpc.metadata,
+            projectId: this.rpc.projectId,
+          });
 
-        if (!options.networks.length) {
-          throw new Error("No networks found for WalletConnect·");
+          if (!options.networks.length) {
+            throw new Error("No networks found for WalletConnect·");
+          }
+
+          appKit = createAppkit({
+            ...options,
+            universalProvider: this.signer as any,
+            manualWCControl: true,
+          });
         }
-
-        appKit = createAppKit({
-          ...options,
-          universalProvider: this.signer as any,
-          manualWCControl: true,
-        });
       } catch (e) {
+        console.error(e);
         throw new Error("To use QR modal, please install @reown/appkit package");
       }
       if (appKit) {
