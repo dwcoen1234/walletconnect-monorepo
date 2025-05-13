@@ -47,6 +47,7 @@ import {
   getInternalError,
   isNode,
   calcExpiry,
+  isAppVisible,
 } from "@walletconnect/utils";
 
 import {
@@ -65,6 +66,7 @@ import {
 import { MessageTracker } from "./messages";
 import { Publisher } from "./publisher";
 import { Subscriber } from "./subscriber";
+import { HEARTBEAT_EVENTS } from "@walletconnect/heartbeat";
 
 export class Relayer extends IRelayer {
   public protocol = "wc";
@@ -616,6 +618,18 @@ export class Relayer extends IRelayer {
         await this.transportOpen().catch((error) =>
           this.logger.error(error, (error as Error)?.message),
         );
+      }
+    });
+
+    this.core.heartbeat.on(HEARTBEAT_EVENTS.pulse, async () => {
+      if (this.transportExplicitlyClosed) return;
+      if (!this.connected && isAppVisible()) {
+        try {
+          await this.confirmOnlineStateOrThrow();
+          await this.transportOpen();
+        } catch (error) {
+          this.logger.warn(error, (error as Error)?.message);
+        }
       }
     });
   }
