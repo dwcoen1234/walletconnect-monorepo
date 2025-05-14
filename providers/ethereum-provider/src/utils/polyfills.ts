@@ -10,6 +10,9 @@ if (isReactNative()) {
   }
   if (typeof global.document === "undefined") {
     global.document = {
+      // `@walletconnect/utils` uses this to check if the document is polyfilled
+      // @ts-ignore
+      walletConnectPolyfill: true,
       // @ts-ignore
       createElement: () => ({}),
       getElementById: () => null,

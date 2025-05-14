@@ -6,7 +6,11 @@ import {
   EngineTypes,
   RelayerTypes,
 } from "@walletconnect/types";
-import { getDocument, getLocation, getNavigator } from "@walletconnect/window-getters";
+import {
+  getDocument as _getDocument,
+  getLocation,
+  getNavigator,
+} from "@walletconnect/window-getters";
 import { getWindowMetadata } from "@walletconnect/window-metadata";
 import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import { IKeyValueStorage } from "@walletconnect/keyvaluestorage";
@@ -34,6 +38,16 @@ export const ONE_THOUSAND = 1000;
 export const SDK_TYPE = "js";
 
 // -- env -----------------------------------------------//
+
+export function getDocument(): Document | undefined {
+  const document = _getDocument();
+  // cater to our custom polyfill set by `@walletconnect/ethereum-provider`
+  // @ts-ignore
+  if (document && document?.walletConnectPolyfill) {
+    return undefined;
+  }
+  return document;
+}
 
 export function isNode(): boolean {
   return (
