@@ -608,9 +608,7 @@ export class EthereumProvider implements IEthereumProvider {
       let appKit;
       try {
         if (isBrowser()) {
-          // @rollup-ignore-next-line
-          const untouchedRequire = require;
-          const createAppkit = untouchedRequire("@reown/appkit/core").createAppKit;
+          const { createAppKit } = await import("@reown/appkit");
           const { convertWCMToAppKitOptions } = await import("./wcmToAppKit");
           const options = convertWCMToAppKitOptions({
             ...this.rpc.qrModalOptions,
@@ -623,7 +621,7 @@ export class EthereumProvider implements IEthereumProvider {
             throw new Error("No networks found for WalletConnect·");
           }
 
-          appKit = createAppkit({
+          appKit = createAppKit({
             ...options,
             universalProvider: this.signer as any,
             manualWCControl: true,
