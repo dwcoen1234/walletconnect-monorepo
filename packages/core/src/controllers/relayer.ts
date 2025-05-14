@@ -50,6 +50,8 @@ import {
   isAppVisible,
 } from "@walletconnect/utils";
 
+import { HEARTBEAT_EVENTS } from "@walletconnect/heartbeat";
+
 import {
   RELAYER_SDK_VERSION,
   RELAYER_CONTEXT,
@@ -66,7 +68,6 @@ import {
 import { MessageTracker } from "./messages";
 import { Publisher } from "./publisher";
 import { Subscriber } from "./subscriber";
-import { HEARTBEAT_EVENTS } from "@walletconnect/heartbeat";
 
 export class Relayer extends IRelayer {
   public protocol = "wc";
