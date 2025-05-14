@@ -268,168 +268,208 @@ describe("Relayer", () => {
         ).to.be.true;
       });
     });
-    describe("transport", () => {
-      beforeEach(async () => {
-        core = new Core(TEST_CORE_OPTIONS);
-        relayer = core.relayer;
-        await core.start();
-        relayer.subscriber.subscriptions.set(randomTopic, {
-          topic: randomTopic,
-          id: randomTopic,
-          relay: { protocol: "irn" },
-        });
+  });
+  describe("transport", () => {
+    beforeEach(async () => {
+      core = new Core(TEST_CORE_OPTIONS);
+      relayer = core.relayer;
+      await core.start();
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
       });
-      it("should restart transport after connection drop", async () => {
-        const randomSessionIdentifier = relayer.core.crypto.randomSessionIdentifier;
-        await relayer.transportOpen();
-        const timeout = setTimeout(() => {
-          throw new Error("Connection did not restart after disconnect");
-        }, 5_001);
-        await Promise.all([
-          new Promise<void>((resolve) => {
-            relayer.once(RELAYER_EVENTS.connect, () => {
-              expect(relayer.connected).to.be.true;
-              resolve();
-            });
-          }),
-          new Promise<void>((resolve) => {
-            relayer.once(RELAYER_EVENTS.disconnect, () => {
-              expect(relayer.connected).to.be.false;
-              resolve();
-            });
-          }),
-          relayer.provider.connection.close(),
-        ]);
-        clearTimeout(timeout);
-        // the identifier should be the same
-        expect(relayer.core.crypto.randomSessionIdentifier).to.eq(randomSessionIdentifier);
-      });
-      it("should connect once regardless of the number of disconnect events", async () => {
-        const disconnectsToEmit = 10;
-        let disconnectsReceived = 0;
-        let connectReceived = 0;
-        relayer.on(RELAYER_EVENTS.connect, () => {
-          connectReceived++;
-        });
-        relayer.on(RELAYER_EVENTS.disconnect, () => {
-          disconnectsReceived++;
-        });
-        await Promise.all(
-          Array.from(Array(disconnectsToEmit).keys()).map(() => relayer.onDisconnectHandler()),
-        );
-        await throttle(5_000);
-        expect(connectReceived).to.eq(1);
-        expect(disconnectsReceived).to.eq(disconnectsToEmit);
-      });
-
-      it("should not start wss connection on init without subscriber topics", async () => {
-        relayer = new Relayer({
-          core,
-          relayUrl: TEST_CORE_OPTIONS.relayUrl,
-          projectId: TEST_CORE_OPTIONS.projectId,
-        });
-        await relayer.init();
-        await throttle(1_000); // +1 sec buffer
-        expect(relayer.connected).to.be.false;
-      });
-
-      it("should start transport on subscribe attempt", async () => {
-        relayer = new Relayer({
-          core,
-          relayUrl: TEST_CORE_OPTIONS.relayUrl,
-          projectId: TEST_CORE_OPTIONS.projectId,
-        });
-        await relayer.init();
-        expect(relayer.connected).to.be.false;
-        const topic = generateRandomBytes32();
-        await relayer.subscribe(topic);
-        await throttle(1_000); // +1 sec buffer
-        expect(relayer.connected).to.be.true;
-      });
-      it(`should connect to ${RELAYER_DEFAULT_RELAY_URL} relay url`, async () => {
-        relayer = new Relayer({
-          core,
-          projectId: TEST_CORE_OPTIONS.projectId,
-        });
-        await relayer.init();
-        relayer.subscriber.subscriptions.set(randomTopic, {
-          topic: randomTopic,
-          id: randomTopic,
-          relay: { protocol: "irn" },
-        });
-        await relayer.transportOpen();
-        const wsConnection = relayer.provider.connection as unknown as WebSocket;
-        expect(relayer.connected).to.be.true;
-        expect(wsConnection.url.startsWith(RELAYER_DEFAULT_RELAY_URL)).to.be.true;
-      });
-      it("should not throw an error if terminate() is not available", async () => {
-        const relayer = new Relayer({
-          core,
-          relayUrl: TEST_CORE_OPTIONS.relayUrl,
-          projectId: TEST_CORE_OPTIONS.projectId,
-        });
-        await relayer.init();
-        relayer.subscriber.subscriptions.set(randomTopic, {
-          topic: randomTopic,
-          id: randomTopic,
-          relay: { protocol: "irn" },
-        });
-        await relayer.transportOpen();
-        expect(relayer.connected).to.be.true;
-        //@ts-expect-error - private property
-        relayer.provider.connection.socket.terminate = undefined;
-        //@ts-expect-error - private property
-        relayer.heartBeatTimeout = 1000;
-        //@ts-expect-error - private method
-        relayer.resetPingTimeout();
-        await throttle(2000);
-        await relayer.transportClose();
-        expect(relayer.connected).to.be.false;
-      });
-      it("should not run into a race condition when `toEstablishConnection` is called while connecting is in progress", async () => {
-        const relayer = new Relayer({
-          core,
-          relayUrl: TEST_CORE_OPTIONS.relayUrl,
-          projectId: TEST_CORE_OPTIONS.projectId,
-        });
-        await relayer.init();
-        relayer.subscriber.subscriptions.set(randomTopic, {
-          topic: randomTopic,
-          id: randomTopic,
-          relay: { protocol: "irn" },
-        });
-
-        // artificially slow down the connect method
-        // and call `toEstablishConnection` multiple times while connecting is in progress
-        // to ensure `connect` is called only once
-        const originalConnect = relayer.connect.bind(relayer);
-        let connectCalled = 0;
-        vi.spyOn(relayer, "connect").mockImplementation(() => {
-          return new Promise<void>((resolve) => {
-            connectCalled++;
-            setTimeout(async () => {
-              await originalConnect();
-              resolve();
-            }, 2000);
-          });
-        });
-
-        await Promise.all([
-          relayer.transportOpen(),
-          new Promise<void>(async (resolve) => {
-            await throttle(500);
-            const a = Array.from(Array(10).keys()).map(() => {
-              relayer.toEstablishConnection();
-            });
-            await Promise.all(a);
+    });
+    it("should restart transport after connection drop", async () => {
+      const randomSessionIdentifier = relayer.core.crypto.randomSessionIdentifier;
+      await relayer.transportOpen();
+      const timeout = setTimeout(() => {
+        throw new Error("Connection did not restart after disconnect");
+      }, 5_001);
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          relayer.once(RELAYER_EVENTS.connect, () => {
+            expect(relayer.connected).to.be.true;
             resolve();
-          }),
-        ]);
-
-        await throttle(1000);
-        expect(connectCalled).to.eq(1);
-        await relayer.transportClose();
+          });
+        }),
+        new Promise<void>((resolve) => {
+          relayer.once(RELAYER_EVENTS.disconnect, () => {
+            expect(relayer.connected).to.be.false;
+            resolve();
+          });
+        }),
+        relayer.provider.connection.close(),
+      ]);
+      clearTimeout(timeout);
+      // the identifier should be the same
+      expect(relayer.core.crypto.randomSessionIdentifier).to.eq(randomSessionIdentifier);
+    });
+    it("should connect once regardless of the number of disconnect events", async () => {
+      const disconnectsToEmit = 10;
+      let disconnectsReceived = 0;
+      let connectReceived = 0;
+      relayer.on(RELAYER_EVENTS.connect, () => {
+        connectReceived++;
       });
+      relayer.on(RELAYER_EVENTS.disconnect, () => {
+        disconnectsReceived++;
+      });
+      await Promise.all(
+        Array.from(Array(disconnectsToEmit).keys()).map(() => relayer.onDisconnectHandler()),
+      );
+      await throttle(5_000);
+      expect(connectReceived).to.eq(1);
+      expect(disconnectsReceived).to.eq(disconnectsToEmit);
+    });
+
+    it("should not start wss connection on init without subscriber topics", async () => {
+      relayer = new Relayer({
+        core,
+        relayUrl: TEST_CORE_OPTIONS.relayUrl,
+        projectId: TEST_CORE_OPTIONS.projectId,
+      });
+      await relayer.init();
+      await throttle(1_000); // +1 sec buffer
+      expect(relayer.connected).to.be.false;
+    });
+
+    it("should start transport on subscribe attempt", async () => {
+      relayer = new Relayer({
+        core,
+        relayUrl: TEST_CORE_OPTIONS.relayUrl,
+        projectId: TEST_CORE_OPTIONS.projectId,
+      });
+      await relayer.init();
+      expect(relayer.connected).to.be.false;
+      const topic = generateRandomBytes32();
+      await relayer.subscribe(topic);
+      await throttle(1_000); // +1 sec buffer
+      expect(relayer.connected).to.be.true;
+    });
+    it(`should connect to ${RELAYER_DEFAULT_RELAY_URL} relay url`, async () => {
+      relayer = new Relayer({
+        core,
+        projectId: TEST_CORE_OPTIONS.projectId,
+      });
+      await relayer.init();
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+      await relayer.transportOpen();
+      const wsConnection = relayer.provider.connection as unknown as WebSocket;
+      expect(relayer.connected).to.be.true;
+      expect(wsConnection.url.startsWith(RELAYER_DEFAULT_RELAY_URL)).to.be.true;
+    });
+    it("should not throw an error if terminate() is not available", async () => {
+      const relayer = new Relayer({
+        core,
+        relayUrl: TEST_CORE_OPTIONS.relayUrl,
+        projectId: TEST_CORE_OPTIONS.projectId,
+      });
+      await relayer.init();
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+      await relayer.transportOpen();
+      expect(relayer.connected).to.be.true;
+      //@ts-expect-error - private property
+      relayer.provider.connection.socket.terminate = undefined;
+      //@ts-expect-error - private property
+      relayer.heartBeatTimeout = 1000;
+      //@ts-expect-error - private method
+      relayer.resetPingTimeout();
+      await throttle(2000);
+      await relayer.transportClose();
+      expect(relayer.connected).to.be.false;
+    });
+    it("should not run into a race condition when `toEstablishConnection` is called while connecting is in progress", async () => {
+      const relayer = new Relayer({
+        core,
+        relayUrl: TEST_CORE_OPTIONS.relayUrl,
+        projectId: TEST_CORE_OPTIONS.projectId,
+      });
+      await relayer.init();
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+
+      // artificially slow down the connect method
+      // and call `toEstablishConnection` multiple times while connecting is in progress
+      // to ensure `connect` is called only once
+      const originalConnect = relayer.connect.bind(relayer);
+      let connectCalled = 0;
+      vi.spyOn(relayer, "connect").mockImplementation(() => {
+        return new Promise<void>((resolve) => {
+          connectCalled++;
+          setTimeout(async () => {
+            await originalConnect();
+            resolve();
+          }, 2000);
+        });
+      });
+
+      await Promise.all([
+        relayer.transportOpen(),
+        new Promise<void>(async (resolve) => {
+          await throttle(500);
+          const a = Array.from(Array(10).keys()).map(() => {
+            relayer.toEstablishConnection();
+          });
+          await Promise.all(a);
+          resolve();
+        }),
+      ]);
+
+      await throttle(1000);
+      expect(connectCalled).to.eq(1);
+      await relayer.transportClose();
+    });
+
+    it("should restart transport via heartbeat pulse when app is back in foreground & network is online", async () => {
+      expect(relayer.connected).to.be.false;
+
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+
+      expect(relayer.connected).to.be.false;
+      // heartbeat pulses every ~5s so we need extra to connect + subscribe
+      await throttle(6500);
+      expect(relayer.connected).to.be.true;
+      await relayer.transportClose();
+    });
+    it("should not restart transport via heartbeat pulse when there are no topics", async () => {
+      expect(relayer.connected).to.be.false;
+      relayer.subscriber.subscriptions.clear();
+      expect(relayer.connected).to.be.false;
+      // heartbeat pulses every ~5s so we need extra to connect + subscribe
+      await throttle(6500);
+      expect(relayer.connected).to.be.false;
+      await relayer.transportClose();
+    });
+    it("should not restart transport via heartbeat pulse when transport is explicitly closed", async () => {
+      expect(relayer.connected).to.be.false;
+
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+
+      await relayer.transportClose();
+      expect(relayer.connected).to.be.false;
+      // heartbeat pulses every ~5s so we need extra to connect + subscribe
+      await throttle(6500);
+      expect(relayer.connected).to.be.false;
     });
   });
   describe("packageName and bundleId validations", () => {

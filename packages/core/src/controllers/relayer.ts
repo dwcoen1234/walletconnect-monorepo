@@ -47,7 +47,10 @@ import {
   getInternalError,
   isNode,
   calcExpiry,
+  isAppVisible,
 } from "@walletconnect/utils";
+
+import { HEARTBEAT_EVENTS } from "@walletconnect/heartbeat";
 
 import {
   RELAYER_SDK_VERSION,
@@ -616,6 +619,18 @@ export class Relayer extends IRelayer {
         await this.transportOpen().catch((error) =>
           this.logger.error(error, (error as Error)?.message),
         );
+      }
+    });
+
+    this.core.heartbeat.on(HEARTBEAT_EVENTS.pulse, async () => {
+      if (this.transportExplicitlyClosed) return;
+      if (!this.connected && isAppVisible()) {
+        try {
+          await this.confirmOnlineStateOrThrow();
+          await this.transportOpen();
+        } catch (error) {
+          this.logger.warn(error, (error as Error)?.message);
+        }
       }
     });
   }

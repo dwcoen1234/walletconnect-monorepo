@@ -1,3 +1,4 @@
+import { getDocument } from "@walletconnect/window-getters";
 import { getEnvironment, ENV_MAP, isBrowser, isReactNative } from "./misc";
 
 export function isOnline(): Promise<boolean> {
@@ -69,4 +70,13 @@ export function subscribeToReactNativeNetworkChange(callbackHandler: (connected:
   if (isReactNative() && typeof global !== "undefined" && (global as any)?.NetInfo) {
     (global as any)?.NetInfo.addEventListener((state: any) => callbackHandler(state?.isConnected));
   }
+}
+
+export function isAppVisible(): boolean {
+  if (isBrowser() && getDocument()) {
+    return getDocument()?.visibilityState === "visible";
+  }
+  // TODO: implement reliable visibility check for react-native
+  // node.js does not have a visibilityState
+  return true;
 }
