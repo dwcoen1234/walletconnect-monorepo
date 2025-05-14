@@ -10,7 +10,7 @@ const plugins = [
   json(),
   commonjs(),
   esbuild({
-    minify: false,
+    minify: true,
     tsconfig: "./tsconfig.json",
     loaders: {
       ".json": "json",
