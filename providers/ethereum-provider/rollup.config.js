@@ -4,37 +4,35 @@ import alias from "@rollup/plugin-alias";
 import path from "path";
 
 const options = { inlineDynamicImports: true };
-// @walletconnect/modal has dynamic imports, so we need to enable inlineDynamicImports
-export default createConfig(
-  name,
-  // keep `@reown/appkit/core` in the external dependencies, else the builds will balloon in size
-  Object.keys({ ...dependencies, ...peerDependencies }).concat("@reown/appkit/core"),
-  options,
-  options,
-  options,
-  [
-    {
-      input,
-      plugins: [
-        alias({
-          entries: [
-            {
-              // this config allows separate files to be used for the browser and native builds
-              find: "./utils/appkit",
-              replacement: path.resolve(__dirname, `src/utils/appkit.native.ts`),
-            },
-          ],
-        }),
-        ...plugins,
-      ],
-      output: {
-        file: "./dist/index.native.js",
-        format: "cjs",
-        exports: "named",
-        name,
-        sourcemap: true,
-        ...options,
-      },
-    },
-  ],
+
+// keep `@reown/appkit/core` in the external dependencies, else the builds will balloon in size
+const externalDependencies = Object.keys({ ...dependencies, ...peerDependencies }).concat(
+  "@reown/appkit/core",
 );
+// @walletconnect/modal has dynamic imports, so we need to enable inlineDynamicImports
+export default createConfig(name, externalDependencies, options, options, options, [
+  {
+    input,
+    plugins: [
+      alias({
+        entries: [
+          {
+            // this config allows separate files to be used for the browser and native builds
+            find: "./utils/appkit",
+            replacement: path.resolve(__dirname, `src/utils/appkit.native.ts`),
+          },
+        ],
+      }),
+      ...plugins,
+    ],
+    external: externalDependencies,
+    output: {
+      file: "./dist/index.native.js",
+      format: "cjs",
+      exports: "named",
+      name,
+      sourcemap: true,
+      ...options,
+    },
+  },
+]);
