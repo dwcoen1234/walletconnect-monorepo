@@ -29,7 +29,7 @@ import {
   OPTIONAL_METHODS,
   OPTIONAL_EVENTS,
 } from "./constants";
-import "./utils/polyfills";
+import { getAppkit } from "./utils/appkit";
 
 export type RpcMethod =
   | "personal_sign"
@@ -608,26 +608,24 @@ export class EthereumProvider implements IEthereumProvider {
     if (this.rpc.showQrModal) {
       let appKit;
       try {
-        if (isBrowser()) {
-          const { createAppKit } = await import("@reown/appkit/core");
-          const { convertWCMToAppKitOptions } = await import("./wcmToAppKit");
-          const options = convertWCMToAppKitOptions({
-            ...this.rpc.qrModalOptions,
-            chains: [...new Set([...this.rpc.chains, ...this.rpc.optionalChains])],
-            metadata: this.rpc.metadata,
-            projectId: this.rpc.projectId,
-          });
+        const createAppKit = await getAppkit();
+        const { convertWCMToAppKitOptions } = await import("./wcmToAppKit");
+        const options = convertWCMToAppKitOptions({
+          ...this.rpc.qrModalOptions,
+          chains: [...new Set([...this.rpc.chains, ...this.rpc.optionalChains])],
+          metadata: this.rpc.metadata,
+          projectId: this.rpc.projectId,
+        });
 
-          if (!options.networks.length) {
-            throw new Error("No networks found for WalletConnect·");
-          }
-
-          appKit = createAppKit({
-            ...options,
-            universalProvider: this.signer as any,
-            manualWCControl: true,
-          });
+        if (!options.networks.length) {
+          throw new Error("No networks found for WalletConnect·");
         }
+
+        appKit = createAppKit({
+          ...options,
+          universalProvider: this.signer as any,
+          manualWCControl: true,
+        });
       } catch (e) {
         console.warn(e);
         throw new Error("To use QR modal, please install @reown/appkit package");
