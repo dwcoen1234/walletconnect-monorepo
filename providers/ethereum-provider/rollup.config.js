@@ -7,6 +7,7 @@ const options = { inlineDynamicImports: true };
 // @walletconnect/modal has dynamic imports, so we need to enable inlineDynamicImports
 export default createConfig(
   name,
+  // keep `@reown/appkit/core` in the external dependencies, else the builds will balloon in size
   Object.keys({ ...dependencies, ...peerDependencies }).concat("@reown/appkit/core"),
   options,
   options,
@@ -18,6 +19,7 @@ export default createConfig(
         alias({
           entries: [
             {
+              // this config allows separate files to be used for the browser and native builds
               find: "./utils/appkit",
               replacement: path.resolve(__dirname, `src/utils/appkit.native.ts`),
             },

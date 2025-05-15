@@ -9,4 +9,4 @@
 "@walletconnect/universal-provider": patch
 ---
 
-Implemented heartbeat connection checker to avoid cases where unreliable browser network state can cause the SDK to stay without active ws connection
+Added new dedicated build of `ethereum-provider` for `react-native` that doesn't try to import `Appkit`
