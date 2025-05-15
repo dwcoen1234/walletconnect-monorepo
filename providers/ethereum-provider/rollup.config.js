@@ -3,13 +3,13 @@ import createConfig, { input, plugins } from "../../rollup.config";
 import alias from "@rollup/plugin-alias";
 import path from "path";
 
+// `ethereum-provider` has dynamic imports, so we need to enable inlineDynamicImports
 const options = { inlineDynamicImports: true };
 
 // keep `@reown/appkit/core` in the external dependencies, else the builds will balloon in size
 const externalDependencies = Object.keys({ ...dependencies, ...peerDependencies }).concat(
   "@reown/appkit/core",
 );
-// @walletconnect/modal has dynamic imports, so we need to enable inlineDynamicImports
 export default createConfig(name, externalDependencies, options, options, options, [
   {
     input,

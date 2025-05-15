@@ -3,8 +3,6 @@ import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
 import visualizer from "rollup-plugin-visualizer";
-import alias from "@rollup/plugin-alias";
-import path from "path";
 
 export const input = "./src/index.ts";
 export const plugins = [
