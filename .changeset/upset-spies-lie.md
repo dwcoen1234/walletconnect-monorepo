@@ -9,4 +9,4 @@
 "@walletconnect/universal-provider": patch
 ---
 
-Added polyfills so `ethereum-provider` can be used in React Native expo environments. The polyfills are required because `@reown/appkit` is now part of the bundle in place of the deprecated WCM
+Added new dedicated build of `ethereum-provider` for `react-native` that doesn't try to import `Appkit`
