@@ -24,6 +24,7 @@ import {
   OPTIONAL_METHODS,
   OPTIONAL_EVENTS,
 } from "./constants";
+import { getAppkit } from "./utils/appkit";
 
 export type RpcMethod =
   | "personal_sign"
@@ -602,7 +603,7 @@ export class EthereumProvider implements IEthereumProvider {
     if (this.rpc.showQrModal) {
       let appKit;
       try {
-        const { createAppKit } = await import("@reown/appkit/core");
+        const createAppKit = await getAppkit();
         const { convertWCMToAppKitOptions } = await import("./wcmToAppKit");
         const options = convertWCMToAppKitOptions({
           ...this.rpc.qrModalOptions,
@@ -621,6 +622,7 @@ export class EthereumProvider implements IEthereumProvider {
           manualWCControl: true,
         });
       } catch (e) {
+        console.warn(e);
         throw new Error("To use QR modal, please install @reown/appkit package");
       }
       if (appKit) {
