@@ -1,5 +1,13 @@
 # @walletconnect/types
 
+## 2.20.3
+
+### Patch Changes
+
+- [#6302](https://github.com/WalletConnect/walletconnect-monorepo/pull/6302) [`2d9648ab4d3892a4903ceec52472420b3009f3c7`](https://github.com/WalletConnect/walletconnect-monorepo/commit/2d9648ab4d3892a4903ceec52472420b3009f3c7) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Added new dedicated build of `ethereum-provider` for `react-native` that doesn't try to import `Appkit`
+
+- [#6304](https://github.com/WalletConnect/walletconnect-monorepo/pull/6304) [`b566edcc1448b31c2ab8fa469e8a19c976ce74f8`](https://github.com/WalletConnect/walletconnect-monorepo/commit/b566edcc1448b31c2ab8fa469e8a19c976ce74f8) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Added new dedicated build of `ethereum-provider` for `react-native` that doesn't try to import `Appkit`
+
 ## 2.20.2
 
 ### Patch Changes
