@@ -99,6 +99,7 @@ import {
   isTestRun,
   isValidArray,
   extractSolanaTransactionId,
+  getSuiDigest,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -3153,6 +3154,10 @@ export class Engine extends IEngine {
 
       // result = { key: [0x...] } or { key: 0x... }
       const hashes: string[] = result[methodConfig.key];
+
+      if (method === "sui_signTransaction") {
+        return [getSuiDigest(result.transactionBytes)];
+      }
 
       // result = { key: [0x...] }
       if (isValidArray(hashes)) {

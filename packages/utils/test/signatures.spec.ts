@@ -1,6 +1,11 @@
 import { AuthTypes } from "@walletconnect/types";
 import { describe, expect, it } from "vitest";
-import { extractSolanaTransactionId, isValidEip191Signature, verifySignature } from "../src";
+import {
+  extractSolanaTransactionId,
+  getSuiDigest,
+  isValidEip191Signature,
+  verifySignature,
+} from "../src";
 
 describe("utils/signature", () => {
   describe("EIP-1271 signatures", () => {
@@ -117,7 +122,8 @@ Expiration Time: 2022-10-11T23:03:35.700Z`;
       const signature = "0xd7ec09eb8ecb1ba9af45380e14d3ef1a1ec2376e0adfc0a9b591e";
       await expect(isValidEip191Signature(address, message, signature)).rejects.toThrow();
     });
-
+  });
+  describe("tvf", () => {
     it("should extract the transaction id from a solana transaction", () => {
       const transaction =
         "AeJw688VKMWEeOHsYhe03By/2rqJHTQeq6W4L1ZLdbT2l/Nim8ctL3erMyH9IWPsQP73uaarRmiVfanEJHx7uQ4BAAIDb3ObYkq6BFd46JrMFy1h0Q+dGmyRGtpelqTKkIg82isAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMGRm/lIRcy/+ytunLDm+e8jOW7xfcSayxDmzpAAAAAtIy17v5fs39LuoitzpBhVrg8ZIQF/3ih1N9dQ+X3shEDAgAFAlgCAAABAgAADAIAAACghgEAAAAAAAIACQMjTgAAAAAAAA==";
@@ -130,6 +136,13 @@ Expiration Time: 2022-10-11T23:03:35.700Z`;
       const transaction =
         "+dGmyRGtpelqTKkIg82isAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMGRm/lIRcy/+ytunLDm+e8jOW7xfcSayxDmzpAAAAAtIy17v5fs39LuoitzpBhVrg8ZIQF/3ih1N9dQ+X3shEDAgAFAlgCAAABAgAADAIAAACghgEAAAAAAAIACQMjTgAAAAAAAA==";
       expect(() => extractSolanaTransactionId(transaction)).to.throw();
+    });
+    it("should extract the digest from a sui transaction", () => {
+      const expectedDigest = "C98G1Uwh5soPMtZZmjUFwbVzWLMoAHzi5jrX2BtABe8v";
+      const base64Tx =
+        "AAACAAhkAAAAAAAAAAAg1fZH7bd9T9ox0DBFBkR/s8kuVar3e8XtS3fDMt1GBfoCAgABAQAAAQEDAAAAAAEBANX2R+23fU/aMdAwRQZEf7PJLlWq93vF7Ut3wzLdRgX6At/pRJzj2VpZgqXpSvEtd3GzPvt99hR8e/yOCGz/8nbRmA7QFAAAAAAgBy5vStJizn76LmJTBlDiONdR/2rSuzzS4L+Tp/Zs4hZ8cBxYkcSlxBD6QXvgS11E6d+DNek8LiA/beba6iH3l5gO0BQAAAAAIMpdmZjiqJ5GG9di1MAgD4S3uRr2gaMC7S1WsaeBwNIx1fZH7bd9T9ox0DBFBkR/s8kuVar3e8XtS3fDMt1GBfroAwAAAAAAAECrPAAAAAAAAA==";
+      const digest = getSuiDigest(base64Tx);
+      expect(digest).toBe(expectedDigest);
     });
   });
 });

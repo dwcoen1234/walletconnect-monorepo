@@ -1,7 +1,9 @@
 import { keccak_256 } from "@noble/hashes/sha3";
 import { recoverAddress } from "viem";
-import { AuthTypes } from "@walletconnect/types";
 import bs58 from "bs58";
+import { blake2b } from "@noble/hashes/blake2b";
+
+import { AuthTypes } from "@walletconnect/types";
 
 import { parseChainId } from "./caip";
 
@@ -140,4 +142,19 @@ export function extractSolanaTransactionId(solanaTransaction: string): string {
   const signatureBuffer = transactionBuffer.slice(1, 65);
 
   return bs58.encode(signatureBuffer);
+}
+
+export function getSuiDigest(transaction: string) {
+  const txBytes = new Uint8Array(Buffer.from(transaction, "base64"));
+
+  const typeTagBytes = Array.from(`TransactionData::`).map((e) => e.charCodeAt(0));
+
+  const dataWithTag = new Uint8Array(typeTagBytes.length + txBytes.length);
+
+  dataWithTag.set(typeTagBytes);
+  dataWithTag.set(txBytes, typeTagBytes.length);
+
+  const hash = blake2b(dataWithTag, { dkLen: 32 });
+
+  return bs58.encode(hash);
 }

@@ -165,4 +165,12 @@ export const TVF_METHODS = {
   solana_signAndSendTransaction: {
     key: "signature",
   },
+
+  sui_signAndExecuteTransaction: {
+    key: "digest",
+  },
+
+  sui_signTransaction: {
+    key: "",
+  },
 };
