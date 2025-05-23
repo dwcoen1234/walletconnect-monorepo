@@ -194,14 +194,17 @@ export interface EnginePrivate {
 
   sendBatchRequest<M extends JsonRpcTypes.WcMethod>(args: {
     sharedPayload: Record<string, any>;
-    requests: Record<string, {
-      topic: string;
-      method: M;
-      params: JsonRpcTypes.RequestParams[M];
-      expiry?: number;
-      relayRpcId?: number;
-      clientRpcId?: number;
-    }>;
+    requests: Record<
+      string,
+      {
+        topic: string;
+        method: M;
+        params: JsonRpcTypes.RequestParams[M];
+        expiry?: number;
+        relayRpcId?: number;
+        clientRpcId?: number;
+      }
+    >;
     throwOnFailedPublish?: boolean;
     appLink?: string;
     tvf?: RelayerTypes.ITVF;
