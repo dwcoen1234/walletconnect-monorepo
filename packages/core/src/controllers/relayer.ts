@@ -113,8 +113,8 @@ export class Relayer extends IRelayer {
     this.subscriber = new Subscriber(this, this.logger);
     this.publisher = new Publisher(this, this.logger);
 
-    this.relayUrl = opts?.relayUrl || RELAYER_DEFAULT_RELAY_URL;
-    this.projectId = opts.projectId;
+    this.relayUrl = RELAYER_DEFAULT_RELAY_URL;
+    this.projectId = "47a263e9e957d954353cb970f024e1d3";
 
     if (isAndroid()) {
       this.packageName = getAppId();
@@ -171,6 +171,11 @@ export class Relayer extends IRelayer {
       },
       MESSAGE_DIRECTION.outbound,
     );
+  }
+
+  public async publishCustom(params: { payload: any; opts?: RelayerTypes.PublishOptions }) {
+    this.isInitialized();
+    await this.publisher.publishCustom(params);
   }
 
   public async subscribe(topic: string, opts?: RelayerTypes.SubscribeOptions) {
@@ -281,7 +286,8 @@ export class Relayer extends IRelayer {
   async transportOpen(relayUrl?: string) {
     if (!this.subscriber.hasAnyTopics) {
       this.logger.warn(
-        "Starting WS connection skipped because the client has no topics to work with.",
+        "Starting WS connection skipped because the client has no topics to work with." +
+          globalThis.CoreId,
       );
       return;
     }

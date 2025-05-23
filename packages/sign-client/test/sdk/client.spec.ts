@@ -75,11 +75,9 @@ describe("Sign Client Integration", () => {
 
   describe("connect", () => {
     it("connect (with new pairing)", async () => {
-      const { clients, sessionA, pairingA } = await initTwoPairedClients(
-        {},
-        {},
-        { logger: "error" },
-      );
+      const clients = await initTwoClients({}, {}, { logger: "warn" });
+      const { pairingA, sessionA } = await testConnectMethod(clients);
+
       expect(pairingA).to.be.exist;
       expect(sessionA).to.be.exist;
       expect(pairingA.topic).to.eq(sessionA.pairingTopic);

@@ -112,7 +112,10 @@ export class Pairing implements IPairing {
     this.events.emit(PAIRING_EVENTS.create, pairing);
     this.core.expirer.set(topic, expiry);
     await this.pairings.set(topic, pairing);
-    await this.core.relayer.subscribe(topic, { transportType: params?.transportType });
+    await this.core.relayer.subscribe(topic, {
+      transportType: params?.transportType,
+      internal: params?.internal,
+    });
 
     return { topic, uri };
   };
