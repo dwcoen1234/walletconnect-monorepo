@@ -480,7 +480,6 @@ export class UniversalProvider implements IUniversalProvider {
       ...optionalNamespaces,
     };
 
-    console.log("this.optionalNamespaces", this.optionalNamespaces);
     this.sessionProperties = sessionProperties;
     this.scopedProperties = scopedProperties;
   }
