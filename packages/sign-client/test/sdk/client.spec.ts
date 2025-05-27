@@ -1356,7 +1356,7 @@ describe("Sign Client Integration", () => {
       const {
         sessionA: { topic },
       } = await testConnectMethod(clients, {
-        requiredNamespaces: TEST_REQUIRED_NAMESPACES_V2,
+        optionalNamespaces: TEST_REQUIRED_NAMESPACES_V2,
         namespaces: TEST_NAMESPACES_V2,
       });
       const testRequestProps = {
@@ -1374,7 +1374,7 @@ describe("Sign Client Integration", () => {
                 acc.includes(TEST_AVALANCHE_CHAIN),
               ),
             ).to.exist;
-            expect(session.requiredNamespaces[TEST_AVALANCHE_CHAIN]).to.exist;
+            expect(session.optionalNamespaces[TEST_AVALANCHE_CHAIN]).to.exist;
             await clients.B.respond({
               topic,
               response: formatJsonRpcResult(payload.id, "test response"),
