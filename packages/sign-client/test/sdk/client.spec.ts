@@ -134,6 +134,44 @@ describe("Sign Client Integration", () => {
 
       await deleteClients(clients);
     });
+    it("should assign requiredNamespaces to optionalNamespaces", async () => {
+      const clients = await initTwoClients();
+      const requestedRequiredNamespaces = {
+        eip155: {
+          chains: ["eip155:1", "eip155:2"],
+          methods: ["eth_sendTransaction", "eth_sign"],
+          events: ["chainChanged", "accountsChanged"],
+        },
+      };
+      const { uri, approval } = await clients.A.connect({
+        requiredNamespaces: requestedRequiredNamespaces,
+      });
+      if (!uri) throw new Error("URI is undefined");
+
+      const session = await Promise.all([
+        new Promise<void>((resolve) => {
+          clients.B.once("session_proposal", async (params) => {
+            const { requiredNamespaces, optionalNamespaces } = params.params;
+
+            expect(requiredNamespaces).to.deep.equal({});
+            expect(optionalNamespaces).to.deep.equal(requestedRequiredNamespaces);
+
+            await clients.B.approve({
+              id: params.id,
+              namespaces: TEST_NAMESPACES,
+            });
+            resolve();
+          });
+        }),
+        clients.B.pair({ uri }),
+        approval(),
+      ]).then((res) => {
+        return res[2];
+      });
+      expect(session.requiredNamespaces).to.deep.equal({});
+      expect(session.optionalNamespaces).to.deep.equal(requestedRequiredNamespaces);
+      await deleteClients(clients);
+    });
     it("should connect with out of order URIs", async () => {
       const clients = await initTwoClients();
       // load three proposals
