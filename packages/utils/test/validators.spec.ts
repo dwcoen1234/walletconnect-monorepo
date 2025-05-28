@@ -1495,7 +1495,7 @@ describe("merge namespaces", () => {
   it("should merge required and optional namespaces. case 4", () => {
     const required = {
       eip155: {
-        chains: ["eip155:1"],
+        chains: ["eip155:2"],
         events: ["chainChanged"],
         methods: ["personal_sign", "eth_sendTransaction"],
       },
@@ -1507,14 +1507,14 @@ describe("merge namespaces", () => {
     };
     const optional = {
       eip155: {
-        chains: ["eip155:2"],
+        chains: ["eip155:1"],
         events: ["accountsChanged"],
         methods: ["eth_signTypedData"],
       },
     };
     const expected = {
       eip155: {
-        chains: ["eip155:1", "eip155:2"],
+        chains: ["eip155:2", "eip155:1"],
         events: ["chainChanged", "accountsChanged"],
         methods: ["personal_sign", "eth_sendTransaction", "eth_signTypedData"],
       },
