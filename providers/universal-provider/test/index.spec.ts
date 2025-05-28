@@ -1496,7 +1496,7 @@ describe("UniversalProvider", function () {
           }),
         ]);
       });
-      it("should cache `wallet_getCapabilities` request", async () => {
+      it("should cache `wallet_getCapabilities` request with different chainIds", async () => {
         const dapp = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
           name: "dapp",
@@ -1539,7 +1539,7 @@ describe("UniversalProvider", function () {
         };
         await Promise.all([
           new Promise<void>((resolve) => {
-            wallet.client.on("session_request", async (event) => {
+            wallet.client.once("session_request", async (event) => {
               await wallet.client.respond({
                 topic: event.topic,
                 response: formatJsonRpcResult(event.id, sessionPropertiesResponse),
@@ -1566,6 +1566,44 @@ describe("UniversalProvider", function () {
           params: [walletAddress],
         });
         expect(cachedResult).to.eql(sessionPropertiesResponse);
+
+        const secondCapabilitiesResult = {
+          "0x1": {
+            atomicBatch: {
+              supported: true,
+            },
+          },
+        };
+
+        await Promise.all([
+          new Promise<void>((resolve) => {
+            wallet.client.once("session_request", async (event) => {
+              await wallet.client.respond({
+                topic: event.topic,
+                response: formatJsonRpcResult(event.id, secondCapabilitiesResult),
+              });
+              resolve();
+            });
+          }),
+          new Promise<void>(async (resolve) => {
+            const result = await dapp.request({
+              method: "wallet_getCapabilities",
+              // this req has additional chainId param so it should not use cached result but make a new request to the wallet
+              params: [walletAddress, ["0x1"]],
+            });
+            expect(result).to.eql(secondCapabilitiesResult);
+            resolve();
+          }),
+        ]);
+
+        const updatedSession2 = dapp.client.session.get(sessionA.topic);
+        expect(updatedSession2.sessionProperties).to.exist;
+        expect(updatedSession2.sessionProperties?.capabilities).to.exist;
+        expect(Object.keys(updatedSession2.sessionProperties?.capabilities || {}).length).to.eql(2);
+        expect(updatedSession2.sessionProperties?.capabilities[`${walletAddress}0x1`]).to.eql(
+          secondCapabilitiesResult,
+        );
+
         await deleteProviders({ A: dapp, B: wallet });
       });
     });

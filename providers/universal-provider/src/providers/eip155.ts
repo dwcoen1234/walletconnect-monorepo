@@ -177,12 +177,18 @@ class Eip155Provider implements IProvider {
   private async getCapabilities(args: RequestParams) {
     // if capabilities are stored in the session, return them, else send the request to the wallet
     const address = args.request?.params?.[0];
+    const chainIds: string[] = args.request?.params?.[1] || [];
+
+    // cache key is address + chainIds to allow requests to be made to different chains
+    const capabilitiesKey = `${address}${chainIds.join(",")}`;
     if (!address) throw new Error("Missing address parameter in `wallet_getCapabilities` request");
     const session = this.client.session.get(args.topic);
     const sessionCapabilities = session?.sessionProperties?.capabilities || {};
-    if (sessionCapabilities?.[address]) {
-      return sessionCapabilities?.[address];
+
+    if (sessionCapabilities?.[capabilitiesKey]) {
+      return sessionCapabilities?.[capabilitiesKey];
     }
+
     // intentionally omit catching errors/rejection during `request` to allow the error to bubble up
     const capabilities = await this.client.request(args as EngineTypes.RequestParams);
     try {
@@ -192,7 +198,7 @@ class Eip155Provider implements IProvider {
           ...(session.sessionProperties || {}),
           capabilities: {
             ...(sessionCapabilities || {}),
-            [address]: capabilities,
+            [capabilitiesKey]: capabilities,
           } as any, // by spec sessionProperties should be <string, string> but here are used as objects?
         },
       });
