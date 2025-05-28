@@ -8,7 +8,12 @@ import {
   TEST_SESSION,
 } from "./shared/values";
 
-import { buildApprovedNamespaces, isConformingNamespaces, isSessionCompatible } from "../src";
+import {
+  buildApprovedNamespaces,
+  isConformingNamespaces,
+  isSessionCompatible,
+  mergeRequiredAndOptionalNamespaces,
+} from "../src";
 
 describe("Validators", () => {
   it("isSessionCompatible", () => {
@@ -1400,4 +1405,127 @@ describe("buildApprovedNamespaces (validators)", () => {
       });
     },
   );
+});
+
+describe("merge namespaces", () => {
+  it("should merge required and optional namespaces. case 1", () => {
+    const required = {
+      "eip155:1": {
+        events: ["chainChanged"],
+        methods: ["personal_sign", "eth_sendTransaction"],
+      },
+    };
+    const optional = {
+      "eip155:1": {
+        events: ["accountsChanged"],
+        methods: ["eth_sendTransaction"],
+      },
+    };
+    const expected = {
+      eip155: {
+        chains: ["eip155:1"],
+        events: ["chainChanged", "accountsChanged"],
+        methods: ["personal_sign", "eth_sendTransaction"],
+      },
+    };
+
+    const result = mergeRequiredAndOptionalNamespaces(required, optional);
+    expect(result).toEqual(expected);
+  });
+
+  it("should merge required and optional namespaces. case 2", () => {
+    const required = {
+      eip155: {
+        chains: ["eip155:1"],
+        events: ["chainChanged"],
+        methods: ["personal_sign", "eth_sendTransaction"],
+      },
+    };
+    const optional = {
+      eip155: {
+        chains: ["eip155:1"],
+        events: ["accountsChanged"],
+        methods: ["eth_sendTransaction"],
+      },
+    };
+    const expected = {
+      eip155: {
+        chains: ["eip155:1"],
+        events: ["chainChanged", "accountsChanged"],
+        methods: ["personal_sign", "eth_sendTransaction"],
+      },
+    };
+
+    const result = mergeRequiredAndOptionalNamespaces(required, optional);
+    expect(result).toEqual(expected);
+  });
+
+  it("should merge required and optional namespaces. case 3", () => {
+    const required = {
+      eip155: {
+        chains: ["eip155:1"],
+        events: ["chainChanged"],
+        methods: ["personal_sign", "eth_sendTransaction"],
+      },
+    };
+    const optional = {
+      solana: {
+        chains: ["solana:1"],
+        events: ["accountsChanged"],
+        methods: ["solana_signTransaction"],
+      },
+    };
+    const expected = {
+      eip155: {
+        chains: ["eip155:1"],
+        events: ["chainChanged"],
+        methods: ["personal_sign", "eth_sendTransaction"],
+      },
+      solana: {
+        chains: ["solana:1"],
+        events: ["accountsChanged"],
+        methods: ["solana_signTransaction"],
+      },
+    };
+
+    const result = mergeRequiredAndOptionalNamespaces(required, optional);
+    expect(result).toEqual(expected);
+  });
+
+  it("should merge required and optional namespaces. case 4", () => {
+    const required = {
+      eip155: {
+        chains: ["eip155:1"],
+        events: ["chainChanged"],
+        methods: ["personal_sign", "eth_sendTransaction"],
+      },
+      solana: {
+        chains: ["solana:1"],
+        events: ["accountsChanged"],
+        methods: ["solana_signTransaction"],
+      },
+    };
+    const optional = {
+      eip155: {
+        chains: ["eip155:2"],
+        events: ["accountsChanged"],
+        methods: ["eth_signTypedData"],
+      },
+    };
+    const expected = {
+      eip155: {
+        chains: ["eip155:1", "eip155:2"],
+        events: ["chainChanged", "accountsChanged"],
+        methods: ["personal_sign", "eth_sendTransaction", "eth_signTypedData"],
+      },
+      solana: {
+        chains: ["solana:1"],
+        events: ["accountsChanged"],
+        methods: ["solana_signTransaction"],
+      },
+    };
+
+    const result = mergeRequiredAndOptionalNamespaces(required, optional);
+    expect(result).toEqual(expected);
+  });
 });

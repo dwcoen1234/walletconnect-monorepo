@@ -99,6 +99,7 @@ import {
   isTestRun,
   isValidArray,
   extractSolanaTransactionId,
+  mergeRequiredAndOptionalNamespaces,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -217,10 +218,11 @@ export class Engine extends IEngine {
     await this.isValidConnect(connectParams);
 
     // requiredNamespaces are deprecated, assign them to optionalNamespaces
-    connectParams.optionalNamespaces = {
-      ...connectParams.requiredNamespaces,
-      ...connectParams.optionalNamespaces,
-    };
+    connectParams.optionalNamespaces = mergeRequiredAndOptionalNamespaces(
+      connectParams.requiredNamespaces,
+      connectParams.optionalNamespaces,
+    );
+
     connectParams.requiredNamespaces = {};
 
     const {

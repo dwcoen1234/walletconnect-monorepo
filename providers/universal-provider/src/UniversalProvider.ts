@@ -475,11 +475,8 @@ export class UniversalProvider implements IUniversalProvider {
       scopedProperties,
     } = params;
 
-    this.optionalNamespaces = {
-      ...namespaces,
-      ...optionalNamespaces,
-    };
-
+    // requiredNamespaces are deprecated, assign them to optionalNamespaces
+    this.optionalNamespaces = mergeRequiredOptionalNamespaces(namespaces, optionalNamespaces);
     this.sessionProperties = sessionProperties;
     this.scopedProperties = scopedProperties;
   }
