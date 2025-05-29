@@ -468,14 +468,15 @@ export class UniversalProvider implements IUniversalProvider {
   }
 
   private setNamespaces(params: ConnectParams): void {
-    const { namespaces, optionalNamespaces, sessionProperties, scopedProperties } = params;
+    const {
+      namespaces = {},
+      optionalNamespaces = {},
+      sessionProperties,
+      scopedProperties,
+    } = params;
 
-    if (namespaces && Object.keys(namespaces).length) {
-      this.namespaces = namespaces;
-    }
-    if (optionalNamespaces && Object.keys(optionalNamespaces).length) {
-      this.optionalNamespaces = optionalNamespaces;
-    }
+    // requiredNamespaces are deprecated, assign them to optionalNamespaces
+    this.optionalNamespaces = mergeRequiredOptionalNamespaces(namespaces, optionalNamespaces);
     this.sessionProperties = sessionProperties;
     this.scopedProperties = scopedProperties;
   }

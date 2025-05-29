@@ -58,6 +58,9 @@ export declare namespace EngineTypes {
   }
 
   interface ConnectParams {
+    /**
+     * @deprecated Use `optionalNamespaces` instead.
+     */
     requiredNamespaces?: ProposalTypes.RequiredNamespaces;
     optionalNamespaces?: ProposalTypes.OptionalNamespaces;
     sessionProperties?: ProposalTypes.SessionProperties;

@@ -378,7 +378,9 @@ describe("Sign Client Validation", () => {
       );
     });
 
-    it("throws when incompatible namespaces methods are provided", async () => {
+    it.skip("throws when incompatible namespaces methods are provided", async () => {
+      // since required namespaces are deprecated, all updates will be successful given the structure is valid
+      // so the test is no longer applicable
       await expect(
         clients.A.update({
           topic,
@@ -389,7 +391,9 @@ describe("Sign Client Validation", () => {
       );
     });
 
-    it("throws when incompatible namespaces chains are provided", async () => {
+    it.skip("throws when incompatible namespaces chains are provided", async () => {
+      // since required namespaces are deprecated, all updates will be successful given the structure is valid
+      // so the test is no longer applicable
       await expect(
         clients.A.update({
           topic,

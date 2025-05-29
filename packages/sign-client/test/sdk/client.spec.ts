@@ -134,6 +134,44 @@ describe("Sign Client Integration", () => {
 
       await deleteClients(clients);
     });
+    it("should assign requiredNamespaces to optionalNamespaces", async () => {
+      const clients = await initTwoClients();
+      const requestedRequiredNamespaces = {
+        eip155: {
+          chains: ["eip155:1", "eip155:2"],
+          methods: ["eth_sendTransaction", "eth_sign"],
+          events: ["chainChanged", "accountsChanged"],
+        },
+      };
+      const { uri, approval } = await clients.A.connect({
+        requiredNamespaces: requestedRequiredNamespaces,
+      });
+      if (!uri) throw new Error("URI is undefined");
+
+      const session = await Promise.all([
+        new Promise<void>((resolve) => {
+          clients.B.once("session_proposal", async (params) => {
+            const { requiredNamespaces, optionalNamespaces } = params.params;
+
+            expect(requiredNamespaces).to.deep.equal({});
+            expect(optionalNamespaces).to.deep.equal(requestedRequiredNamespaces);
+
+            await clients.B.approve({
+              id: params.id,
+              namespaces: TEST_NAMESPACES,
+            });
+            resolve();
+          });
+        }),
+        clients.B.pair({ uri }),
+        approval(),
+      ]).then((res) => {
+        return res[2];
+      });
+      expect(session.requiredNamespaces).to.deep.equal({});
+      expect(session.optionalNamespaces).to.deep.equal(requestedRequiredNamespaces);
+      await deleteClients(clients);
+    });
     it("should connect with out of order URIs", async () => {
       const clients = await initTwoClients();
       // load three proposals
@@ -1318,7 +1356,7 @@ describe("Sign Client Integration", () => {
       const {
         sessionA: { topic },
       } = await testConnectMethod(clients, {
-        requiredNamespaces: TEST_REQUIRED_NAMESPACES_V2,
+        optionalNamespaces: TEST_REQUIRED_NAMESPACES_V2,
         namespaces: TEST_NAMESPACES_V2,
       });
       const testRequestProps = {
@@ -1336,7 +1374,7 @@ describe("Sign Client Integration", () => {
                 acc.includes(TEST_AVALANCHE_CHAIN),
               ),
             ).to.exist;
-            expect(session.requiredNamespaces[TEST_AVALANCHE_CHAIN]).to.exist;
+
             await clients.B.respond({
               topic,
               response: formatJsonRpcResult(payload.id, "test response"),

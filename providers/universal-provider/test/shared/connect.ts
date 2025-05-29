@@ -50,7 +50,7 @@ export async function testConnectMethod(
   const resolveSessionProposal = new Promise<void>((resolve, reject) => {
     walletClient.once("session_proposal", async (proposal) => {
       try {
-        expect(proposal.params.requiredNamespaces).to.eql(connectParams.requiredNamespaces);
+        expect(proposal.params.requiredNamespaces).to.eql({});
         const { acknowledged } = await walletClient.approve({
           id: proposal.id,
           ...approveParams,
