@@ -1,15 +1,5 @@
 # @walletconnect/react-native-compat
 
-## 2.21.0
-
-### Minor Changes
-
-- [#6667](https://github.com/WalletConnect/walletconnect-monorepo/pull/6667) [`cf81bfa705bc91084fefba51f53bfa0f009b9649`](https://github.com/WalletConnect/walletconnect-monorepo/commit/cf81bfa705bc91084fefba51f53bfa0f009b9649) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Deprecating `requiredNamespaces`. If the `requiredNamespaces` are used, the values are automatically assigned to `optionalNamespaces` instead.
-
-### Patch Changes
-
-- [#6668](https://github.com/WalletConnect/walletconnect-monorepo/pull/6668) [`d51e82482246cf37781c4ffd72fb306fa33c433a`](https://github.com/WalletConnect/walletconnect-monorepo/commit/d51e82482246cf37781c4ffd72fb306fa33c433a) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - the wallet_getCapabilities cache in universal-provider now takes the chainIds as well as the address to decide if the request should be sent to the wallet
-
 ## 2.20.3
 
 ### Patch Changes
