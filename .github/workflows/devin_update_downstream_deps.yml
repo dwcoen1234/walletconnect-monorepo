@@ -36,6 +36,7 @@ jobs:
             * **ONLY** update packages that were actually versioned in this "chore: version packages" commit - do not add new dependencies or update packages that weren't part of this release
             * Update dependencies in package.json files throughout the reown-com/appkit repository
             * Ensure version updates are consistent across all package.json files in the appkit repository
+            * **Update the lockfile** at the root of the reown-com/appkit monorepo after all package.json files have been updated (run `pnpm install` or equivalent to regenerate the lockfile)
             * Follow the same pattern as this example PR: https://github.com/reown-com/appkit/pull/4298
 
             ## Expected Deliverable
