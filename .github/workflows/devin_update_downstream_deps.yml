@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - debug/devin-trigger
 
 permissions:
   contents: read # Required to read github.event.head_commit.message
