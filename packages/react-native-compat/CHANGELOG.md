@@ -1,5 +1,11 @@
 # @walletconnect/react-native-compat
 
+## 2.21.1
+
+### Patch Changes
+
+- [#6680](https://github.com/WalletConnect/walletconnect-monorepo/pull/6680) [`fd9386811ea91ee7ee9fd8a333024f980c6c0b41`](https://github.com/WalletConnect/walletconnect-monorepo/commit/fd9386811ea91ee7ee9fd8a333024f980c6c0b41) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - updated `@reown/appkit` version to `1.7.8` in `@walletconnect/ethereum-provider`
+
 ## 2.21.0
 
 ### Minor Changes
