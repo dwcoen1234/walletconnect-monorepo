@@ -642,6 +642,11 @@ describe("Sign Client Integration", () => {
                   events: [],
                   chains: ["eip155:1"],
                 },
+                sui: {
+                  methods: ["sui_signTransaction", "sui_signAndExecuteTransaction"],
+                  events: [],
+                  chains: ["sui:devnet"],
+                },
               },
               namespaces: {
                 solana: {
@@ -658,6 +663,12 @@ describe("Sign Client Integration", () => {
                   methods: ["eth_sendTransaction"],
                   events: [],
                   accounts: ["eip155:1:0x"],
+                },
+                sui: {
+                  methods: ["sui_signTransaction", "sui_signAndExecuteTransaction"],
+                  events: [],
+                  chains: ["sui:devnet"],
+                  accounts: ["sui:devnet:0x"],
                 },
               },
             },
@@ -686,14 +697,14 @@ describe("Sign Client Integration", () => {
                   expect(tvf?.contractAddresses).to.eql([params.request.params[0].to]);
 
                   if (!tvf) {
-                    return console.error("tvf is undefined");
+                    return console.error("eip155 tvf is undefined");
                   }
                   if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
-                    return console.error("tvf is missing required fields");
+                    return console.error("eip155 tvf is missing required fields");
                   }
                   if (tvf.txHashes[0] !== result.result) {
                     return console.error(
-                      "txHashes do not match: signature - eth_sendTransaction",
+                      "eip155 txHashes do not match: signature - eth_sendTransaction",
                       tvf.txHashes[0],
                       result.result,
                       id,
@@ -762,14 +773,14 @@ describe("Sign Client Integration", () => {
                   const tvf = publishPayload.tvf;
                   console.log("tvf", tvf);
                   if (!tvf) {
-                    return console.error("tvf is undefined");
+                    return console.error("solana tvf is undefined");
                   }
                   if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
-                    return console.error("tvf is missing required fields");
+                    return console.error("solana tvf is missing required fields");
                   }
                   if (tvf.txHashes[0] !== result.result.signature) {
                     return console.error(
-                      "txHashes do not match: signature - solana_signAndSendTransaction",
+                      "solana txHashes do not match: signature - solana_signAndSendTransaction",
                       tvf.txHashes[0],
                       result.result.signature,
                       id,
@@ -839,14 +850,14 @@ describe("Sign Client Integration", () => {
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                   const tvf = publishPayload.tvf;
                   if (!tvf) {
-                    return console.error("tvf is undefined");
+                    return console.error("solana tvf is undefined");
                   }
                   if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
-                    return console.error("tvf is missing required fields");
+                    return console.error("solana tvf is missing required fields");
                   }
                   if (tvf.txHashes[0] !== result.result.signature) {
                     return console.error(
-                      "txHashes do not match: signature",
+                      "solana txHashes do not match: signature",
                       tvf.txHashes[0],
                       result.result.signature,
                     );
@@ -927,14 +938,14 @@ describe("Sign Client Integration", () => {
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                   const tvf = publishPayload.tvf;
                   if (!tvf) {
-                    return console.error("tvf is undefined");
+                    return console.error("solana tvf is undefined");
                   }
                   if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
-                    return console.error("tvf is missing required fields");
+                    return console.error("solana tvf is missing required fields");
                   }
                   if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
                     return console.error(
-                      "txHashes do not match: transactions",
+                      "solana txHashes do not match: transactions",
                       tvf.txHashes,
                       result.result.transactions,
                     );
@@ -983,6 +994,169 @@ describe("Sign Client Integration", () => {
                   ...requestParams,
                 },
                 chainId: "solana:devnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // sui sui_signTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+
+                const result = formatJsonRpcResult(id, {
+                  transactionBytes:
+                    "AAACAAhkAAAAAAAAAAAg1fZH7bd9T9ox0DBFBkR/s8kuVar3e8XtS3fDMt1GBfoCAgABAQAAAQEDAAAAAAEBANX2R+23fU/aMdAwRQZEf7PJLlWq93vF7Ut3wzLdRgX6At/pRJzj2VpZgqXpSvEtd3GzPvt99hR8e/yOCGz/8nbRmA7QFAAAAAAgBy5vStJizn76LmJTBlDiONdR/2rSuzzS4L+Tp/Zs4hZ8cBxYkcSlxBD6QXvgS11E6d+DNek8LiA/beba6iH3l5gO0BQAAAAAIMpdmZjiqJ5GG9di1MAgD4S3uRr2gaMC7S1WsaeBwNIx1fZH7bd9T9ox0DBFBkR/s8kuVar3e8XtS3fDMt1GBfroAwAAAAAAAECrPAAAAAAAAA==",
+                });
+                const expectedTxHashes = ["C98G1Uwh5soPMtZZmjUFwbVzWLMoAHzi5jrX2BtABe8v"];
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("sui tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("sui tvf is missing required fields");
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "sui txHashes do not match: transactionBytes",
+                      tvf.txHashes,
+                      result.result.transactionBytes,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "sui_signTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "sui:devnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // sui sui_signAndExecuteTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["C98G1Uwh5soPMtZZmjUFwbVzWLMoAHzi5jrX2BtABe8v"];
+                const result = formatJsonRpcResult(id, {
+                  digest: expectedTxHashes[0],
+                });
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("sui tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("sui tvf is missing required fields");
+                  }
+                  if (
+                    tvf.rpcMethods.length !== 1 &&
+                    tvf.rpcMethods[0] !== "sui_signAndExecuteTransaction"
+                  ) {
+                    return console.error("sui tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "sui txHashes do not match: digest",
+                      tvf.txHashes,
+                      result.result.digest,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "sui_signAndExecuteTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "sui:devnet",
               });
               expect(checkedDappPublish).to.be.true;
               resolve();
