@@ -1,5 +1,35 @@
 # @walletconnect/ethereum-provider
 
+## 2.21.0
+
+### Minor Changes
+
+- [#6667](https://github.com/WalletConnect/walletconnect-monorepo/pull/6667) [`cf81bfa705bc91084fefba51f53bfa0f009b9649`](https://github.com/WalletConnect/walletconnect-monorepo/commit/cf81bfa705bc91084fefba51f53bfa0f009b9649) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Deprecating `requiredNamespaces`. If the `requiredNamespaces` are used, the values are automatically assigned to `optionalNamespaces` instead.
+
+### Patch Changes
+
+- [#6668](https://github.com/WalletConnect/walletconnect-monorepo/pull/6668) [`d51e82482246cf37781c4ffd72fb306fa33c433a`](https://github.com/WalletConnect/walletconnect-monorepo/commit/d51e82482246cf37781c4ffd72fb306fa33c433a) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - the wallet_getCapabilities cache in universal-provider now takes the chainIds as well as the address to decide if the request should be sent to the wallet
+
+- Updated dependencies [[`d51e82482246cf37781c4ffd72fb306fa33c433a`](https://github.com/WalletConnect/walletconnect-monorepo/commit/d51e82482246cf37781c4ffd72fb306fa33c433a), [`cf81bfa705bc91084fefba51f53bfa0f009b9649`](https://github.com/WalletConnect/walletconnect-monorepo/commit/cf81bfa705bc91084fefba51f53bfa0f009b9649)]:
+  - @walletconnect/universal-provider@2.21.0
+  - @walletconnect/sign-client@2.21.0
+  - @walletconnect/types@2.21.0
+  - @walletconnect/utils@2.21.0
+
+## 2.20.3
+
+### Patch Changes
+
+- [#6302](https://github.com/WalletConnect/walletconnect-monorepo/pull/6302) [`2d9648ab4d3892a4903ceec52472420b3009f3c7`](https://github.com/WalletConnect/walletconnect-monorepo/commit/2d9648ab4d3892a4903ceec52472420b3009f3c7) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Added new dedicated build of `ethereum-provider` for `react-native` that doesn't try to import `Appkit`
+
+- [#6304](https://github.com/WalletConnect/walletconnect-monorepo/pull/6304) [`b566edcc1448b31c2ab8fa469e8a19c976ce74f8`](https://github.com/WalletConnect/walletconnect-monorepo/commit/b566edcc1448b31c2ab8fa469e8a19c976ce74f8) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Added new dedicated build of `ethereum-provider` for `react-native` that doesn't try to import `Appkit`
+
+- Updated dependencies [[`2d9648ab4d3892a4903ceec52472420b3009f3c7`](https://github.com/WalletConnect/walletconnect-monorepo/commit/2d9648ab4d3892a4903ceec52472420b3009f3c7), [`9c58e1e8d62e55ba22b8b1924a8128e9358a1195`](https://github.com/WalletConnect/walletconnect-monorepo/commit/9c58e1e8d62e55ba22b8b1924a8128e9358a1195), [`b566edcc1448b31c2ab8fa469e8a19c976ce74f8`](https://github.com/WalletConnect/walletconnect-monorepo/commit/b566edcc1448b31c2ab8fa469e8a19c976ce74f8)]:
+  - @walletconnect/utils@2.20.3
+  - @walletconnect/sign-client@2.20.3
+  - @walletconnect/types@2.20.3
+  - @walletconnect/universal-provider@2.20.3
+
 ## 2.20.2
 
 ### Patch Changes

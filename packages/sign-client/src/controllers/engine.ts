@@ -100,6 +100,7 @@ import {
   isValidArray,
   extractSolanaTransactionId,
   getSuiDigest,
+  mergeRequiredAndOptionalNamespaces,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -216,6 +217,15 @@ export class Engine extends IEngine {
       optionalNamespaces: params.optionalNamespaces || {},
     };
     await this.isValidConnect(connectParams);
+
+    // requiredNamespaces are deprecated, assign them to optionalNamespaces
+    connectParams.optionalNamespaces = mergeRequiredAndOptionalNamespaces(
+      connectParams.requiredNamespaces,
+      connectParams.optionalNamespaces,
+    );
+
+    connectParams.requiredNamespaces = {};
+
     const {
       pairingTopic,
       requiredNamespaces,
@@ -2641,6 +2651,14 @@ export class Engine extends IEngine {
 
     // validate required namespaces only if they are defined
     if (!isUndefined(requiredNamespaces) && isValidObject(requiredNamespaces) !== 0) {
+      const warning =
+        "requiredNamespaces are deprecated and are automatically assigned to optionalNamespaces";
+      // if logger level is one of the following, the logger.warn will not be shown, so we need to use console.warn
+      if (["fatal", "error", "silent"].includes(this.client.logger.level)) {
+        console.warn(warning);
+      } else {
+        this.client.logger.warn(warning);
+      }
       this.validateNamespaces(requiredNamespaces, "requiredNamespaces");
     }
 

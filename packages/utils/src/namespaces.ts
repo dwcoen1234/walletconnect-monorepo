@@ -263,3 +263,36 @@ export function buildNamespacesFromAuth(methods: string[], accounts: string[]) {
   }
   return namespaces;
 }
+
+export function mergeRequiredAndOptionalNamespaces(
+  requiredNamespaces: ProposalTypes.RequiredNamespaces,
+  optionalNamespaces: ProposalTypes.OptionalNamespaces,
+) {
+  const normalizedRequired = normalizeNamespaces(requiredNamespaces);
+  const normalizedOptional = normalizeNamespaces(optionalNamespaces);
+
+  const mergedNamespaces: ProposalTypes.OptionalNamespaces = {};
+
+  const combinedNamespaces = Object.keys(normalizedRequired).concat(
+    Object.keys(normalizedOptional),
+  );
+
+  for (const namespace of combinedNamespaces) {
+    mergedNamespaces[namespace] = {
+      chains: mergeArrays(
+        normalizedRequired[namespace]?.chains,
+        normalizedOptional[namespace]?.chains,
+      ),
+      methods: mergeArrays(
+        normalizedRequired[namespace]?.methods,
+        normalizedOptional[namespace]?.methods,
+      ),
+      events: mergeArrays(
+        normalizedRequired[namespace]?.events,
+        normalizedOptional[namespace]?.events,
+      ),
+    };
+  }
+
+  return mergedNamespaces;
+}

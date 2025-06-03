@@ -88,8 +88,14 @@ export function normalizeNamespaces(namespaces: NamespaceConfig): NamespaceConfi
       chains: mergeArrays(chains, normalizedNamespaces[normalizedKey]?.chains),
       methods: mergeArrays(methods, normalizedNamespaces[normalizedKey]?.methods),
       events: mergeArrays(events, normalizedNamespaces[normalizedKey]?.events),
-      rpcMap: { ...rpcMap, ...normalizedNamespaces[normalizedKey]?.rpcMap },
     };
+    // avoid adding empty `rpcMap: {}` if there are no values for it
+    if (isValidObject(rpcMap) || isValidObject(normalizedNamespaces[normalizedKey]?.rpcMap || {})) {
+      normalizedNamespaces[normalizedKey].rpcMap = {
+        ...rpcMap,
+        ...normalizedNamespaces[normalizedKey]?.rpcMap,
+      };
+    }
   }
   return normalizedNamespaces;
 }

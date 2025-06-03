@@ -185,8 +185,13 @@ export class WalletClient {
       async (proposal: SignClientTypes.EventArguments["session_proposal"]) => {
         if (typeof this.client === "undefined") throw new Error("Sign Client not inititialized");
         const { id, requiredNamespaces, optionalNamespaces, relays } = proposal.params;
+
+        if (Object.keys(requiredNamespaces).length !== 0) {
+          throw new Error("Unexpected required namespaces");
+        }
+
         const namespaces = {};
-        Object.entries(requiredNamespaces).forEach(([key, value]) => {
+        Object.entries(optionalNamespaces).forEach(([key, value]) => {
           namespaces[key] = {
             chains: value.chains,
             methods: value.methods,
