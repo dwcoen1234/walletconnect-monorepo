@@ -146,6 +146,7 @@ export const ENGINE_QUEUE_STATES: { idle: "IDLE"; active: "ACTIVE" } = {
 };
 
 export const TVF_METHODS = {
+  // evm
   eth_sendTransaction: {
     key: "",
   },
@@ -156,6 +157,7 @@ export const TVF_METHODS = {
     key: "",
   },
 
+  // solana
   solana_signTransaction: {
     key: "signature",
   },
@@ -166,11 +168,19 @@ export const TVF_METHODS = {
     key: "signature",
   },
 
+  // sui
   sui_signAndExecuteTransaction: {
     key: "digest",
   },
-
   sui_signTransaction: {
     key: "",
+  },
+
+  // hedera
+  hedera_signAndExecuteTransaction: {
+    key: "transactionId",
+  },
+  hedera_executeTransaction: {
+    key: "transactionId",
   },
 };
