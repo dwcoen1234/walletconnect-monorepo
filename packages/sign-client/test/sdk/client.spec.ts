@@ -1258,7 +1258,7 @@ describe("Sign Client Integration", () => {
             }),
           ]);
 
-          // hedera hedera_signAndExecuteTransaction example
+          // hedera hedera_executeTransaction example
           await Promise.all([
             new Promise<void>((resolve) => {
               clients.B.once("session_request", async (args) => {
