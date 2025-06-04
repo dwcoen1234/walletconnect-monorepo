@@ -183,4 +183,15 @@ export const TVF_METHODS = {
   hedera_executeTransaction: {
     key: "transactionId",
   },
+
+  // near
+  near_signTransaction: {
+    key: "",
+  },
+  near_signAndExecuteTransaction: {
+    key: "",
+  },
+  near_signAndExecuteTransactions: {
+    key: "",
+  },
 };

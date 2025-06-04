@@ -1,7 +1,8 @@
 import { keccak_256 } from "@noble/hashes/sha3";
 import { recoverAddress } from "viem";
+import { sha256 } from "@noble/hashes/sha2";
 import bs58 from "bs58";
-import { blake2b } from "@noble/hashes/blake2b";
+import { blake2b } from "@noble/hashes/blake2";
 
 import { AuthTypes } from "@walletconnect/types";
 
@@ -157,4 +158,24 @@ export function getSuiDigest(transaction: string) {
   const hash = blake2b(dataWithTag, { dkLen: 32 });
 
   return bs58.encode(hash);
+}
+
+export function getNearTransactionIdFromSignedTransaction(signedTransaction: unknown) {
+  const hash = new Uint8Array(sha256(getNearUint8ArrayFromBytes(signedTransaction)));
+  const hashBase58 = bs58.encode(hash);
+  return hashBase58;
+}
+
+export function getNearUint8ArrayFromBytes(bytes: unknown) {
+  if (bytes instanceof Uint8Array) {
+    return bytes;
+  } else if (Array.isArray(bytes)) {
+    return new Uint8Array(bytes);
+  } else if (typeof bytes === "object" && (bytes as any)?.data) {
+    return new Uint8Array(Object.values((bytes as any).data));
+  } else if (typeof bytes === "object" && bytes) {
+    return new Uint8Array(Object.values(bytes));
+  } else {
+    throw new Error("getNearUint8ArrayFromBytes: Unexpected result type from bytes array");
+  }
 }

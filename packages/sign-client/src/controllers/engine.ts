@@ -101,6 +101,7 @@ import {
   extractSolanaTransactionId,
   getSuiDigest,
   mergeRequiredAndOptionalNamespaces,
+  getNearTransactionIdFromSignedTransaction,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -652,7 +653,6 @@ export class Engine extends IEngine {
       },
       chainId,
     };
-    const shouldSetTVF = this.shouldSetTVF(protocolMethod, protocolRequestParams);
 
     return await Promise.all([
       new Promise<void>(async (resolve) => {
@@ -664,9 +664,7 @@ export class Engine extends IEngine {
           params: protocolRequestParams,
           expiry,
           throwOnFailedPublish: true,
-          ...(shouldSetTVF && {
-            tvf: this.getTVFParams(clientRpcId, protocolRequestParams),
-          }),
+          tvf: this.getTVFParams(clientRpcId, protocolRequestParams),
         }).catch((error) => reject(error));
         this.client.events.emit("session_request_sent", {
           topic,
@@ -1585,9 +1583,7 @@ export class Engine extends IEngine {
       record = await this.client.core.history.get(topic, id);
       const request = record.request;
       try {
-        if (this.shouldSetTVF(request.method as JsonRpcTypes.WcMethod, request.params)) {
-          tvf = this.getTVFParams(id, request.params, result);
-        }
+        tvf = this.getTVFParams(id, request.params, result);
       } catch (error) {
         this.client.logger.warn(`sendResult() -> getTVFParams() failed`, error);
       }
@@ -3112,39 +3108,27 @@ export class Engine extends IEngine {
     }
   };
 
-  private shouldSetTVF = (
-    protocolMethod: JsonRpcTypes.WcMethod,
-    params: JsonRpcTypes.RequestParams["wc_sessionRequest"],
-  ) => {
-    if (!params) return false;
-    if (protocolMethod !== "wc_sessionRequest") return false;
-    const { request } = params;
-    return Object.keys(TVF_METHODS).includes(request.method);
-  };
-
   private getTVFParams = (
     id: number,
     params: JsonRpcTypes.RequestParams["wc_sessionRequest"],
     result?: any,
   ) => {
+    const requestMethod = params.request.method;
+    const tvf: RelayerTypes.ITVF = {
+      correlationId: id,
+      rpcMethods: [requestMethod],
+      chainId: params.chainId,
+    };
     try {
-      const requestMethod = params.request.method;
       const txHashes = this.extractTxHashesFromResult(requestMethod, result);
-      const tvf: RelayerTypes.ITVF = {
-        correlationId: id,
-        rpcMethods: [requestMethod],
-        chainId: params.chainId,
-        ...(this.isValidContractData(params.request.params) && {
-          // initially only get contractAddresses from EVM txs
-          contractAddresses: [params.request.params?.[0]?.to],
-        }),
-        txHashes,
-      };
-      return tvf;
+      tvf.txHashes = txHashes;
+      tvf.contractAddresses = this.isValidContractData(params.request.params)
+        ? [params.request.params?.[0]?.to]
+        : [];
     } catch (e) {
       this.client.logger.warn("Error getting TVF params", e);
     }
-    return {};
+    return tvf;
   };
 
   private isValidContractData = (params: any) => {
@@ -3165,6 +3149,23 @@ export class Engine extends IEngine {
   private extractTxHashesFromResult = (method: string, result: any): string[] => {
     try {
       const methodConfig = TVF_METHODS[method as keyof typeof TVF_METHODS];
+
+      if (method === "sui_signTransaction") {
+        return [getSuiDigest(result.transactionBytes)];
+      }
+
+      if (method === "near_signTransaction") {
+        return [getNearTransactionIdFromSignedTransaction(result)];
+      }
+
+      if (method === "near_signAndExecuteTransaction") {
+        return [result.transaction.hash];
+      }
+
+      if (method === "near_signAndExecuteTransactions") {
+        return result.map((tx: any) => tx.transaction.hash);
+      }
+
       // result = 0x...
       if (typeof result === "string") {
         return [result];
@@ -3172,10 +3173,6 @@ export class Engine extends IEngine {
 
       // result = { key: [0x...] } or { key: 0x... }
       const hashes: string[] = result[methodConfig.key];
-
-      if (method === "sui_signTransaction") {
-        return [getSuiDigest(result.transactionBytes)];
-      }
 
       // result = { key: [0x...] }
       if (isValidArray(hashes)) {
