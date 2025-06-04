@@ -647,6 +647,11 @@ describe("Sign Client Integration", () => {
                   events: [],
                   chains: ["sui:devnet"],
                 },
+                hedera: {
+                  methods: ["hedera_signAndExecuteTransaction", "hedera_executeTransaction"],
+                  events: [],
+                  chains: ["hedera:mainnet"],
+                },
               },
               namespaces: {
                 solana: {
@@ -669,6 +674,12 @@ describe("Sign Client Integration", () => {
                   events: [],
                   chains: ["sui:devnet"],
                   accounts: ["sui:devnet:0x"],
+                },
+                hedera: {
+                  methods: ["hedera_signAndExecuteTransaction", "hedera_executeTransaction"],
+                  events: [],
+                  chains: ["hedera:mainnet"],
+                  accounts: ["hedera:mainnet:0x"],
                 },
               },
             },
@@ -1157,6 +1168,174 @@ describe("Sign Client Integration", () => {
                   ...requestParams,
                 },
                 chainId: "sui:devnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // hedera hedera_signAndExecuteTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["0.0.12345678@1689281510.675369303"];
+                const result = formatJsonRpcResult(id, {
+                  transactionId: expectedTxHashes[0],
+                });
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("hedera tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("hedera tvf is missing required fields");
+                  }
+                  if (
+                    tvf.rpcMethods.length !== 1 &&
+                    tvf.rpcMethods[0] !== "hedera_signAndExecuteTransaction"
+                  ) {
+                    return console.error("hedera tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "hedera txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result.transactionId,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "hedera_signAndExecuteTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "hedera:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // hedera hedera_executeTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["0.0.12345678@1689281510.675369303"];
+                const result = formatJsonRpcResult(id, {
+                  transactionId: expectedTxHashes[0],
+                });
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("hedera tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("hedera tvf is missing required fields");
+                  }
+                  if (
+                    tvf.rpcMethods.length !== 1 &&
+                    tvf.rpcMethods[0] !== "hedera_signAndExecuteTransaction"
+                  ) {
+                    return console.error("hedera tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "hedera txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result.transactionId,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "hedera_executeTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "hedera:mainnet",
               });
               expect(checkedDappPublish).to.be.true;
               resolve();
