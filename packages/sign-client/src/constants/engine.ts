@@ -194,4 +194,9 @@ export const TVF_METHODS = {
   near_signAndExecuteTransactions: {
     key: "",
   },
+
+  // tron
+  tron_signTransaction: {
+    key: "txID",
+  },
 };

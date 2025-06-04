@@ -662,6 +662,11 @@ describe("Sign Client Integration", () => {
                   events: [],
                   chains: ["near:testnet"],
                 },
+                tron: {
+                  methods: ["tron_signTransaction"],
+                  events: [],
+                  chains: ["tron:mainnet"],
+                },
               },
               namespaces: {
                 solana: {
@@ -700,6 +705,12 @@ describe("Sign Client Integration", () => {
                   events: [],
                   chains: ["near:testnet"],
                   accounts: ["near:testnet:0x"],
+                },
+                tron: {
+                  methods: ["tron_signTransaction"],
+                  events: [],
+                  chains: ["tron:mainnet"],
+                  accounts: ["tron:mainnet:0x"],
                 },
               },
             },
@@ -1632,6 +1643,89 @@ describe("Sign Client Integration", () => {
                   ...requestParams,
                 },
                 chainId: "near:testnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // tron tron_signTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["0x1234567890"];
+                const transaction = {
+                  txID: expectedTxHashes[0],
+                };
+
+                const result = formatJsonRpcResult(id, transaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("tron tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("tron tvf is missing required fields");
+                  }
+                  if (tvf.rpcMethods.length !== 1 && tvf.rpcMethods[0] !== "tron_signTransaction") {
+                    return console.error("tron tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "tron txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "tron_signTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "tron:mainnet",
               });
               expect(checkedDappPublish).to.be.true;
               resolve();
