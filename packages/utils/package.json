@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@noble/ciphers": "1.2.1",
-    "@noble/curves": "1.8.1",
+    "@noble/curves": "1.9.1",
     "@noble/hashes": "1.7.1",
     "@walletconnect/jsonrpc-utils": "1.0.8",
     "@walletconnect/keyvaluestorage": "1.1.1",
