@@ -213,4 +213,9 @@ export const TVF_METHODS = {
   algo_signTxn: {
     key: "",
   },
+
+  // bitcoin
+  sendTransfer: {
+    key: "txid",
+  },
 };
