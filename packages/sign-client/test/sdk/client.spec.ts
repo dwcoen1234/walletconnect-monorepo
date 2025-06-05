@@ -687,6 +687,11 @@ describe("Sign Client Integration", () => {
                   events: [],
                   chains: ["stacks:mainnet"],
                 },
+                polkadot: {
+                  methods: ["polkadot_signTransaction"],
+                  events: [],
+                  chains: ["polkadot:mainnet"],
+                },
               },
               namespaces: {
                 solana: {
@@ -755,6 +760,12 @@ describe("Sign Client Integration", () => {
                   events: [],
                   chains: ["stacks:mainnet"],
                   accounts: ["stacks:mainnet:0x"],
+                },
+                polkadot: {
+                  methods: ["polkadot_signTransaction"],
+                  events: [],
+                  chains: ["polkadot:mainnet"],
+                  accounts: ["polkadot:mainnet:0x"],
                 },
               },
             },
@@ -2192,6 +2203,108 @@ describe("Sign Client Integration", () => {
                   ...requestParams,
                 },
                 chainId: "stacks:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // polkadot polkadot_signTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = [
+                  "0x48016b3c80b7b61d32d1db6f52038de70d7d30ef948da047442cc9c952b92e84",
+                ];
+                const transaction = {
+                  signature:
+                    "362cef5dff66aee851a5d8c5100a53590eddd7c75c1a53553b08861fb28ce80b96d53279f52a27c866639954c5efa32b52c148fefe78dbdad1f9d3be4f44538f",
+                };
+
+                const result = formatJsonRpcResult(id, transaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("polkadot tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("polkadot tvf is missing required fields");
+                  }
+                  if (
+                    tvf.rpcMethods.length !== 1 &&
+                    tvf.rpcMethods[0] !== "polkadot_signTransaction"
+                  ) {
+                    return console.error("polkadot tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "polkadot txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      expectedTxHashes,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "polkadot_signTransaction",
+                params: {
+                  address: "15JBFhDp1rQycRFuCtkr2VouMiWyDzh3qRUPA8STY53mdRmM",
+                  transactionPayload: {
+                    method:
+                      "050300c07d211d3c181df768d9d9d41df6f14f9d116d9c1906f38153b208259c315b4b02286bee",
+                    specVersion: "c9550f00",
+                    transactionVersion: "1a000000",
+                    genesisHash: "91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3",
+                    blockHash: "130d8c27af0e0adfa85d370af89746f229780b677c81da97d11a4921cdb86df5",
+                    era: "1502",
+                    nonce: "1c",
+                    tip: "00",
+                    mode: "00",
+                    metadataHash: "00",
+                    address: "15JBFhDp1rQycRFuCtkr2VouMiWyDzh3qRUPA8STY53mdRmM",
+                    version: 4,
+                  },
+                },
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "polkadot:mainnet",
               });
               expect(checkedDappPublish).to.be.true;
               resolve();

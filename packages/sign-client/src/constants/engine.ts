@@ -223,4 +223,9 @@ export const TVF_METHODS = {
   stacks_stxTransfer: {
     key: "txId",
   },
+
+  // polkadot
+  polkadot_signTransaction: {
+    key: "",
+  },
 };

@@ -1,6 +1,8 @@
 import { AuthTypes } from "@walletconnect/types";
 import { describe, expect, it } from "vitest";
 import {
+  buildSignedExtrinsic,
+  buildSignedExtrinsicHash,
   extractSolanaTransactionId,
   getAlgorandTransactionId,
   getNearTransactionIdFromSignedTransaction,
@@ -457,6 +459,35 @@ Expiration Time: 2022-10-11T23:03:35.700Z`;
       const expectedTransactionId = "OM5JS3AE4HVAT5ZMCIMY32HPD6KJAQVPFS2LL2ZW2R5JKUKZFVNA";
       const transactionId = getAlgorandTransactionId(signedTransaction);
       expect(transactionId).toBe(expectedTransactionId);
+    });
+
+    it("should derive hash from a signed extrinsic", () => {
+      const transactionPayload = {
+        method: "050300c07d211d3c181df768d9d9d41df6f14f9d116d9c1906f38153b208259c315b4b02286bee",
+        specVersion: "c9550f00",
+        transactionVersion: "1a000000",
+        genesisHash: "91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3",
+        blockHash: "130d8c27af0e0adfa85d370af89746f229780b677c81da97d11a4921cdb86df5",
+        era: "1502",
+        nonce: "1c",
+        tip: "00",
+        mode: "00",
+        metadataHash: "00",
+        address: "15JBFhDp1rQycRFuCtkr2VouMiWyDzh3qRUPA8STY53mdRmM",
+        version: 4,
+      };
+
+      const walletResponse = {
+        signature:
+          "362cef5dff66aee851a5d8c5100a53590eddd7c75c1a53553b08861fb28ce80b96d53279f52a27c866639954c5efa32b52c148fefe78dbdad1f9d3be4f44538f",
+      };
+
+      const hash = buildSignedExtrinsicHash({
+        transaction: transactionPayload,
+        signature: walletResponse.signature,
+      });
+
+      expect(hash).toBe("0x48016b3c80b7b61d32d1db6f52038de70d7d30ef948da047442cc9c952b92e84");
     });
   });
 });

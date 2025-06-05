@@ -103,6 +103,7 @@ import {
   mergeRequiredAndOptionalNamespaces,
   getNearTransactionIdFromSignedTransaction,
   getAlgorandTransactionId,
+  buildSignedExtrinsicHash,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -3114,14 +3115,13 @@ export class Engine extends IEngine {
     params: JsonRpcTypes.RequestParams["wc_sessionRequest"],
     result?: any,
   ) => {
-    const requestMethod = params.request.method;
     const tvf: RelayerTypes.ITVF = {
       correlationId: id,
-      rpcMethods: [requestMethod],
+      rpcMethods: [params.request.method],
       chainId: params.chainId,
     };
     try {
-      const txHashes = this.extractTxHashesFromResult(requestMethod, result);
+      const txHashes = this.extractTxHashesFromResult(params.request, result);
       tvf.txHashes = txHashes;
       tvf.contractAddresses = this.isValidContractData(params.request.params)
         ? [params.request.params?.[0]?.to]
@@ -3147,8 +3147,14 @@ export class Engine extends IEngine {
     return false;
   };
 
-  private extractTxHashesFromResult = (method: string, result: any): string[] => {
+  private extractTxHashesFromResult = (
+    request: JsonRpcTypes.RequestParams["wc_sessionRequest"]["request"],
+    result: any,
+  ): string[] => {
     try {
+      if (!result) return [];
+
+      const method = request.method;
       const methodConfig = TVF_METHODS[method as keyof typeof TVF_METHODS];
 
       if (method === "sui_signTransaction") {
@@ -3169,6 +3175,15 @@ export class Engine extends IEngine {
 
       if (method === "xrpl_signTransactionFor" || method === "xrpl_signTransaction") {
         return [result.tx_json?.hash];
+      }
+
+      if (method === "polkadot_signTransaction") {
+        return [
+          buildSignedExtrinsicHash({
+            transaction: request.params.transactionPayload,
+            signature: result.signature,
+          }),
+        ];
       }
 
       if (method === "algo_signTxn") {
