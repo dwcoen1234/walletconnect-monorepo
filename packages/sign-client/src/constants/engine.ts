@@ -199,4 +199,13 @@ export const TVF_METHODS = {
   tron_signTransaction: {
     key: "txID",
   },
+
+  // xrpl
+  xrpl_signTransaction: {
+    key: "",
+  },
+
+  xrpl_signTransactionFor: {
+    key: "",
+  },
 };

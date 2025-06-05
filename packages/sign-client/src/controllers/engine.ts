@@ -3166,6 +3166,10 @@ export class Engine extends IEngine {
         return result.map((tx: any) => tx.transaction.hash);
       }
 
+      if (method === "xrpl_signTransactionFor" || method === "xrpl_signTransaction") {
+        return [result.tx_json?.hash];
+      }
+
       // result = 0x...
       if (typeof result === "string") {
         return [result];
