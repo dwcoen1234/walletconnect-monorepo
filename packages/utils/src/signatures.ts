@@ -202,3 +202,53 @@ export function getAlgorandTransactionId(transaction: string) {
   // Encode to base32 and remove padding
   return base32.encode(hash).replace(/=+$/, "");
 }
+
+function encodeVarint(value: number | bigint): Buffer {
+  const result: number[] = [];
+  let v = BigInt(value);
+  while (v >= 0x80n) {
+    result.push(Number((v & 0x7fn) | 0x80n));
+    v >>= 7n;
+  }
+  result.push(Number(v));
+  return Buffer.from(result);
+}
+
+export function getSignDirectHash(payload: {
+  signed: {
+    chainId: string;
+    accountNumber: string;
+    authInfoBytes: string;
+    bodyBytes: string;
+  };
+  signature: {
+    pub_key: {
+      type: string;
+      value: string;
+    };
+    signature: string;
+  };
+}) {
+  const bodyBytes = Buffer.from(payload.signed.bodyBytes, "base64");
+  const authInfoBytes = Buffer.from(payload.signed.authInfoBytes, "base64");
+  const signature = Buffer.from(payload.signature.signature, "base64");
+
+  const chunks: Buffer[] = [];
+
+  chunks.push(Buffer.from([0x0a]));
+  chunks.push(encodeVarint(bodyBytes.length));
+  chunks.push(bodyBytes);
+
+  chunks.push(Buffer.from([0x12]));
+  chunks.push(encodeVarint(authInfoBytes.length));
+  chunks.push(authInfoBytes);
+
+  chunks.push(Buffer.from([0x1a]));
+  chunks.push(encodeVarint(signature.length));
+  chunks.push(signature);
+
+  const txRawBytes = Buffer.concat(chunks);
+  const hashBytes = sha256(txRawBytes);
+
+  return Buffer.from(hashBytes).toString("hex").toUpperCase();
+}

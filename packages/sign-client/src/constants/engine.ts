@@ -228,4 +228,9 @@ export const TVF_METHODS = {
   polkadot_signTransaction: {
     key: "",
   },
+
+  // cosmos
+  cosmos_signDirect: {
+    key: "",
+  },
 };

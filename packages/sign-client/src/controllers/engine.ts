@@ -104,6 +104,7 @@ import {
   getNearTransactionIdFromSignedTransaction,
   getAlgorandTransactionId,
   buildSignedExtrinsicHash,
+  getSignDirectHash,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -3190,6 +3191,10 @@ export class Engine extends IEngine {
         return isValidArray(result)
           ? result.map((tx: any) => getAlgorandTransactionId(tx))
           : [getAlgorandTransactionId(result)];
+      }
+
+      if (method === "cosmos_signDirect") {
+        return [getSignDirectHash(result)];
       }
 
       // result = 0x...
