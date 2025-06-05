@@ -218,4 +218,9 @@ export const TVF_METHODS = {
   sendTransfer: {
     key: "txid",
   },
+
+  // stacks
+  stacks_stxTransfer: {
+    key: "txId",
+  },
 };
