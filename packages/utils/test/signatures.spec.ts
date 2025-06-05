@@ -2,6 +2,7 @@ import { AuthTypes } from "@walletconnect/types";
 import { describe, expect, it } from "vitest";
 import {
   extractSolanaTransactionId,
+  getAlgorandTransactionId,
   getNearTransactionIdFromSignedTransaction,
   getSuiDigest,
   isValidEip191Signature,
@@ -447,6 +448,14 @@ Expiration Time: 2022-10-11T23:03:35.700Z`;
 
       const expectedTransactionId = "EpHx79wKAn6br4G9aKaCGLpdzNc8YjrthiFonXQgskAx";
       const transactionId = getNearTransactionIdFromSignedTransaction(signedTransaction);
+      expect(transactionId).toBe(expectedTransactionId);
+    });
+
+    it("should extract the transaction hash from algorand signed transaction", () => {
+      const signedTransaction =
+        "gqNzaWfEQNGPgbxS9pTu0sTikT3cJVO48WFltc8MM8meFR+aAnGwOo3FO+0nFkAludT0jNqHRM6E65gW6k/m92sHVCxVnQWjdHhuiaNhbXTOAAehIKNmZWXNA+iiZnbOAv0CO6NnZW6sbWFpbm5ldC12MS4womdoxCDAYcTY/B293tLXYEvkVo4/bQQZh6w3veS2ILWrOSSK36Jsds4C/QYjo3JjdsQgeqRNTBEXudHx2kO9Btq289aRzj5DlNUw0jwX9KEnaZqjc25kxCDH1s5tvgARbjtHceUG07Sj5IDfqzn7Zwx0P+XuvCYMz6R0eXBlo3BheQ==";
+      const expectedTransactionId = "OM5JS3AE4HVAT5ZMCIMY32HPD6KJAQVPFS2LL2ZW2R5JKUKZFVNA";
+      const transactionId = getAlgorandTransactionId(signedTransaction);
       expect(transactionId).toBe(expectedTransactionId);
     });
   });

@@ -102,6 +102,7 @@ import {
   getSuiDigest,
   mergeRequiredAndOptionalNamespaces,
   getNearTransactionIdFromSignedTransaction,
+  getAlgorandTransactionId,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -3168,6 +3169,12 @@ export class Engine extends IEngine {
 
       if (method === "xrpl_signTransactionFor" || method === "xrpl_signTransaction") {
         return [result.tx_json?.hash];
+      }
+
+      if (method === "algo_signTxn") {
+        return isValidArray(result)
+          ? result.map((tx: any) => getAlgorandTransactionId(tx))
+          : [getAlgorandTransactionId(result)];
       }
 
       // result = 0x...

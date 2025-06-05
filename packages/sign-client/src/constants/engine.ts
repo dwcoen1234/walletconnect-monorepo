@@ -208,4 +208,9 @@ export const TVF_METHODS = {
   xrpl_signTransactionFor: {
     key: "",
   },
+
+  // algorand
+  algo_signTxn: {
+    key: "",
+  },
 };

@@ -672,6 +672,11 @@ describe("Sign Client Integration", () => {
                   events: [],
                   chains: ["xrpl:mainnet"],
                 },
+                algorand: {
+                  methods: ["algo_signTxn"],
+                  events: [],
+                  chains: ["algorand:mainnet"],
+                },
               },
               namespaces: {
                 solana: {
@@ -722,6 +727,12 @@ describe("Sign Client Integration", () => {
                   events: [],
                   chains: ["xrpl:mainnet"],
                   accounts: ["xrpl:mainnet:0x"],
+                },
+                algorand: {
+                  methods: ["algo_signTxn"],
+                  events: [],
+                  chains: ["algorand:mainnet"],
+                  accounts: ["algorand:mainnet:0x"],
                 },
               },
             },
@@ -1910,6 +1921,89 @@ describe("Sign Client Integration", () => {
                   ...requestParams,
                 },
                 chainId: "xrpl:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // algorand algo_signTxn example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["OM5JS3AE4HVAT5ZMCIMY32HPD6KJAQVPFS2LL2ZW2R5JKUKZFVNA"];
+                const transaction = [
+                  "gqNzaWfEQNGPgbxS9pTu0sTikT3cJVO48WFltc8MM8meFR+aAnGwOo3FO+0nFkAludT0jNqHRM6E65gW6k/m92sHVCxVnQWjdHhuiaNhbXTOAAehIKNmZWXNA+iiZnbOAv0CO6NnZW6sbWFpbm5ldC12MS4womdoxCDAYcTY/B293tLXYEvkVo4/bQQZh6w3veS2ILWrOSSK36Jsds4C/QYjo3JjdsQgeqRNTBEXudHx2kO9Btq289aRzj5DlNUw0jwX9KEnaZqjc25kxCDH1s5tvgARbjtHceUG07Sj5IDfqzn7Zwx0P+XuvCYMz6R0eXBlo3BheQ==",
+                ];
+
+                const result = formatJsonRpcResult(id, transaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("algorand tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("algorand tvf is missing required fields");
+                  }
+                  if (tvf.rpcMethods.length !== 1 && tvf.rpcMethods[0] !== "algo_signTxn") {
+                    return console.error("algorand tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "algorand txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "algo_signTxn",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "algorand:mainnet",
               });
               expect(checkedDappPublish).to.be.true;
               resolve();

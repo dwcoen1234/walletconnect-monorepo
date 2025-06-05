@@ -1,9 +1,10 @@
 import { keccak_256 } from "@noble/hashes/sha3";
 import { recoverAddress } from "viem";
-import { sha256 } from "@noble/hashes/sha2";
+import { sha256, sha512_256 } from "@noble/hashes/sha2";
 import bs58 from "bs58";
 import { blake2b } from "@noble/hashes/blake2";
-
+import { encode as msgpackEncode, decode as msgpackDecode } from "@msgpack/msgpack";
+import { base32 } from "@scure/base";
 import { AuthTypes } from "@walletconnect/types";
 
 import { parseChainId } from "./caip";
@@ -178,4 +179,26 @@ export function getNearUint8ArrayFromBytes(bytes: unknown) {
   } else {
     throw new Error("getNearUint8ArrayFromBytes: Unexpected result type from bytes array");
   }
+}
+
+export function getAlgorandTransactionId(transaction: string) {
+  const signedTxnBytes = Buffer.from(transaction, "base64");
+
+  const decoded = msgpackDecode(signedTxnBytes) as any;
+
+  const unsignedTxn = decoded.txn;
+  if (!unsignedTxn) {
+    throw new Error("Invalid signed transaction: missing 'txn' field");
+  }
+
+  const serializedUnsignedTxn = msgpackEncode(unsignedTxn);
+
+  // Prepend "TX" prefix
+  const txPrefix = Buffer.from("TX");
+  const toHash = Buffer.concat([txPrefix, Buffer.from(serializedUnsignedTxn)]);
+
+  const hash = sha512_256(toHash);
+
+  // Encode to base32 and remove padding
+  return base32.encode(hash).replace(/=+$/, "");
 }
