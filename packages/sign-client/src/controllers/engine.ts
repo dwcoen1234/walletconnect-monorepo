@@ -3166,12 +3166,8 @@ export class Engine extends IEngine {
         return [getNearTransactionIdFromSignedTransaction(result)];
       }
 
-      if (method === "near_signAndExecuteTransaction") {
-        return [result.transaction.hash];
-      }
-
-      if (method === "near_signAndExecuteTransactions") {
-        return result.map((tx: any) => tx.transaction.hash);
+      if (method === "near_signTransactions") {
+        return result.map((tx: any) => getNearTransactionIdFromSignedTransaction(tx));
       }
 
       if (method === "xrpl_signTransactionFor" || method === "xrpl_signTransaction") {

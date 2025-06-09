@@ -188,10 +188,7 @@ export const TVF_METHODS = {
   near_signTransaction: {
     key: "",
   },
-  near_signAndExecuteTransaction: {
-    key: "",
-  },
-  near_signAndExecuteTransactions: {
+  near_signTransactions: {
     key: "",
   },
 
