@@ -1,5 +1,16 @@
 # @walletconnect/universal-provider
 
+## 2.21.2
+
+### Patch Changes
+
+- [#6678](https://github.com/WalletConnect/walletconnect-monorepo/pull/6678) [`d6eda498d24afb650e49df32f717b1d0db863753`](https://github.com/WalletConnect/walletconnect-monorepo/commit/d6eda498d24afb650e49df32f717b1d0db863753) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Extended TVF to cover more chains
+
+- Updated dependencies [[`d6eda498d24afb650e49df32f717b1d0db863753`](https://github.com/WalletConnect/walletconnect-monorepo/commit/d6eda498d24afb650e49df32f717b1d0db863753)]:
+  - @walletconnect/sign-client@2.21.2
+  - @walletconnect/utils@2.21.2
+  - @walletconnect/types@2.21.2
+
 ## 2.21.1
 
 ### Patch Changes
