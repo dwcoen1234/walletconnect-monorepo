@@ -1,7 +1,11 @@
 import { keccak_256 } from "@noble/hashes/sha3";
 import { recoverAddress } from "viem";
-import { AuthTypes } from "@walletconnect/types";
+import { sha256, sha512_256 } from "@noble/hashes/sha2";
 import bs58 from "bs58";
+import { blake2b } from "@noble/hashes/blake2";
+import { encode as msgpackEncode, decode as msgpackDecode } from "@msgpack/msgpack";
+import { base32 } from "@scure/base";
+import { AuthTypes } from "@walletconnect/types";
 
 import { parseChainId } from "./caip";
 
@@ -140,4 +144,111 @@ export function extractSolanaTransactionId(solanaTransaction: string): string {
   const signatureBuffer = transactionBuffer.slice(1, 65);
 
   return bs58.encode(signatureBuffer);
+}
+
+export function getSuiDigest(transaction: string) {
+  const txBytes = new Uint8Array(Buffer.from(transaction, "base64"));
+
+  const typeTagBytes = Array.from(`TransactionData::`).map((e) => e.charCodeAt(0));
+
+  const dataWithTag = new Uint8Array(typeTagBytes.length + txBytes.length);
+
+  dataWithTag.set(typeTagBytes);
+  dataWithTag.set(txBytes, typeTagBytes.length);
+
+  const hash = blake2b(dataWithTag, { dkLen: 32 });
+
+  return bs58.encode(hash);
+}
+
+export function getNearTransactionIdFromSignedTransaction(signedTransaction: unknown) {
+  const hash = new Uint8Array(sha256(getNearUint8ArrayFromBytes(signedTransaction)));
+  const hashBase58 = bs58.encode(hash);
+  return hashBase58;
+}
+
+export function getNearUint8ArrayFromBytes(bytes: unknown) {
+  if (bytes instanceof Uint8Array) {
+    return bytes;
+  } else if (Array.isArray(bytes)) {
+    return new Uint8Array(bytes);
+  } else if (typeof bytes === "object" && (bytes as any)?.data) {
+    return new Uint8Array(Object.values((bytes as any).data));
+  } else if (typeof bytes === "object" && bytes) {
+    return new Uint8Array(Object.values(bytes));
+  } else {
+    throw new Error("getNearUint8ArrayFromBytes: Unexpected result type from bytes array");
+  }
+}
+
+export function getAlgorandTransactionId(transaction: string) {
+  const signedTxnBytes = Buffer.from(transaction, "base64");
+
+  const decoded = msgpackDecode(signedTxnBytes) as any;
+
+  const unsignedTxn = decoded.txn;
+  if (!unsignedTxn) {
+    throw new Error("Invalid signed transaction: missing 'txn' field");
+  }
+
+  const serializedUnsignedTxn = msgpackEncode(unsignedTxn);
+
+  // Prepend "TX" prefix
+  const txPrefix = Buffer.from("TX");
+  const toHash = Buffer.concat([txPrefix, Buffer.from(serializedUnsignedTxn)]);
+
+  const hash = sha512_256(toHash);
+
+  // Encode to base32 and remove padding
+  return base32.encode(hash).replace(/=+$/, "");
+}
+
+function encodeVarint(value: number | bigint): Buffer {
+  const result: number[] = [];
+  let v = BigInt(value);
+  while (v >= 0x80n) {
+    result.push(Number((v & 0x7fn) | 0x80n));
+    v >>= 7n;
+  }
+  result.push(Number(v));
+  return Buffer.from(result);
+}
+
+export function getSignDirectHash(payload: {
+  signed: {
+    chainId: string;
+    accountNumber: string;
+    authInfoBytes: string;
+    bodyBytes: string;
+  };
+  signature: {
+    pub_key: {
+      type: string;
+      value: string;
+    };
+    signature: string;
+  };
+}) {
+  const bodyBytes = Buffer.from(payload.signed.bodyBytes, "base64");
+  const authInfoBytes = Buffer.from(payload.signed.authInfoBytes, "base64");
+  const signature = Buffer.from(payload.signature.signature, "base64");
+
+  const chunks: Buffer[] = [];
+
+  chunks.push(Buffer.from([0x0a]));
+  chunks.push(encodeVarint(bodyBytes.length));
+  chunks.push(bodyBytes);
+
+  chunks.push(Buffer.from([0x12]));
+  chunks.push(encodeVarint(authInfoBytes.length));
+  chunks.push(authInfoBytes);
+
+  chunks.push(Buffer.from([0x1a]));
+  chunks.push(encodeVarint(signature.length));
+  chunks.push(signature);
+
+  const txRawBytes = Buffer.concat(chunks);
+  const hashBytes = sha256(txRawBytes);
+
+  return Buffer.from(hashBytes).toString("hex").toUpperCase();
 }
