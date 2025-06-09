@@ -481,6 +481,7 @@ export class Engine extends IEngine {
       metadata: proposer.metadata,
     });
     await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
+    this.client.core.expirer.del(id);
     await this.client.core.pairing.activate({ topic: pairingTopic });
     await this.setExpiry(sessionTopic, calcExpiry(SESSION_EXPIRY));
     return {
@@ -515,8 +516,10 @@ export class Engine extends IEngine {
         error: reason,
         rpcOpts: ENGINE_RPC_OPTS.wc_sessionPropose.reject,
       });
-      await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
     }
+
+    await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
+    this.client.core.expirer.del(id);
   };
 
   public update: IEngine["update"] = async (params) => {
