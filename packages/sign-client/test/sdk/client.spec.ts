@@ -93,6 +93,10 @@ describe("Sign Client Integration", () => {
       expect(clients.B.metadata.redirect).to.exist;
       expect(clients.B.metadata.redirect?.native).to.exist;
       expect(clients.B.metadata.redirect?.universal).to.exist;
+      expect(clients.A.core.expirer.keys).to.deep.equal(clients.B.core.expirer.keys);
+      expect(clients.A.core.expirer.keys.length).to.eq(2);
+      expect(clients.B.core.expirer.keys.length).to.eq(2);
+
       await deleteClients(clients);
     });
     it("should set scopedProperties in session", async () => {
