@@ -9,4 +9,4 @@
 "@walletconnect/universal-provider": patch
 ---
 
-Fixed a bug where reuseing pairing URI second time was not providing correct verify context in session_proposal
+Fixed a bug where reusing pairing URI second time was not providing correct verify context in session_proposal
