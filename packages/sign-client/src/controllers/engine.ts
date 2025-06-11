@@ -480,8 +480,7 @@ export class Engine extends IEngine {
       topic: pairingTopic,
       metadata: proposer.metadata,
     });
-    await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
-    this.client.core.expirer.del(id);
+    await this.deleteProposal(id);
     await this.client.core.pairing.activate({ topic: pairingTopic });
     await this.setExpiry(sessionTopic, calcExpiry(SESSION_EXPIRY));
     return {
@@ -518,8 +517,7 @@ export class Engine extends IEngine {
       });
     }
 
-    await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
-    this.client.core.expirer.del(id);
+    await this.deleteProposal(id);
   };
 
   public update: IEngine["update"] = async (params) => {
@@ -1329,7 +1327,7 @@ export class Engine extends IEngine {
       ),
     });
     await this.client.auth.requests.delete(id, { message: "rejected", code: 0 });
-    await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
+    await this.deleteProposal(id);
   };
 
   public formatAuthMessage: IEngine["formatAuthMessage"] = (params) => {
@@ -1956,7 +1954,7 @@ export class Engine extends IEngine {
       });
       await this.client.core.pairing.activate({ topic });
     } else if (isJsonRpcError(payload)) {
-      await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
+      await this.deleteProposal(id);
       const target = engineEvent("session_connect", id);
       const listeners = this.events.listenerCount(target);
       if (listeners === 0) {
