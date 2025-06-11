@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { TEST_APP_METADATA_A, TEST_EMPTY_METADATA, TEST_WALLET_METADATA } from "./../shared/values";
 import {
   formatJsonRpcError,
@@ -92,6 +93,10 @@ describe("Sign Client Integration", () => {
       expect(clients.B.metadata.redirect).to.exist;
       expect(clients.B.metadata.redirect?.native).to.exist;
       expect(clients.B.metadata.redirect?.universal).to.exist;
+      expect(clients.A.core.expirer.keys).to.deep.equal(clients.B.core.expirer.keys);
+      expect(clients.A.core.expirer.keys.length).to.eq(2);
+      expect(clients.B.core.expirer.keys.length).to.eq(2);
+
       await deleteClients(clients);
     });
     it("should set scopedProperties in session", async () => {
@@ -642,6 +647,56 @@ describe("Sign Client Integration", () => {
                   events: [],
                   chains: ["eip155:1"],
                 },
+                sui: {
+                  methods: ["sui_signTransaction", "sui_signAndExecuteTransaction"],
+                  events: [],
+                  chains: ["sui:devnet"],
+                },
+                hedera: {
+                  methods: ["hedera_signAndExecuteTransaction", "hedera_executeTransaction"],
+                  events: [],
+                  chains: ["hedera:mainnet"],
+                },
+                near: {
+                  methods: ["near_signTransaction", "near_signTransactions"],
+                  events: [],
+                  chains: ["near:testnet"],
+                },
+                tron: {
+                  methods: ["tron_signTransaction"],
+                  events: [],
+                  chains: ["tron:mainnet"],
+                },
+                xrpl: {
+                  methods: ["xrpl_signTransaction", "xrpl_signTransactionFor"],
+                  events: [],
+                  chains: ["xrpl:mainnet"],
+                },
+                algorand: {
+                  methods: ["algo_signTxn"],
+                  events: [],
+                  chains: ["algorand:mainnet"],
+                },
+                bip122: {
+                  methods: ["sendTransfer"],
+                  events: [],
+                  chains: ["bip122:mainnet"],
+                },
+                stacks: {
+                  methods: ["stacks_stxTransfer"],
+                  events: [],
+                  chains: ["stacks:mainnet"],
+                },
+                polkadot: {
+                  methods: ["polkadot_signTransaction"],
+                  events: [],
+                  chains: ["polkadot:mainnet"],
+                },
+                cosmos: {
+                  methods: ["cosmos_signDirect"],
+                  events: [],
+                  chains: ["cosmos:mainnet"],
+                },
               },
               namespaces: {
                 solana: {
@@ -658,6 +713,66 @@ describe("Sign Client Integration", () => {
                   methods: ["eth_sendTransaction"],
                   events: [],
                   accounts: ["eip155:1:0x"],
+                },
+                sui: {
+                  methods: ["sui_signTransaction", "sui_signAndExecuteTransaction"],
+                  events: [],
+                  chains: ["sui:devnet"],
+                  accounts: ["sui:devnet:0x"],
+                },
+                hedera: {
+                  methods: ["hedera_signAndExecuteTransaction", "hedera_executeTransaction"],
+                  events: [],
+                  chains: ["hedera:mainnet"],
+                  accounts: ["hedera:mainnet:0x"],
+                },
+                near: {
+                  methods: ["near_signTransaction", "near_signTransactions"],
+                  events: [],
+                  chains: ["near:testnet"],
+                  accounts: ["near:testnet:0x"],
+                },
+                tron: {
+                  methods: ["tron_signTransaction"],
+                  events: [],
+                  chains: ["tron:mainnet"],
+                  accounts: ["tron:mainnet:0x"],
+                },
+                xrpl: {
+                  methods: ["xrpl_signTransaction", "xrpl_signTransactionFor"],
+                  events: [],
+                  chains: ["xrpl:mainnet"],
+                  accounts: ["xrpl:mainnet:0x"],
+                },
+                algorand: {
+                  methods: ["algo_signTxn"],
+                  events: [],
+                  chains: ["algorand:mainnet"],
+                  accounts: ["algorand:mainnet:0x"],
+                },
+                bip122: {
+                  methods: ["sendTransfer"],
+                  events: [],
+                  chains: ["bip122:mainnet"],
+                  accounts: ["bip122:mainnet:0x"],
+                },
+                stacks: {
+                  methods: ["stacks_stxTransfer"],
+                  events: [],
+                  chains: ["stacks:mainnet"],
+                  accounts: ["stacks:mainnet:0x"],
+                },
+                polkadot: {
+                  methods: ["polkadot_signTransaction"],
+                  events: [],
+                  chains: ["polkadot:mainnet"],
+                  accounts: ["polkadot:mainnet:0x"],
+                },
+                cosmos: {
+                  methods: ["cosmos_signDirect"],
+                  events: [],
+                  chains: ["cosmos:mainnet"],
+                  accounts: ["cosmos:mainnet:0x"],
                 },
               },
             },
@@ -686,14 +801,14 @@ describe("Sign Client Integration", () => {
                   expect(tvf?.contractAddresses).to.eql([params.request.params[0].to]);
 
                   if (!tvf) {
-                    return console.error("tvf is undefined");
+                    return console.error("eip155 tvf is undefined");
                   }
                   if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
-                    return console.error("tvf is missing required fields");
+                    return console.error("eip155 tvf is missing required fields");
                   }
                   if (tvf.txHashes[0] !== result.result) {
                     return console.error(
-                      "txHashes do not match: signature - eth_sendTransaction",
+                      "eip155 txHashes do not match: signature - eth_sendTransaction",
                       tvf.txHashes[0],
                       result.result,
                       id,
@@ -762,14 +877,14 @@ describe("Sign Client Integration", () => {
                   const tvf = publishPayload.tvf;
                   console.log("tvf", tvf);
                   if (!tvf) {
-                    return console.error("tvf is undefined");
+                    return console.error("solana tvf is undefined");
                   }
                   if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
-                    return console.error("tvf is missing required fields");
+                    return console.error("solana tvf is missing required fields");
                   }
                   if (tvf.txHashes[0] !== result.result.signature) {
                     return console.error(
-                      "txHashes do not match: signature - solana_signAndSendTransaction",
+                      "solana txHashes do not match: signature - solana_signAndSendTransaction",
                       tvf.txHashes[0],
                       result.result.signature,
                       id,
@@ -839,14 +954,14 @@ describe("Sign Client Integration", () => {
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                   const tvf = publishPayload.tvf;
                   if (!tvf) {
-                    return console.error("tvf is undefined");
+                    return console.error("solana tvf is undefined");
                   }
                   if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
-                    return console.error("tvf is missing required fields");
+                    return console.error("solana tvf is missing required fields");
                   }
                   if (tvf.txHashes[0] !== result.result.signature) {
                     return console.error(
-                      "txHashes do not match: signature",
+                      "solana txHashes do not match: signature",
                       tvf.txHashes[0],
                       result.result.signature,
                     );
@@ -927,14 +1042,14 @@ describe("Sign Client Integration", () => {
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                   const tvf = publishPayload.tvf;
                   if (!tvf) {
-                    return console.error("tvf is undefined");
+                    return console.error("solana tvf is undefined");
                   }
                   if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
-                    return console.error("tvf is missing required fields");
+                    return console.error("solana tvf is missing required fields");
                   }
                   if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
                     return console.error(
-                      "txHashes do not match: transactions",
+                      "solana txHashes do not match: transactions",
                       tvf.txHashes,
                       result.result.transactions,
                     );
@@ -983,6 +1098,1226 @@ describe("Sign Client Integration", () => {
                   ...requestParams,
                 },
                 chainId: "solana:devnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // sui sui_signTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+
+                const result = formatJsonRpcResult(id, {
+                  transactionBytes:
+                    "AAACAAhkAAAAAAAAAAAg1fZH7bd9T9ox0DBFBkR/s8kuVar3e8XtS3fDMt1GBfoCAgABAQAAAQEDAAAAAAEBANX2R+23fU/aMdAwRQZEf7PJLlWq93vF7Ut3wzLdRgX6At/pRJzj2VpZgqXpSvEtd3GzPvt99hR8e/yOCGz/8nbRmA7QFAAAAAAgBy5vStJizn76LmJTBlDiONdR/2rSuzzS4L+Tp/Zs4hZ8cBxYkcSlxBD6QXvgS11E6d+DNek8LiA/beba6iH3l5gO0BQAAAAAIMpdmZjiqJ5GG9di1MAgD4S3uRr2gaMC7S1WsaeBwNIx1fZH7bd9T9ox0DBFBkR/s8kuVar3e8XtS3fDMt1GBfroAwAAAAAAAECrPAAAAAAAAA==",
+                });
+                const expectedTxHashes = ["C98G1Uwh5soPMtZZmjUFwbVzWLMoAHzi5jrX2BtABe8v"];
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("sui tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("sui tvf is missing required fields");
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "sui txHashes do not match: transactionBytes",
+                      tvf.txHashes,
+                      result.result.transactionBytes,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "sui_signTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "sui:devnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // sui sui_signAndExecuteTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["C98G1Uwh5soPMtZZmjUFwbVzWLMoAHzi5jrX2BtABe8v"];
+                const result = formatJsonRpcResult(id, {
+                  digest: expectedTxHashes[0],
+                });
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("sui tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("sui tvf is missing required fields");
+                  }
+                  if (
+                    tvf.rpcMethods.length !== 1 &&
+                    tvf.rpcMethods[0] !== "sui_signAndExecuteTransaction"
+                  ) {
+                    return console.error("sui tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "sui txHashes do not match: digest",
+                      tvf.txHashes,
+                      result.result.digest,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "sui_signAndExecuteTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "sui:devnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // hedera hedera_signAndExecuteTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["0.0.12345678@1689281510.675369303"];
+                const result = formatJsonRpcResult(id, {
+                  transactionId: expectedTxHashes[0],
+                });
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("hedera tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("hedera tvf is missing required fields");
+                  }
+                  if (
+                    tvf.rpcMethods.length !== 1 &&
+                    tvf.rpcMethods[0] !== "hedera_signAndExecuteTransaction"
+                  ) {
+                    return console.error("hedera tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "hedera txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result.transactionId,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "hedera_signAndExecuteTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "hedera:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // hedera hedera_executeTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["0.0.12345678@1689281510.675369303"];
+                const result = formatJsonRpcResult(id, {
+                  transactionId: expectedTxHashes[0],
+                });
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("hedera tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("hedera tvf is missing required fields");
+                  }
+                  if (
+                    tvf.rpcMethods.length !== 1 &&
+                    tvf.rpcMethods[0] !== "hedera_signAndExecuteTransaction"
+                  ) {
+                    return console.error("hedera tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "hedera txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result.transactionId,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "hedera_executeTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "hedera:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // near near_signTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["EpHx79wKAn6br4G9aKaCGLpdzNc8YjrthiFonXQgskAx"];
+                const signedTransaction = new Uint8Array([
+                  16, 0, 0, 0, 48, 120, 103, 97, 110, 99, 104, 111, 46, 116, 101, 115, 116, 110,
+                  101, 116, 0, 243, 74, 204, 31, 29, 80, 146, 149, 102, 175, 8, 83, 231, 187, 5,
+                  120, 41, 115, 247, 22, 197, 120, 182, 242, 120, 135, 73, 137, 166, 246, 171, 103,
+                  77, 243, 34, 42, 212, 180, 0, 0, 16, 0, 0, 0, 48, 120, 103, 97, 110, 99, 104, 111,
+                  46, 116, 101, 115, 116, 110, 101, 116, 5, 233, 95, 227, 45, 10, 101, 176, 111,
+                  124, 190, 86, 106, 27, 143, 54, 148, 125, 132, 252, 25, 71, 125, 78, 60, 242, 100,
+                  219, 40, 168, 65, 3, 1, 0, 0, 0, 3, 0, 0, 0, 161, 237, 204, 206, 27, 194, 211, 0,
+                  0, 0, 0, 0, 0,
+                ]);
+
+                const result = formatJsonRpcResult(id, signedTransaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("near tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("near tvf is missing required fields");
+                  }
+                  if (tvf.rpcMethods.length !== 1 && tvf.rpcMethods[0] !== "near_signTransaction") {
+                    return console.error("near tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "near txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "near_signTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "near:testnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // near near_signTransactions example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = [
+                  "EpHx79wKAn6br4G9aKaCGLpdzNc8YjrthiFonXQgskAx",
+                  "EpHx79wKAn6br4G9aKaCGLpdzNc8YjrthiFonXQgskAx",
+                ];
+                const signedTransaction = new Uint8Array([
+                  16, 0, 0, 0, 48, 120, 103, 97, 110, 99, 104, 111, 46, 116, 101, 115, 116, 110,
+                  101, 116, 0, 243, 74, 204, 31, 29, 80, 146, 149, 102, 175, 8, 83, 231, 187, 5,
+                  120, 41, 115, 247, 22, 197, 120, 182, 242, 120, 135, 73, 137, 166, 246, 171, 103,
+                  77, 243, 34, 42, 212, 180, 0, 0, 16, 0, 0, 0, 48, 120, 103, 97, 110, 99, 104, 111,
+                  46, 116, 101, 115, 116, 110, 101, 116, 5, 233, 95, 227, 45, 10, 101, 176, 111,
+                  124, 190, 86, 106, 27, 143, 54, 148, 125, 132, 252, 25, 71, 125, 78, 60, 242, 100,
+                  219, 40, 168, 65, 3, 1, 0, 0, 0, 3, 0, 0, 0, 161, 237, 204, 206, 27, 194, 211, 0,
+                  0, 0, 0, 0, 0,
+                ]);
+
+                const result = formatJsonRpcResult(id, [signedTransaction, signedTransaction]);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("near tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("near tvf is missing required fields");
+                  }
+                  if (
+                    tvf.rpcMethods.length !== 1 &&
+                    tvf.rpcMethods[0] !== "near_signTransactions"
+                  ) {
+                    return console.error("near tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "near txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      expectedTxHashes,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "near_signTransactions",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "near:testnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // tron tron_signTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["0x1234567890"];
+                const transaction = {
+                  txID: expectedTxHashes[0],
+                };
+
+                const result = formatJsonRpcResult(id, transaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("tron tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("tron tvf is missing required fields");
+                  }
+                  if (tvf.rpcMethods.length !== 1 && tvf.rpcMethods[0] !== "tron_signTransaction") {
+                    return console.error("tron tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "tron txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "tron_signTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "tron:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // xrpl xrpl_signTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["0x1234567890"];
+                const transaction = {
+                  tx_json: {
+                    hash: expectedTxHashes[0],
+                  },
+                };
+
+                const result = formatJsonRpcResult(id, transaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("xrpl tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("xrpl tvf is missing required fields");
+                  }
+                  if (tvf.rpcMethods.length !== 1 && tvf.rpcMethods[0] !== "xrpl_signTransaction") {
+                    return console.error("xrpl tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "xrpl txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "xrpl_signTransaction",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "xrpl:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // xrpl xrpl_signTransactionFor example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["0x1234567890"];
+                const transaction = {
+                  tx_json: {
+                    hash: expectedTxHashes[0],
+                  },
+                };
+
+                const result = formatJsonRpcResult(id, transaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("xrpl tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("xrpl tvf is missing required fields");
+                  }
+                  if (
+                    tvf.rpcMethods.length !== 1 &&
+                    tvf.rpcMethods[0] !== "xrpl_signTransactionFor"
+                  ) {
+                    return console.error("xrpl tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "xrpl txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "xrpl_signTransactionFor",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "xrpl:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // algorand algo_signTxn example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["OM5JS3AE4HVAT5ZMCIMY32HPD6KJAQVPFS2LL2ZW2R5JKUKZFVNA"];
+                const transaction = [
+                  "gqNzaWfEQNGPgbxS9pTu0sTikT3cJVO48WFltc8MM8meFR+aAnGwOo3FO+0nFkAludT0jNqHRM6E65gW6k/m92sHVCxVnQWjdHhuiaNhbXTOAAehIKNmZWXNA+iiZnbOAv0CO6NnZW6sbWFpbm5ldC12MS4womdoxCDAYcTY/B293tLXYEvkVo4/bQQZh6w3veS2ILWrOSSK36Jsds4C/QYjo3JjdsQgeqRNTBEXudHx2kO9Btq289aRzj5DlNUw0jwX9KEnaZqjc25kxCDH1s5tvgARbjtHceUG07Sj5IDfqzn7Zwx0P+XuvCYMz6R0eXBlo3BheQ==",
+                ];
+
+                const result = formatJsonRpcResult(id, transaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("algorand tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("algorand tvf is missing required fields");
+                  }
+                  if (tvf.rpcMethods.length !== 1 && tvf.rpcMethods[0] !== "algo_signTxn") {
+                    return console.error("algorand tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "algorand txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "algo_signTxn",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "algorand:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // bip122 sendTransfer example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["OM5JS3AE4HVAT5ZMCIMY32HPD6KJAQVPFS2LL2ZW2R5JKUKZFVNA"];
+                const transaction = {
+                  txid: expectedTxHashes[0],
+                };
+
+                const result = formatJsonRpcResult(id, transaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("bip122 tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("bip122 tvf is missing required fields");
+                  }
+                  if (tvf.rpcMethods.length !== 1 && tvf.rpcMethods[0] !== "sendTransfer") {
+                    return console.error("bip122 tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "bip122 txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "sendTransfer",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "bip122:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // stacks stacks_stxTransfer example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = ["OM5JS3AE4HVAT5ZMCIMY32HPD6KJAQVPFS2LL2ZW2R5JKUKZFVNA"];
+                const transaction = {
+                  txId: expectedTxHashes[0],
+                };
+
+                const result = formatJsonRpcResult(id, transaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("stacks tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("stacks tvf is missing required fields");
+                  }
+                  if (tvf.rpcMethods.length !== 1 && tvf.rpcMethods[0] !== "stacks_stxTransfer") {
+                    return console.error("stacks tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "stacks txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      result.result,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "stacks_stxTransfer",
+                params: [
+                  {
+                    data: "0xdeadbeef",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "stacks:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // polkadot polkadot_signTransaction example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = [
+                  "0x48016b3c80b7b61d32d1db6f52038de70d7d30ef948da047442cc9c952b92e84",
+                ];
+                const transaction = {
+                  signature:
+                    "362cef5dff66aee851a5d8c5100a53590eddd7c75c1a53553b08861fb28ce80b96d53279f52a27c866639954c5efa32b52c148fefe78dbdad1f9d3be4f44538f",
+                };
+
+                const result = formatJsonRpcResult(id, transaction);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("polkadot tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("polkadot tvf is missing required fields");
+                  }
+                  if (
+                    tvf.rpcMethods.length !== 1 &&
+                    tvf.rpcMethods[0] !== "polkadot_signTransaction"
+                  ) {
+                    return console.error("polkadot tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "polkadot txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      expectedTxHashes,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "polkadot_signTransaction",
+                params: {
+                  address: "15JBFhDp1rQycRFuCtkr2VouMiWyDzh3qRUPA8STY53mdRmM",
+                  transactionPayload: {
+                    method:
+                      "050300c07d211d3c181df768d9d9d41df6f14f9d116d9c1906f38153b208259c315b4b02286bee",
+                    specVersion: "c9550f00",
+                    transactionVersion: "1a000000",
+                    genesisHash: "91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3",
+                    blockHash: "130d8c27af0e0adfa85d370af89746f229780b677c81da97d11a4921cdb86df5",
+                    era: "1502",
+                    nonce: "1c",
+                    tip: "00",
+                    mode: "00",
+                    metadataHash: "00",
+                    address: "15JBFhDp1rQycRFuCtkr2VouMiWyDzh3qRUPA8STY53mdRmM",
+                    version: 4,
+                  },
+                },
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "polkadot:mainnet",
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // cosmos cosmos_signDirect example
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+                const expectedTxHashes = [
+                  "A7284BA475C55983E5BCB7D52F5C82CBFF19FD75725F5E0E33BA4384FCFC6052",
+                ];
+                const signedResult = {
+                  signature: {
+                    pub_key: {
+                      type: "tendermint/PubKeySecp256k1",
+                      value: "AgSEjOuOr991QlHCORRmdE5ahVKeyBrmtgoYepCpQGOW",
+                    },
+                    signature:
+                      "S7BJEbiXQ6vxvF9o4Wj7qAcocMQqBsqz+NVH4wilhidFsRpyqpSP5XiXoQZxTDrT9uET/S5SH6+5gUmjYntH/Q==",
+                  },
+                  signed: {
+                    chainId: "cosmoshub-4",
+                    accountNumber: "1",
+                    authInfoBytes:
+                      "ClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiEDNOXj4u60JFq00+VbLBCNBTYy76Pn864AvYNFG/9cQwMSBAoCCH8YAhITCg0KBXVhdG9tEgQ0NTM1EIaJCw==",
+                    bodyBytes:
+                      "CpoICikvaWJjLmFwcGxpY2F0aW9ucy50cmFuc2Zlci52MS5Nc2dUcmFuc2ZlchLsBwoIdHJhbnNmZXISC2NoYW5uZWwtMTQxGg8KBXVhdG9tEgYxODg4MDYiLWNvc21vczFhanBkZndsZmRqY240MG5yZXN5ZHJxazRhOGo2ZG0wemY0MGszcSo/b3NtbzEwYTNrNGh2azM3Y2M0aG54Y3R3NHA5NWZoc2NkMno2aDJybXgwYXVrYzZybTh1OXFxeDlzbWZzaDd1MgcIARDFt5YRQsgGeyJ3YXNtIjp7ImNvbnRyYWN0Ijoib3NtbzEwYTNrNGh2azM3Y2M0aG54Y3R3NHA5NWZoc2NkMno2aDJybXgwYXVrYzZybTh1OXFxeDlzbWZzaDd1IiwibXNnIjp7InN3YXBfYW5kX2FjdGlvbiI6eyJ1c2VyX3N3YXAiOnsic3dhcF9leGFjdF9hc3NldF9pbiI6eyJzd2FwX3ZlbnVlX25hbWUiOiJvc21vc2lzLXBvb2xtYW5hZ2VyIiwib3BlcmF0aW9ucyI6W3sicG9vbCI6IjE0MDAiLCJkZW5vbV9pbiI6ImliYy8yNzM5NEZCMDkyRDJFQ0NENTYxMjNDNzRGMzZFNEMxRjkyNjAwMUNFQURBOUNBOTdFQTYyMkIyNUY0MUU1RUIyIiwiZGVub21fb3V0IjoidW9zbW8ifSx7InBvb2wiOiIxMzQ3IiwiZGVub21faW4iOiJ1b3NtbyIsImRlbm9tX291dCI6ImliYy9ENzlFN0Q4M0FCMzk5QkZGRjkzNDMzRTU0RkFBNDgwQzE5MTI0OEZDNTU2OTI0QTJBODM1MUFFMjYzOEIzODc3In1dfX0sIm1pbl9hc3NldCI6eyJuYXRpdmUiOnsiZGVub20iOiJpYmMvRDc5RTdEODNBQjM5OUJGRkY5MzQzM0U1NEZBQTQ4MEMxOTEyNDhGQzU1NjkyNEEyQTgzNTFBRTI2MzhCMzg3NyIsImFtb3VudCI6IjMzOTQ2NyJ9fSwidGltZW91dF90aW1lc3RhbXAiOjE3NDc3NDY3MzM3OTU4OTgzNjQsInBvc3Rfc3dhcF9hY3Rpb24iOnsiaWJjX3RyYW5zZmVyIjp7ImliY19pbmZvIjp7InNvdXJjZV9jaGFubmVsIjoiY2hhbm5lbC02OTk0IiwicmVjZWl2ZXIiOiJjZWxlc3RpYTFhanBkZndsZmRqY240MG5yZXN5ZHJxazRhOGo2ZG0wemNsN3h0ZCIsIm1lbW8iOiIiLCJyZWNvdmVyX2FkZHJlc3MiOiJvc21vMWFqcGRmd2xmZGpjbjQwbnJlc3lkcnFrNGE4ajZkbTB6cHd1eDhqIn19fSwiYWZmaWxpYXRlcyI6W119fX19",
+                  },
+                };
+
+                const result = formatJsonRpcResult(id, signedResult);
+
+                let checkedWalletPublish = false;
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  const tvf = publishPayload.tvf;
+                  if (!tvf) {
+                    return console.error("cosmos tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("cosmos tvf is missing required fields");
+                  }
+                  if (tvf.rpcMethods.length !== 1 && tvf.rpcMethods[0] !== "cosmos_signDirect") {
+                    return console.error("cosmos tvf rpcMethods is invalid", tvf.rpcMethods);
+                  }
+                  if (tvf.txHashes.join(",") !== expectedTxHashes.join(",")) {
+                    return console.error(
+                      "cosmos txHashes do not match: transactionId",
+                      tvf.txHashes,
+                      expectedTxHashes,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "cosmos_signDirect",
+                params: {},
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+                chainId: "cosmos:mainnet",
               });
               expect(checkedDappPublish).to.be.true;
               resolve();

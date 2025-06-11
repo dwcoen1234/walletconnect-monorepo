@@ -99,7 +99,12 @@ import {
   isTestRun,
   isValidArray,
   extractSolanaTransactionId,
+  getSuiDigest,
   mergeRequiredAndOptionalNamespaces,
+  getNearTransactionIdFromSignedTransaction,
+  getAlgorandTransactionId,
+  buildSignedExtrinsicHash,
+  getSignDirectHash,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -475,7 +480,7 @@ export class Engine extends IEngine {
       topic: pairingTopic,
       metadata: proposer.metadata,
     });
-    await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
+    await this.deleteProposal(id);
     await this.client.core.pairing.activate({ topic: pairingTopic });
     await this.setExpiry(sessionTopic, calcExpiry(SESSION_EXPIRY));
     return {
@@ -510,8 +515,9 @@ export class Engine extends IEngine {
         error: reason,
         rpcOpts: ENGINE_RPC_OPTS.wc_sessionPropose.reject,
       });
-      await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
     }
+
+    await this.deleteProposal(id);
   };
 
   public update: IEngine["update"] = async (params) => {
@@ -651,7 +657,6 @@ export class Engine extends IEngine {
       },
       chainId,
     };
-    const shouldSetTVF = this.shouldSetTVF(protocolMethod, protocolRequestParams);
 
     return await Promise.all([
       new Promise<void>(async (resolve) => {
@@ -663,9 +668,7 @@ export class Engine extends IEngine {
           params: protocolRequestParams,
           expiry,
           throwOnFailedPublish: true,
-          ...(shouldSetTVF && {
-            tvf: this.getTVFParams(clientRpcId, protocolRequestParams),
-          }),
+          tvf: this.getTVFParams(clientRpcId, protocolRequestParams),
         }).catch((error) => reject(error));
         this.client.events.emit("session_request_sent", {
           topic,
@@ -1324,7 +1327,7 @@ export class Engine extends IEngine {
       ),
     });
     await this.client.auth.requests.delete(id, { message: "rejected", code: 0 });
-    await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
+    await this.deleteProposal(id);
   };
 
   public formatAuthMessage: IEngine["formatAuthMessage"] = (params) => {
@@ -1584,9 +1587,7 @@ export class Engine extends IEngine {
       record = await this.client.core.history.get(topic, id);
       const request = record.request;
       try {
-        if (this.shouldSetTVF(request.method as JsonRpcTypes.WcMethod, request.params)) {
-          tvf = this.getTVFParams(id, request.params, result);
-        }
+        tvf = this.getTVFParams(id, request.params, result);
       } catch (error) {
         this.client.logger.warn(`sendResult() -> getTVFParams() failed`, error);
       }
@@ -1953,7 +1954,7 @@ export class Engine extends IEngine {
       });
       await this.client.core.pairing.activate({ topic });
     } else if (isJsonRpcError(payload)) {
-      await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
+      await this.deleteProposal(id);
       const target = engineEvent("session_connect", id);
       const listeners = this.events.listenerCount(target);
       if (listeners === 0) {
@@ -3111,39 +3112,26 @@ export class Engine extends IEngine {
     }
   };
 
-  private shouldSetTVF = (
-    protocolMethod: JsonRpcTypes.WcMethod,
-    params: JsonRpcTypes.RequestParams["wc_sessionRequest"],
-  ) => {
-    if (!params) return false;
-    if (protocolMethod !== "wc_sessionRequest") return false;
-    const { request } = params;
-    return Object.keys(TVF_METHODS).includes(request.method);
-  };
-
   private getTVFParams = (
     id: number,
     params: JsonRpcTypes.RequestParams["wc_sessionRequest"],
     result?: any,
   ) => {
+    const tvf: RelayerTypes.ITVF = {
+      correlationId: id,
+      rpcMethods: [params.request.method],
+      chainId: params.chainId,
+    };
     try {
-      const requestMethod = params.request.method;
-      const txHashes = this.extractTxHashesFromResult(requestMethod, result);
-      const tvf: RelayerTypes.ITVF = {
-        correlationId: id,
-        rpcMethods: [requestMethod],
-        chainId: params.chainId,
-        ...(this.isValidContractData(params.request.params) && {
-          // initially only get contractAddresses from EVM txs
-          contractAddresses: [params.request.params?.[0]?.to],
-        }),
-        txHashes,
-      };
-      return tvf;
+      const txHashes = this.extractTxHashesFromResult(params.request, result);
+      tvf.txHashes = txHashes;
+      tvf.contractAddresses = this.isValidContractData(params.request.params)
+        ? [params.request.params?.[0]?.to]
+        : [];
     } catch (e) {
       this.client.logger.warn("Error getting TVF params", e);
     }
-    return {};
+    return tvf;
   };
 
   private isValidContractData = (params: any) => {
@@ -3161,9 +3149,51 @@ export class Engine extends IEngine {
     return false;
   };
 
-  private extractTxHashesFromResult = (method: string, result: any): string[] => {
+  private extractTxHashesFromResult = (
+    request: JsonRpcTypes.RequestParams["wc_sessionRequest"]["request"],
+    result: any,
+  ): string[] => {
     try {
+      if (!result) return [];
+
+      const method = request.method;
       const methodConfig = TVF_METHODS[method as keyof typeof TVF_METHODS];
+
+      if (method === "sui_signTransaction") {
+        return [getSuiDigest(result.transactionBytes)];
+      }
+
+      if (method === "near_signTransaction") {
+        return [getNearTransactionIdFromSignedTransaction(result)];
+      }
+
+      if (method === "near_signTransactions") {
+        return result.map((tx: any) => getNearTransactionIdFromSignedTransaction(tx));
+      }
+
+      if (method === "xrpl_signTransactionFor" || method === "xrpl_signTransaction") {
+        return [result.tx_json?.hash];
+      }
+
+      if (method === "polkadot_signTransaction") {
+        return [
+          buildSignedExtrinsicHash({
+            transaction: request.params.transactionPayload,
+            signature: result.signature,
+          }),
+        ];
+      }
+
+      if (method === "algo_signTxn") {
+        return isValidArray(result)
+          ? result.map((tx: any) => getAlgorandTransactionId(tx))
+          : [getAlgorandTransactionId(result)];
+      }
+
+      if (method === "cosmos_signDirect") {
+        return [getSignDirectHash(result)];
+      }
+
       // result = 0x...
       if (typeof result === "string") {
         return [result];

@@ -146,6 +146,7 @@ export const ENGINE_QUEUE_STATES: { idle: "IDLE"; active: "ACTIVE" } = {
 };
 
 export const TVF_METHODS = {
+  // evm
   eth_sendTransaction: {
     key: "",
   },
@@ -156,6 +157,7 @@ export const TVF_METHODS = {
     key: "",
   },
 
+  // solana
   solana_signTransaction: {
     key: "signature",
   },
@@ -164,5 +166,68 @@ export const TVF_METHODS = {
   },
   solana_signAndSendTransaction: {
     key: "signature",
+  },
+
+  // sui
+  sui_signAndExecuteTransaction: {
+    key: "digest",
+  },
+  sui_signTransaction: {
+    key: "",
+  },
+
+  // hedera
+  hedera_signAndExecuteTransaction: {
+    key: "transactionId",
+  },
+  hedera_executeTransaction: {
+    key: "transactionId",
+  },
+
+  // near
+  near_signTransaction: {
+    key: "",
+  },
+  near_signTransactions: {
+    key: "",
+  },
+
+  // tron
+  tron_signTransaction: {
+    key: "txID",
+  },
+
+  // xrpl
+  xrpl_signTransaction: {
+    key: "",
+  },
+
+  xrpl_signTransactionFor: {
+    key: "",
+  },
+
+  // algorand
+  algo_signTxn: {
+    key: "",
+  },
+
+  // bitcoin
+  sendTransfer: {
+    key: "txid",
+  },
+
+  // stacks
+  stacks_stxTransfer: {
+    key: "txId",
+  },
+
+  // polkadot
+  polkadot_signTransaction: {
+    key: "",
+  },
+
+  // cosmos
+  cosmos_signDirect: {
+    key: "",
   },
 };
