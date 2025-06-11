@@ -177,6 +177,62 @@ describe("Sign Client Integration", () => {
       expect(session.optionalNamespaces).to.deep.equal(requestedRequiredNamespaces);
       await deleteClients(clients);
     });
+
+    it("should save attestation and encryptedId in pending proposal", async () => {
+      const clients = await initTwoClients();
+      const requestedRequiredNamespaces = {
+        eip155: {
+          chains: ["eip155:1", "eip155:2"],
+          methods: ["eth_sendTransaction", "eth_sign"],
+          events: ["chainChanged", "accountsChanged"],
+        },
+      };
+      const { uri } = await clients.A.connect({
+        requiredNamespaces: requestedRequiredNamespaces,
+      });
+      if (!uri) throw new Error("URI is undefined");
+
+      const attestation = "attestation";
+      const encryptedId = "encryptedId";
+
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          clients.B.once("session_proposal", (params) => {
+            const { id } = params.params;
+
+            const proposal = clients.A.proposal.get(id);
+            expect(proposal).to.exist;
+            expect(proposal.attestation).to.be.undefined;
+            expect(proposal.encryptedId).to.be.undefined;
+            clients.A.proposal.set(id, {
+              ...proposal,
+              attestation,
+              encryptedId,
+            });
+
+            resolve();
+          });
+        }),
+        clients.B.pair({ uri }),
+      ]);
+
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          clients.B.once("session_proposal", (params) => {
+            const { id } = params.params;
+            const proposal = clients.A.proposal.get(id);
+            expect(proposal).to.exist;
+            console.log("proposal", proposal);
+            expect(proposal.attestation).to.equal(attestation);
+            expect(proposal.encryptedId).to.equal(encryptedId);
+            resolve();
+          });
+        }),
+        clients.B.pair({ uri }),
+      ]);
+
+      await deleteClients(clients);
+    });
     it("should connect with out of order URIs", async () => {
       const clients = await initTwoClients();
       // load three proposals
