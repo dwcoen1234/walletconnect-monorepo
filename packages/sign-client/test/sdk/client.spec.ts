@@ -222,7 +222,6 @@ describe("Sign Client Integration", () => {
             const { id } = params.params;
             const proposal = clients.A.proposal.get(id);
             expect(proposal).to.exist;
-            console.log("proposal", proposal);
             expect(proposal.attestation).to.equal(attestation);
             expect(proposal.encryptedId).to.equal(encryptedId);
             resolve();
