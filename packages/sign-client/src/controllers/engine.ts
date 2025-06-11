@@ -1886,7 +1886,14 @@ export class Engine extends IEngine {
       this.isValidConnect({ ...payload.params });
       const expiryTimestamp =
         params.expiryTimestamp || calcExpiry(ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl);
-      const proposal = { id, pairingTopic: topic, expiryTimestamp, ...params };
+      const proposal = {
+        id,
+        pairingTopic: topic,
+        expiryTimestamp,
+        attestation,
+        encryptedId,
+        ...params,
+      };
       await this.setProposal(id, proposal);
 
       const verifyContext = await this.getVerifyContext({
@@ -2526,6 +2533,8 @@ export class Engine extends IEngine {
         },
         proposal.id,
       ),
+      attestation: proposal.attestation,
+      encryptedId: proposal.encryptedId,
     });
   };
 
