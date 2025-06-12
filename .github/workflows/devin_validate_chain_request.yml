@@ -3,6 +3,9 @@ name: Trigger Devin for New Chain Request Validation
 on:
   issues:
     types: [labeled]
+  push:
+    branches:
+      - feat/devin-new-chains-workflow
 
 permissions:
   contents: read # Required to read issue content
@@ -10,9 +13,10 @@ permissions:
 
 jobs:
   trigger-devin-chain-validation:
-    # This job runs only if the issue was labeled with 'type: new chain request'
+    # This job runs if the issue was labeled with 'type: new chain request' OR if pushed to v2.0 branch (for debugging)
     if: |
-      github.event.label.name == 'type: new chain request'
+      github.event.label.name == 'type: new chain request' || 
+      github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Send Slack Notification for Chain Request Validation
@@ -22,15 +26,50 @@ jobs:
           PROMPT_TEXT: |
             ## Context
 
-            A new issue (#${{ github.event.issue.number }}) has been labeled with "type: new chain request" in the ${{ github.repository }} repository. Your task is to validate this chain request for completeness and take appropriate action.
+            A new issue (#${{ github.event_name == 'push' && '6753' || github.event.issue.number }}) has been labeled with "type: new chain request" in the ${{ github.repository }} repository. Your task is to validate this chain request for completeness and take appropriate action.
 
             **Issue Details:**
-            - **Title**: ${{ github.event.issue.title }}
-            - **URL**: ${{ github.event.issue.html_url }}
-            - **Author**: ${{ github.event.issue.user.login }}
+            - **Title**: ${{ github.event_name == 'push' && '[DEBUG] debug chain request' || github.event.issue.title }}
+            - **URL**: ${{ github.event_name == 'push' && 'https://github.com/WalletConnect/walletconnect-monorepo/issues/6753' || github.event.issue.html_url }}
+            - **Author**: ${{ github.event_name == 'push' && 'bkrem' || github.event.issue.user.login }}
 
             **Issue Body:**
-            ${{ github.event.issue.body }}
+            ${{ github.event_name == 'push' && '**Adding a new chain to the Explorer**
+            To get a new chain added to the Explorer, you will need to submit the following:
+
+            1. JSON-RPC spec for Wallets **(only if [one](https://docs.walletconnect.com/2.0/advanced/rpc-reference/ethereum-rpc) doesn''t already exist)**. For more information, please review the Ethereum [JSON-RPC API docs](https://ethereum.org/en/developers/docs/apis/json-rpc/).
+               **GitHub Link**: 
+            2. Write a [CASA namespace spec](https://github.com/ChainAgnostic/namespaces) if not already available for this namespace.
+               **GitHub Link**: 
+            3. **namespaces**:
+               _*known chain namespaces (e.g. eip:155 for Ethereum/EVM-based chains, solana, ...)_
+            4. **chains**:
+               _*known chains, where the primary key is a compound key composed of namespace + reference (e.g. ETH mainnet is eip155:1)._
+               _Please provide labels for each chain (e.g. mainnet, testnet, devnet, ...)_
+            5. **RPC endpoints**
+               _*list of common/canonical RPC endpoints for the chain(s)_
+            6. **[SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) coin type**:
+               _* slip44 coin type used in the namespace_
+
+            **References**
+            To ensure timely processing of your request, please provide the following references:
+
+            - [ ] Source of RPC endpoints (e.g. RPC docs): [link]
+            - [ ] Source of namespace (if non-EIP155) chain information (particularly chainIds): [link]
+
+            **Additional context**
+            Add any other context here.
+
+            **Please note:**
+
+            **Registering a chain with the Explorer does not impact or improve the ability for wallets and dapps to support your chain.** It is simply a way for users to discover wallets and dapps that support your chain by:
+
+            - Browsing the [Chains List](https://docs.walletconnect.com/advanced/multichain/chain-list)
+            - Filtering results programmatically via the [Explorer API](https://docs.walletconnect.com/cloud/explorer)
+
+            **It is still up to wallets and dapps to provide concrete support for your chain once it is listed as part of the Explorer.**
+
+            - [ ] I have read and understood the above clarification' || github.event.issue.body }}
 
             ## Validation Requirements
 
@@ -67,7 +106,7 @@ jobs:
             * ${{ github.repository }} (for commenting on the issue if needed)
             * reown-com/web-monorepo (for creating the PR if request is valid)
 
-            Please proceed with validating issue #${{ github.event.issue.number }} and take the appropriate action based on your assessment.
+            Please proceed with validating issue #${{ github.event_name == 'push' && '6753' || github.event.issue.number }} and take the appropriate action based on your assessment.
         run: |
           # Exit on error
           set -e
@@ -100,10 +139,11 @@ jobs:
           echo "Sending Slack notification for Chain Request Validation."
           # Echo context information using direct GitHub context expressions for clarity and consistency.
           echo "Repository: ${{ github.repository }}"
-          echo "Issue Number: #${{ github.event.issue.number }}"
-          echo "Issue Title: ${{ github.event.issue.title }}"
-          echo "Issue URL: ${{ github.event.issue.html_url }}"
-          echo "Label Added: ${{ github.event.label.name }}"
+          echo "Issue Number: #${{ github.event_name == 'push' && '6753' || github.event.issue.number }}"
+          echo "Issue Title: ${{ github.event_name == 'push' && '[DEBUG] debug chain request' || github.event.issue.title }}"
+          echo "Issue URL: ${{ github.event_name == 'push' && 'https://github.com/WalletConnect/walletconnect-monorepo/issues/6753' || github.event.issue.html_url }}"
+          echo "Label Added: ${{ github.event_name == 'push' && 'type: new chain request' || github.event.label.name }}"
+          echo "Trigger Type: ${{ github.event_name }}"
 
           # Send the notification to Slack using curl.
           # -s: silent mode (no progress meter).
