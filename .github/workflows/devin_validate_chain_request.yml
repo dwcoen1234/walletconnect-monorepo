@@ -3,172 +3,172 @@ name: Trigger Devin for New Chain Request Validation
 on:
   issues:
     types: [labeled]
-  push:
-    branches:
-      - feat/devin-new-chains-workflow
+    #push:
+    #branches:
+    #  - feat/devin-new-chains-workflow
 
 permissions:
   contents: read # Required to read issue content
   issues: read # Required to read issue details
 
 jobs:
-  trigger-devin-chain-validation:
-    # This job runs if the issue was labeled with 'type: new chain request' OR if pushed to v2.0 branch (for debugging)
-    if: |
-      github.event.label.name == 'type: new chain request' || 
-      github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send Slack Notification for Chain Request Validation
-        env:
-          DEVIN_SLACK_WEBHOOK_URL: ${{ secrets.DEVIN_SLACK_WEBHOOK_URL }}
-          DEVIN_SLACK_USER_ID: U08M9DKD4MC
-          PROMPT_TEXT: |
-            ## Context
+  # trigger-devin-chain-validation:
+  #   # This job runs if the issue was labeled with 'type: new chain request' OR if pushed to v2.0 branch (for debugging)
+  #   if: |
+  #     github.event.label.name == 'type: new chain request' ||
+  #     github.event_name == 'push'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Send Slack Notification for Chain Request Validation
+  #       env:
+  #         DEVIN_SLACK_WEBHOOK_URL: ${{ secrets.DEVIN_SLACK_WEBHOOK_URL }}
+  #         DEVIN_SLACK_USER_ID: U08M9DKD4MC
+  #         PROMPT_TEXT: |
+  #           ## Context
 
-            A new issue (#${{ github.event_name == 'push' && '6753' || github.event.issue.number }}) has been labeled with "type: new chain request" in the ${{ github.repository }} repository. Your task is to validate this chain request for completeness and take appropriate action.
+  #           A new issue (#${{ github.event_name == 'push' && '6753' || github.event.issue.number }}) has been labeled with "type: new chain request" in the ${{ github.repository }} repository. Your task is to validate this chain request for completeness and take appropriate action.
 
-            **Issue Details:**
-            - **Title**: ${{ github.event_name == 'push' && '[DEBUG] debug chain request' || github.event.issue.title }}
-            - **URL**: ${{ github.event_name == 'push' && 'https://github.com/WalletConnect/walletconnect-monorepo/issues/6753' || github.event.issue.html_url }}
-            - **Author**: ${{ github.event_name == 'push' && 'bkrem' || github.event.issue.user.login }}
+  #           **Issue Details:**
+  #           - **Title**: ${{ github.event_name == 'push' && '[DEBUG] debug chain request' || github.event.issue.title }}
+  #           - **URL**: ${{ github.event_name == 'push' && 'https://github.com/WalletConnect/walletconnect-monorepo/issues/6753' || github.event.issue.html_url }}
+  #           - **Author**: ${{ github.event_name == 'push' && 'bkrem' || github.event.issue.user.login }}
 
-            **Issue Body:**
-            ${{ github.event_name == 'push' && '**Adding a new chain to the Explorer**
-            To get a new chain added to the Explorer, you will need to submit the following:
+  #           **Issue Body:**
+  #           ${{ github.event_name == 'push' && '**Adding a new chain to the Explorer**
+  #           To get a new chain added to the Explorer, you will need to submit the following:
 
-            1. JSON-RPC spec for Wallets **(only if [one](https://docs.walletconnect.com/2.0/advanced/rpc-reference/ethereum-rpc) doesn''t already exist)**. For more information, please review the Ethereum [JSON-RPC API docs](https://ethereum.org/en/developers/docs/apis/json-rpc/).
-               **GitHub Link**: 
-            2. Write a [CASA namespace spec](https://github.com/ChainAgnostic/namespaces) if not already available for this namespace.
-               **GitHub Link**: 
-            3. **namespaces**:
-               _*known chain namespaces (e.g. eip:155 for Ethereum/EVM-based chains, solana, ...)_
-            4. **chains**:
-               _*known chains, where the primary key is a compound key composed of namespace + reference (e.g. ETH mainnet is eip155:1)._
-               _Please provide labels for each chain (e.g. mainnet, testnet, devnet, ...)_
-            5. **RPC endpoints**
-               _*list of common/canonical RPC endpoints for the chain(s)_
-            6. **[SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) coin type**:
-               _* slip44 coin type used in the namespace_
+  #           1. JSON-RPC spec for Wallets **(only if [one](https://docs.walletconnect.com/2.0/advanced/rpc-reference/ethereum-rpc) doesnt already exist)**. For more information, please review the Ethereum [JSON-RPC API docs](https://ethereum.org/en/developers/docs/apis/json-rpc/).
+  #              **GitHub Link**:
+  #           2. Write a [CASA namespace spec](https://github.com/ChainAgnostic/namespaces) if not already available for this namespace.
+  #              **GitHub Link**:
+  #           3. **namespaces**:
+  #              _*known chain namespaces (e.g. eip:155 for Ethereum/EVM-based chains, solana, ...)_
+  #           4. **chains**:
+  #              _*known chains, where the primary key is a compound key composed of namespace + reference (e.g. ETH mainnet is eip155:1)._
+  #              _Please provide labels for each chain (e.g. mainnet, testnet, devnet, ...)_
+  #           5. **RPC endpoints**
+  #              _*list of common/canonical RPC endpoints for the chain(s)_
+  #           6. **[SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) coin type**:
+  #              _* slip44 coin type used in the namespace_
 
-            **References**
-            To ensure timely processing of your request, please provide the following references:
+  #           **References**
+  #           To ensure timely processing of your request, please provide the following references:
 
-            - [ ] Source of RPC endpoints (e.g. RPC docs): [link]
-            - [ ] Source of namespace (if non-EIP155) chain information (particularly chainIds): [link]
+  #           - [ ] Source of RPC endpoints (e.g. RPC docs): [link]
+  #           - [ ] Source of namespace (if non-EIP155) chain information (particularly chainIds): [link]
 
-            **Additional context**
-            Add any other context here.
+  #           **Additional context**
+  #           Add any other context here.
 
-            **Please note:**
+  #           **Please note:**
 
-            **Registering a chain with the Explorer does not impact or improve the ability for wallets and dapps to support your chain.** It is simply a way for users to discover wallets and dapps that support your chain by:
+  #           **Registering a chain with the Explorer does not impact or improve the ability for wallets and dapps to support your chain.** It is simply a way for users to discover wallets and dapps that support your chain by:
 
-            - Browsing the [Chains List](https://docs.walletconnect.com/advanced/multichain/chain-list)
-            - Filtering results programmatically via the [Explorer API](https://docs.walletconnect.com/cloud/explorer)
+  #           - Browsing the [Chains List](https://docs.walletconnect.com/advanced/multichain/chain-list)
+  #           - Filtering results programmatically via the [Explorer API](https://docs.walletconnect.com/cloud/explorer)
 
-            **It is still up to wallets and dapps to provide concrete support for your chain once it is listed as part of the Explorer.**
+  #           **It is still up to wallets and dapps to provide concrete support for your chain once it is listed as part of the Explorer.**
 
-            - [ ] I have read and understood the above clarification' || github.event.issue.body }}
+  #           - [ ] I have read and understood the above clarification' || github.event.issue.body }}
 
-            ## Validation Requirements
+  #           ## Validation Requirements
 
-            Please validate the chain request against the following complete example format:
+  #           Please validate the chain request against the following complete example format:
 
-            **Required Elements:**
-            1. **JSON-RPC spec for Wallets** - Only required if one doesn't already exist (link to existing spec or new spec)
-            2. **CASA namespace spec** - GitHub link to ChainAgnostic/namespaces specification
-            3. **namespaces** - The namespace identifier (e.g., "fil", "eip155")
-            4. **chains** - List of chains with their CAIP-2 identifiers (e.g. "Filecoin [mainnet] fil:f")
-            5. **RPC endpoints** - Working RPC endpoints for each chain
-            6. **SLIP-0044 coin type** - The registered coin type number
-            7. **References section** with:
-               - Source of RPC endpoints (with working link)
-               - Source of namespace chain information (with working link)
-            8. **Confirmation checkbox** - "I have read and understood the above clarification" must be checked
+  #           **Required Elements:**
+  #           1. **JSON-RPC spec for Wallets** - Only required if one doesn't already exist (link to existing spec or new spec)
+  #           2. **CASA namespace spec** - GitHub link to ChainAgnostic/namespaces specification
+  #           3. **namespaces** - The namespace identifier (e.g., "fil", "eip155")
+  #           4. **chains** - List of chains with their CAIP-2 identifiers (e.g. "Filecoin [mainnet] fil:f")
+  #           5. **RPC endpoints** - Working RPC endpoints for each chain
+  #           6. **SLIP-0044 coin type** - The registered coin type number
+  #           7. **References section** with:
+  #              - Source of RPC endpoints (with working link)
+  #              - Source of namespace chain information (with working link)
+  #           8. **Confirmation checkbox** - "I have read and understood the above clarification" must be checked
 
-            ## Your Actions
+  #           ## Your Actions
 
-            **If the request is INCOMPLETE or INVALID:**
-            - Comment on the issue with a detailed summary of what is missing or incorrect
-            - Be specific about which required elements are missing
-            - Provide guidance on how to fix the issues
-            - Use a helpful and constructive tone
+  #           **If the request is INCOMPLETE or INVALID:**
+  #           - Comment on the issue with a detailed summary of what is missing or incorrect
+  #           - Be specific about which required elements are missing
+  #           - Provide guidance on how to fix the issues
+  #           - Use a helpful and constructive tone
 
-            **If the request is COMPLETE and VALID:**
-            - Create a pull request in the https://github.com/reown-com/web-monorepo/ repository
-            - Use the title: "chore: add new chains"
-            - Use this PR as a reference for structure and format: https://github.com/reown-com/web-monorepo/pull/1923
-            - Include all the chain information from the validated issue
-            - Reference the original issue in the PR description
+  #           **If the request is COMPLETE and VALID:**
+  #           - Create a pull request in the https://github.com/reown-com/web-monorepo/ repository
+  #           - Use the title: "chore: add new chains"
+  #           - Use this PR as a reference for structure and format: https://github.com/reown-com/web-monorepo/pull/1923
+  #           - Include all the chain information from the validated issue
+  #           - Reference the original issue in the PR description
 
-            ## Repositories Access Required
-            * ${{ github.repository }} (for commenting on the issue if needed)
-            * reown-com/web-monorepo (for creating the PR if request is valid)
+  #           ## Repositories Access Required
+  #           * ${{ github.repository }} (for commenting on the issue if needed)
+  #           * reown-com/web-monorepo (for creating the PR if request is valid)
 
-            Please proceed with validating issue #${{ github.event_name == 'push' && '6753' || github.event.issue.number }} and take the appropriate action based on your assessment.
-        run: |
-          # Exit on error
-          set -e
+  #           Please proceed with validating issue #${{ github.event_name == 'push' && '6753' || github.event.issue.number }} and take the appropriate action based on your assessment.
+  #       run: |
+  #         # Exit on error
+  #         set -e
 
-          # Check if the Slack webhook URL is provided and not empty
-          if [ -z "${DEVIN_SLACK_WEBHOOK_URL}" ]; then
-            echo "Error: DEVIN_SLACK_WEBHOOK_URL is not set or is empty."
-            echo "Please ensure this secret is configured in the repository settings (Secrets and variables > Actions)."
-            exit 1
-          fi
+  #         # Check if the Slack webhook URL is provided and not empty
+  #         if [ -z "${DEVIN_SLACK_WEBHOOK_URL}" ]; then
+  #           echo "Error: DEVIN_SLACK_WEBHOOK_URL is not set or is empty."
+  #           echo "Please ensure this secret is configured in the repository settings (Secrets and variables > Actions)."
+  #           exit 1
+  #         fi
 
-          # PROMPT_TEXT is set in the 'env' block and should be fully expanded by GitHub Actions.
-          # Construct the final message text for Slack.
-          MESSAGE_TEXT="<@${DEVIN_SLACK_USER_ID}> ${PROMPT_TEXT}"
+  #         # PROMPT_TEXT is set in the 'env' block and should be fully expanded by GitHub Actions.
+  #         # Construct the final message text for Slack.
+  #         MESSAGE_TEXT="<@${DEVIN_SLACK_USER_ID}> ${PROMPT_TEXT}"
 
-          # Create the JSON payload for Slack.
-          # The --arg option in jq handles escaping special characters in MESSAGE_TEXT for valid JSON.
-          echo "Attempting to create JSON payload..."
-          JSON_PAYLOAD=$(jq -n --arg text "$MESSAGE_TEXT" '{text: $text}')
-          JQ_EXIT_CODE=$?
+  #         # Create the JSON payload for Slack.
+  #         # The --arg option in jq handles escaping special characters in MESSAGE_TEXT for valid JSON.
+  #         echo "Attempting to create JSON payload..."
+  #         JSON_PAYLOAD=$(jq -n --arg text "$MESSAGE_TEXT" '{text: $text}')
+  #         JQ_EXIT_CODE=$?
 
-          if [ $JQ_EXIT_CODE -ne 0 ]; then
-            echo "Error: jq command failed to create JSON payload (Exit Code: $JQ_EXIT_CODE)."
-            # Log a snippet of the message text to aid debugging, avoiding overly long logs.
-            echo "Original Message Text (first 200 characters):"
-            echo "${MESSAGE_TEXT:0:200}..."
-            exit 1
-          fi
+  #         if [ $JQ_EXIT_CODE -ne 0 ]; then
+  #           echo "Error: jq command failed to create JSON payload (Exit Code: $JQ_EXIT_CODE)."
+  #           # Log a snippet of the message text to aid debugging, avoiding overly long logs.
+  #           echo "Original Message Text (first 200 characters):"
+  #           echo "${MESSAGE_TEXT:0:200}..."
+  #           exit 1
+  #         fi
 
-          echo "Sending Slack notification for Chain Request Validation."
-          # Echo context information using direct GitHub context expressions for clarity and consistency.
-          echo "Repository: ${{ github.repository }}"
-          echo "Issue Number: #${{ github.event_name == 'push' && '6753' || github.event.issue.number }}"
-          echo "Issue Title: ${{ github.event_name == 'push' && '[DEBUG] debug chain request' || github.event.issue.title }}"
-          echo "Issue URL: ${{ github.event_name == 'push' && 'https://github.com/WalletConnect/walletconnect-monorepo/issues/6753' || github.event.issue.html_url }}"
-          echo "Label Added: ${{ github.event_name == 'push' && 'type: new chain request' || github.event.label.name }}"
-          echo "Trigger Type: ${{ github.event_name }}"
+  #         echo "Sending Slack notification for Chain Request Validation."
+  #         # Echo context information using direct GitHub context expressions for clarity and consistency.
+  #         echo "Repository: ${{ github.repository }}"
+  #         echo "Issue Number: #${{ github.event_name == 'push' && '6753' || github.event.issue.number }}"
+  #         echo "Issue Title: ${{ github.event_name == 'push' && '[DEBUG] debug chain request' || github.event.issue.title }}"
+  #         echo "Issue URL: ${{ github.event_name == 'push' && 'https://github.com/WalletConnect/walletconnect-monorepo/issues/6753' || github.event.issue.html_url }}"
+  #         echo "Label Added: ${{ github.event_name == 'push' && 'type: new chain request' || github.event.label.name }}"
+  #         echo "Trigger Type: ${{ github.event_name }}"
 
-          # Send the notification to Slack using curl.
-          # -s: silent mode (no progress meter).
-          # -X POST: specifies the HTTP POST method.
-          # -H "Content-Type: application/json": sets the content type header.
-          # -d "$JSON_PAYLOAD": provides the JSON data for the request body.
-          RESPONSE=$(curl -s -X POST \
-            -H "Content-Type: application/json" \
-            -d "$JSON_PAYLOAD" \
-            "${DEVIN_SLACK_WEBHOOK_URL}")
-          CURL_EXIT_CODE=$?
+  #         # Send the notification to Slack using curl.
+  #         # -s: silent mode (no progress meter).
+  #         # -X POST: specifies the HTTP POST method.
+  #         # -H "Content-Type: application/json": sets the content type header.
+  #         # -d "$JSON_PAYLOAD": provides the JSON data for the request body.
+  #         RESPONSE=$(curl -s -X POST \
+  #           -H "Content-Type: application/json" \
+  #           -d "$JSON_PAYLOAD" \
+  #           "${DEVIN_SLACK_WEBHOOK_URL}")
+  #         CURL_EXIT_CODE=$?
 
-          if [ $CURL_EXIT_CODE -ne 0 ]; then
-            echo "Error: curl command failed to send Slack notification (Exit Code: $CURL_EXIT_CODE)."
-            # RESPONSE might be empty or contain an error message from curl itself (e.g., if URL is malformed or network issue).
-            echo "Curl response (if any): $RESPONSE"
-            exit 1
-          fi
+  #         if [ $CURL_EXIT_CODE -ne 0 ]; then
+  #           echo "Error: curl command failed to send Slack notification (Exit Code: $CURL_EXIT_CODE)."
+  #           # RESPONSE might be empty or contain an error message from curl itself (e.g., if URL is malformed or network issue).
+  #           echo "Curl response (if any): $RESPONSE"
+  #           exit 1
+  #         fi
 
-          # Check the content of the response from the Slack API.
-          # A successful Slack webhook POST request typically returns the string "ok".
-          if [ "$RESPONSE" = "ok" ]; then
-            echo "Slack notification sent successfully."
-          else
-            echo "Error sending Slack notification: Slack API did not return 'ok'."
-            echo "Response from Slack: $RESPONSE"
-            exit 1
-          fi
+  #         # Check the content of the response from the Slack API.
+  #         # A successful Slack webhook POST request typically returns the string "ok".
+  #         if [ "$RESPONSE" = "ok" ]; then
+  #           echo "Slack notification sent successfully."
+  #         else
+  #           echo "Error sending Slack notification: Slack API did not return 'ok'."
+  #           echo "Response from Slack: $RESPONSE"
+  #           exit 1
+  #         fi
