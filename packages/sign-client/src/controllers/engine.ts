@@ -1589,9 +1589,7 @@ export class Engine extends IEngine {
       try {
         tvf = this.getTVFParams(id, request.params, result);
       } catch (error) {
-        this.client.logger.warn(
-          `sendResult() -> getTVFParams() failed: ${(error as Error)?.message}`,
-        );
+        this.client.logger.warn(`sendResult() -> getTVFParams() failed`, error);
       }
     } catch (error) {
       this.client.logger.error(`sendResult() -> history.get(${topic}, ${id}) failed`);
@@ -2042,7 +2040,7 @@ export class Engine extends IEngine {
         id: payload.id,
         topic,
         result: true,
-        throwOnFailedPublish: false,
+        throwOnFailedPublish: true,
       });
     } catch (err: any) {
       await this.sendError({
@@ -2092,7 +2090,7 @@ export class Engine extends IEngine {
           id,
           topic,
           result: true,
-          throwOnFailedPublish: false,
+          throwOnFailedPublish: true,
         });
       } catch (e) {
         MemoryStore.delete(memoryKey);
@@ -2142,7 +2140,7 @@ export class Engine extends IEngine {
         id,
         topic,
         result: true,
-        throwOnFailedPublish: false,
+        throwOnFailedPublish: true,
       });
       this.client.events.emit("session_extend", { id, topic });
     } catch (err: any) {
@@ -2177,7 +2175,7 @@ export class Engine extends IEngine {
         id,
         topic,
         result: true,
-        throwOnFailedPublish: false,
+        throwOnFailedPublish: true,
       });
       this.client.events.emit("session_ping", { id, topic });
     } catch (err: any) {
@@ -2228,7 +2226,7 @@ export class Engine extends IEngine {
           id,
           topic,
           result: true,
-          throwOnFailedPublish: false,
+          throwOnFailedPublish: true,
         }),
         this.cleanupPendingSentRequestsForTopic({ topic, error: getSdkError("USER_DISCONNECTED") }),
       ]).catch((err) => this.client.logger.error(err));
