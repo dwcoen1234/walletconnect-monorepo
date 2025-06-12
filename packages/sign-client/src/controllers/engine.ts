@@ -2042,6 +2042,7 @@ export class Engine extends IEngine {
         id: payload.id,
         topic,
         result: true,
+        throwOnFailedPublish: true,
       });
     } catch (err: any) {
       await this.sendError({
@@ -2091,6 +2092,7 @@ export class Engine extends IEngine {
           id,
           topic,
           result: true,
+          throwOnFailedPublish: true,
         });
       } catch (e) {
         MemoryStore.delete(memoryKey);
@@ -2140,6 +2142,7 @@ export class Engine extends IEngine {
         id,
         topic,
         result: true,
+        throwOnFailedPublish: true,
       });
       this.client.events.emit("session_extend", { id, topic });
     } catch (err: any) {
@@ -2225,6 +2228,7 @@ export class Engine extends IEngine {
           id,
           topic,
           result: true,
+          throwOnFailedPublish: true,
         }),
         this.cleanupPendingSentRequestsForTopic({ topic, error: getSdkError("USER_DISCONNECTED") }),
       ]).catch((err) => this.client.logger.error(err));
