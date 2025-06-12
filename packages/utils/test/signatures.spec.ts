@@ -8,6 +8,7 @@ import {
   getNearTransactionIdFromSignedTransaction,
   getSignDirectHash,
   getSuiDigest,
+  isValidEip1271Signature,
   isValidEip191Signature,
   verifySignature,
 } from "../src";
@@ -98,6 +99,21 @@ Expiration Time: 2022-10-11T23:03:35.700Z`;
       ).rejects.toThrow(
         `isValidEip1271Signature failed: chainId must be in CAIP-2 format, received: ${invalidChainIdThree}`,
       );
+    });
+    it("should verify 1271 multi-sig", async () => {
+      const signature =
+        "0x6037120d3995a626caa8dac775220ef5c91ece120a8ffa599bf28dbd1c40f1e1398cb941dd9fc4e880b988f279c603cedf7fe0609aa2b9cad829861d9798803b1be2a4308f50367f32a84baa7965102c87ab22db69a70ba3d3717f951e07007fea5901c524425171f8ff9143b64fe3223155a26ee0aab54b03058ab99187bc5ad71c";
+      const message = "0xb48c43838346726a55fe0023cd2fc14b26144b6a9d36284a436b62e934bf382d";
+      const address = "0x9a1148b5D6a2D34CA46111379d0FD1352a0ade4a";
+      const chainId = "eip155:11155111";
+      const isValid = await isValidEip1271Signature(
+        address,
+        message,
+        signature,
+        chainId,
+        projectId,
+      );
+      expect(isValid).toBe(true);
     });
   });
   describe("EIP-191 signatures", () => {
