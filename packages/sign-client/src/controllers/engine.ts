@@ -480,7 +480,7 @@ export class Engine extends IEngine {
       topic: pairingTopic,
       metadata: proposer.metadata,
     });
-    await this.deleteProposal(id);
+    this.deleteProposal(id);
     await this.client.core.pairing.activate({ topic: pairingTopic });
     await this.setExpiry(sessionTopic, calcExpiry(SESSION_EXPIRY));
     return {
@@ -517,7 +517,7 @@ export class Engine extends IEngine {
       });
     }
 
-    await this.deleteProposal(id);
+    this.deleteProposal(id);
   };
 
   public update: IEngine["update"] = async (params) => {
@@ -1327,7 +1327,7 @@ export class Engine extends IEngine {
       ),
     });
     await this.client.auth.requests.delete(id, { message: "rejected", code: 0 });
-    await this.deleteProposal(id);
+    this.deleteProposal(id);
   };
 
   public formatAuthMessage: IEngine["formatAuthMessage"] = (params) => {
@@ -1963,7 +1963,7 @@ export class Engine extends IEngine {
       });
       await this.client.core.pairing.activate({ topic });
     } else if (isJsonRpcError(payload)) {
-      await this.deleteProposal(id);
+      this.deleteProposal(id);
       const target = engineEvent("session_connect", id);
       const listeners = this.events.listenerCount(target);
       if (listeners === 0) {
@@ -2487,7 +2487,7 @@ export class Engine extends IEngine {
           this.client.events.emit("session_expire", { topic });
         }
       } else if (id) {
-        await this.deleteProposal(id, true);
+        this.deleteProposal(id, true);
         this.client.events.emit("proposal_expire", { id });
       }
     });
