@@ -75,10 +75,13 @@ export async function isValidEip1271Signature(
   try {
     const eip1271MagicValue = "0x1626ba7e";
     const dynamicTypeOffset = "0000000000000000000000000000000000000000000000000000000000000040";
-    const dynamicTypeLength = "0000000000000000000000000000000000000000000000000000000000000041";
     const nonPrefixedSignature = signature.substring(2);
-    const nonPrefixedHashedMessage = hashEthereumMessage(reconstructedMessage).substring(2);
-
+    const dynamicTypeLength = (nonPrefixedSignature.length / 2).toString(16).padStart(64, "0");
+    const nonPrefixedHashedMessage = (
+      reconstructedMessage.startsWith("0x")
+        ? reconstructedMessage
+        : hashEthereumMessage(reconstructedMessage)
+    ).substring(2);
     const data =
       eip1271MagicValue +
       nonPrefixedHashedMessage +
@@ -88,6 +91,9 @@ export async function isValidEip1271Signature(
     const response = await fetch(
       `${baseRpcUrl || DEFAULT_RPC_URL}/?chainId=${chainId}&projectId=${projectId}`,
       {
+        headers: {
+          "Content-Type": "application/json",
+        },
         method: "POST",
         body: JSON.stringify({
           id: generateJsonRpcId(),
