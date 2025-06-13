@@ -3124,6 +3124,11 @@ export class Engine extends IEngine {
     params: JsonRpcTypes.RequestParams["wc_sessionRequest"],
     result?: any,
   ) => {
+    // this check will filter all Sign protocol methods since they don't have a method property
+    if (!params.request?.method) {
+      return {};
+    }
+
     const tvf: RelayerTypes.ITVF = {
       correlationId: id,
       rpcMethods: [params.request.method],
