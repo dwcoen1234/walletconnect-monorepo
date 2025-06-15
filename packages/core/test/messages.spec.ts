@@ -116,7 +116,7 @@ describe("Messages", () => {
         "Not initialized. messages",
       );
     });
-    it("removes the the topic-message pair from `messagesWithoutClientAck` when acknowledged", async () => {
+    it("removes the topic-message pair from `messagesWithoutClientAck` when acknowledged", async () => {
       await messageTracker.set(topic, "message", MESSAGE_DIRECTION.inbound);
       await messageTracker.ack(topic, "message");
       expect(messageTracker.messages.size).to.equal(1);
