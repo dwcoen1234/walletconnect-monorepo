@@ -250,7 +250,7 @@ describe("UniversalProvider utils", function () {
     });
   });
 
-  it.only("should extract capabilities from session. Case 5", function () {
+  it("should extract capabilities from session. Case 6", function () {
     const session = {
       scopedProperties: {
         "eip155:1": {
