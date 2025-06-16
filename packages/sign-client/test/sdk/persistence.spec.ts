@@ -78,14 +78,18 @@ describe("Sign Client Persistence", () => {
             },
           );
 
-          await new Promise<void>((resolve) => {
-            clients.A.core.relayer.on(RELAYER_EVENTS.connect, () => {
-              resolve();
-            });
-            clients.B.core.relayer.on(RELAYER_EVENTS.connect, () => {
-              resolve();
-            });
-          });
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.A.core.relayer.on(RELAYER_EVENTS.connect, () => {
+                resolve();
+              });
+            }),
+            new Promise<void>((resolve) => {
+              clients.B.core.relayer.on(RELAYER_EVENTS.connect, () => {
+                resolve();
+              });
+            }),
+          ]);
 
           expect(clients.A.core.relayer.connected).toBe(true);
           expect(clients.B.core.relayer.connected).toBe(true);
