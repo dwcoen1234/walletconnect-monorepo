@@ -38,7 +38,7 @@ jobs:
         run: npm ci && npm run build
 
       - name: Set version using Lerna 📦
-        run: npx lerna version ${{ github.event.inputs.canaryVersion }} --no-push --no-git-tag-version --yes
+        run: npx lerna version ${{ github.event.inputs.canaryVersion }} --exact --no-push --no-git-tag-version --yes
 
       - name: Rebuild after version change 🔁
         run: npm run build
