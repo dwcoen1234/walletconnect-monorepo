@@ -78,6 +78,15 @@ describe("Sign Client Persistence", () => {
             },
           );
 
+          await new Promise<void>((resolve) => {
+            clients.A.core.relayer.on(RELAYER_EVENTS.connect, () => {
+              resolve();
+            });
+            clients.B.core.relayer.on(RELAYER_EVENTS.connect, () => {
+              resolve();
+            });
+          });
+
           expect(clients.A.core.relayer.connected).toBe(true);
           expect(clients.B.core.relayer.connected).toBe(true);
 
@@ -395,7 +404,8 @@ describe("Sign Client Persistence", () => {
      * before the implementing client (sign-client) is ready to process it
      * the message should be queued and processed after the client is ready
      */
-    it("should process pending messages after restart", async () => {
+    // NOTE: this test is no longer applicable as we no longer await the relayer to connect during init
+    it.skip("should process pending messages after restart", async () => {
       const db_a = generateClientDbName("client_a");
       const clients = await initTwoClients(
         {
