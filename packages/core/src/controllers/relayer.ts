@@ -131,13 +131,8 @@ export class Relayer extends IRelayer {
     this.registerEventListeners();
     await Promise.all([this.messages.init(), this.subscriber.init()]);
     this.initialized = true;
-    if (this.subscriber.hasAnyTopics) {
-      try {
-        await this.transportOpen();
-      } catch (e) {
-        this.logger.warn(e, (e as Error)?.message);
-      }
-    }
+    // don't block init with transportOpen
+    this.transportOpen().catch((e) => this.logger.warn(e, (e as Error)?.message));
   }
 
   get context() {
@@ -377,7 +372,7 @@ export class Relayer extends IRelayer {
 
         await new Promise<void>(async (resolve, reject) => {
           const onDisconnect = () => {
-            reject(new Error(`Connection interrupted while trying to subscribe`));
+            reject(new Error(`Connection interrupted while trying to connect`));
           };
           this.provider.once(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
 
@@ -395,15 +390,15 @@ export class Relayer extends IRelayer {
               this.provider.off(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
               clearTimeout(this.reconnectTimeout);
             });
-          await new Promise(async (resolve, reject) => {
+          await new Promise(async (_resolve, _reject) => {
             const onDisconnect = () => {
               reject(new Error(`Connection interrupted while trying to subscribe`));
             };
             this.provider.once(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
             await this.subscriber
               .start()
-              .then(resolve)
-              .catch(reject)
+              .then(_resolve)
+              .catch(_reject)
               .finally(() => {
                 this.provider.off(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
               });

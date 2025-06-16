@@ -46,6 +46,26 @@ describe("Relayer", () => {
       await disconnectSocket(relayer);
     });
 
+    it("should not block init with transportOpen", async () => {
+      const core = new Core({ ...TEST_CORE_OPTIONS, projectId: "non-existent" });
+      core.relayer.subscriber.topicMap.set(randomTopic, randomTopic);
+      let initFinished = false;
+
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          core.relayer.on(RELAYER_EVENTS.error, () => {
+            if (initFinished === false) {
+              throw new Error("Error received before init finished");
+            }
+            resolve();
+          });
+        }),
+        core.start().then(() => {
+          initFinished = true;
+        }),
+      ]);
+    });
+
     it("should not throw unhandled on network disconnect when there is no provider instance", async () => {
       relayer.messages.init = initSpy;
       relayer.subscriber.topicMap.clear();
