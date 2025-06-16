@@ -31,6 +31,7 @@ import {
 import { getChainId, getGlobal, getRpcUrl, setGlobal } from "../src/utils";
 import { BUNDLER_URL, RPC_URL } from "../src/constants";
 import { formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
+import { RELAYER_EVENTS } from "../../../packages/core/src/constants";
 
 const getDbName = (_prefix: string) => {
   return `./test/tmp/${_prefix}.db`;
@@ -1756,6 +1757,14 @@ type ValidateProviderParams = {
 };
 const validateProvider = async (params: ValidateProviderParams) => {
   const { provider, defaultNamespace = "eip155", addresses, chains, expectedChainId } = params;
+  if (!provider.client.core.relayer.connected) {
+    await new Promise<void>((resolve) => {
+      provider.client.core.relayer.once(RELAYER_EVENTS.connect, () => {
+        resolve();
+      });
+    });
+  }
+
   expect(provider.client.core.relayer.connected).to.be.true;
   const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
   expect(accounts).to.be.an("array");
