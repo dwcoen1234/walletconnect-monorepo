@@ -1,5 +1,21 @@
 # @walletconnect/core
 
+## 2.21.3
+
+### Patch Changes
+
+- [#6759](https://github.com/WalletConnect/walletconnect-monorepo/pull/6759) [`5b7e95a02b7471cad07a18acff44c4198d9d0cfd`](https://github.com/WalletConnect/walletconnect-monorepo/commit/5b7e95a02b7471cad07a18acff44c4198d9d0cfd) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Relayer init no longer awaits transportOpen
+
+- [#6743](https://github.com/WalletConnect/walletconnect-monorepo/pull/6743) [`f482c9105a12136f79eab3c730feada9c326f1bf`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f482c9105a12136f79eab3c730feada9c326f1bf) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixed a bug where reusing pairing URI second time was not providing correct verify context in session_proposal
+
+- [#6738](https://github.com/WalletConnect/walletconnect-monorepo/pull/6738) [`8b6e3c0d187e2f47876bb81d7094fc7794b90e4e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/8b6e3c0d187e2f47876bb81d7094fc7794b90e4e) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - deletes expirer entry after the wallet responds to a session proposal
+
+- [#6746](https://github.com/WalletConnect/walletconnect-monorepo/pull/6746) [`f011c4ae16fa41a4bf17c532da79e17e841ab573`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f011c4ae16fa41a4bf17c532da79e17e841ab573) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixed a bug in the 1271 signature validator that was causing multi sig to fail due to hardcoded signature length
+
+- Updated dependencies [[`5b7e95a02b7471cad07a18acff44c4198d9d0cfd`](https://github.com/WalletConnect/walletconnect-monorepo/commit/5b7e95a02b7471cad07a18acff44c4198d9d0cfd), [`f482c9105a12136f79eab3c730feada9c326f1bf`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f482c9105a12136f79eab3c730feada9c326f1bf), [`8b6e3c0d187e2f47876bb81d7094fc7794b90e4e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/8b6e3c0d187e2f47876bb81d7094fc7794b90e4e), [`f011c4ae16fa41a4bf17c532da79e17e841ab573`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f011c4ae16fa41a4bf17c532da79e17e841ab573)]:
+  - @walletconnect/types@2.21.3
+  - @walletconnect/utils@2.21.3
+
 ## 2.21.2
 
 ### Patch Changes
