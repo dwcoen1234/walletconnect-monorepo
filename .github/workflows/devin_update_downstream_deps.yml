@@ -3,7 +3,7 @@ name: Trigger Devin for AppKit Dependencies Update
 on:
   push:
     branches:
-      - main
+      - v2.0
 
 permissions:
   contents: read # Required to read github.event.head_commit.message
