@@ -42,14 +42,15 @@ export const extractCapabilitiesFromSession = (
     return;
   }
 
+  // get all capabilities from sessionProperties as they apply to all chains/addresses
+  const globalCapabilities = getCapabilitiesFromObject(sessionProperties);
+
   for (const chain of chainIds) {
     const chainId = hexToDecimal(chain);
     if (!chainId) {
       continue;
     }
 
-    // get all capabilities from sessionProperties as they apply to all chains/addresses
-    const globalCapabilities = getCapabilitiesFromObject(sessionProperties);
     result[decimalToHex(chainId)] = globalCapabilities;
 
     const chainSpecific = scopedProperties?.[`${EIP155_PREFIX}:${chainId}`];
