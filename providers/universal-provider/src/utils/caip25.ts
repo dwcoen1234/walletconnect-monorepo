@@ -2,6 +2,13 @@ import { SessionTypes } from "@walletconnect/types";
 import { isValidObject } from "@walletconnect/utils";
 
 const EIP155_PREFIX = "eip155";
+const CAPABILITIES_KEYS = [
+  "atomic",
+  "flow-control",
+  "paymasterService",
+  "sessionKeys",
+  "auxiliaryFunds",
+];
 
 const hexToDecimal = (hex?: string) => {
   return hex && hex.startsWith("0x") ? BigInt(hex).toString(10) : hex;
@@ -11,13 +18,10 @@ const decimalToHex = (decimal: string) => {
   return decimal && decimal.startsWith("0x") ? decimal : `0x${BigInt(decimal).toString(16)}`;
 };
 
-const filterCaip10AccountsFromObject = (object: Record<string, any>) => {
-  const keysToPreserve = Object.keys(object).filter((item) => {
-    const parts = item.split(":");
-    return parts.length !== 3;
-  });
+const getCapabilitiesFromObject = (object: Record<string, any>) => {
+  const capabilitiesKeys = Object.keys(object).filter((item) => CAPABILITIES_KEYS.includes(item));
 
-  return keysToPreserve.reduce(
+  return capabilitiesKeys.reduce(
     (acc, key) => {
       acc[key] = object[key];
       return acc;
@@ -31,11 +35,10 @@ export const extractCapabilitiesFromSession = (
   address: string,
   chainIds: string[],
 ) => {
-  const { scopedProperties = {} } = session;
+  const { sessionProperties = {}, scopedProperties = {} } = session;
   const result: Record<string, any> = {};
 
-  if (!isValidObject(scopedProperties)) {
-    console.warn("No scoped properties found in session");
+  if (!isValidObject(scopedProperties) && !isValidObject(sessionProperties)) {
     return;
   }
 
@@ -45,24 +48,29 @@ export const extractCapabilitiesFromSession = (
       continue;
     }
 
-    const chainCapabilities = scopedProperties?.[`${EIP155_PREFIX}:${chainId}`];
+    // get all capabilities from sessionProperties as they apply to all chains/addresses
+    const globalCapabilities = getCapabilitiesFromObject(sessionProperties);
+    result[decimalToHex(chainId)] = globalCapabilities;
 
-    if (chainCapabilities) {
-      const addressSpecificCapabilities =
-        chainCapabilities?.[`${EIP155_PREFIX}:${chainId}:${address}`];
+    const chainSpecific = scopedProperties?.[`${EIP155_PREFIX}:${chainId}`];
 
-      // check for specific capabilities for the address
-      if (addressSpecificCapabilities) {
-        result[decimalToHex(chainId)] = addressSpecificCapabilities;
-      } else {
-        // remove all other address specific capabilities
-        const chainSpecificCapabilities = filterCaip10AccountsFromObject(chainCapabilities);
-        if (Object.keys(chainSpecificCapabilities).length > 0) {
-          result[decimalToHex(chainId)] = chainSpecificCapabilities;
-        }
-      }
+    if (chainSpecific) {
+      const addressSpecific = chainSpecific?.[`${EIP155_PREFIX}:${chainId}:${address}`];
+
+      // use the address specific capabilities if they exist, otherwise use the chain specific capabilities
+      result[decimalToHex(chainId)] = {
+        ...result[decimalToHex(chainId)],
+        ...getCapabilitiesFromObject(addressSpecific || chainSpecific),
+      };
     }
   }
 
-  return result;
+  // remove any chains that have no capabilities
+  for (const [key, value] of Object.entries(result)) {
+    if (Object.keys(value).length === 0) {
+      delete result[key];
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
 };
