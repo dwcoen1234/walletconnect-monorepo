@@ -198,8 +198,13 @@ class Eip155Provider implements IProvider {
     if (legacyCapabilities) {
       return legacyCapabilities;
     }
+    let cachedCapabilities;
+    try {
+      cachedCapabilities = extractCapabilitiesFromSession(session, address, chainIds);
+    } catch (error) {
+      console.warn("Failed to extract capabilities from session", error);
+    }
 
-    const cachedCapabilities = extractCapabilitiesFromSession(session, address, chainIds);
     if (cachedCapabilities) {
       return cachedCapabilities;
     }

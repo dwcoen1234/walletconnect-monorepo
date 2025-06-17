@@ -31,7 +31,7 @@ export const extractCapabilitiesFromSession = (
   address: string,
   chainIds: string[],
 ) => {
-  const { scopedProperties } = session;
+  const { scopedProperties = {} } = session;
   const result: Record<string, any> = {};
 
   if (!isValidObject(scopedProperties)) {
