@@ -13,7 +13,7 @@ export declare namespace ProposalTypes {
 
   type RequiredNamespaces = Record<string, RequiredNamespace>;
   type OptionalNamespaces = Record<string, RequiredNamespace>;
-  type SessionProperties = Record<string, string>;
+  type SessionProperties = Record<string, unknown>;
   type ScopedProperties = Record<string, unknown>;
 
   export interface Struct {

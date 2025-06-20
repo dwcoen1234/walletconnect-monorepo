@@ -105,6 +105,7 @@ import {
   getAlgorandTransactionId,
   buildSignedExtrinsicHash,
   getSignDirectHash,
+  populateAuthPayload,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -859,13 +860,10 @@ export class Engine extends IEngine {
       this.client.auth.pairingTopics.set(responseTopic, { topic: responseTopic, pairingTopic }),
     ]);
 
-    // Subscribe to response topic
-    await this.client.core.relayer.subscribe(responseTopic, { transportType });
-
     this.client.logger.info(`sending request to new pairing topic: ${pairingTopic}`);
 
+    const { namespace } = parseChainId(chains[0]);
     if (methods.length > 0) {
-      const { namespace } = parseChainId(chains[0]);
       let recap = createEncodedRecap(namespace, "request", methods);
       const existingRecap = getRecapFromResources(resources);
       if (existingRecap) {
@@ -901,17 +899,25 @@ export class Engine extends IEngine {
       expiryTimestamp: calcExpiry(authRequestExpiry),
     };
 
+    const signMethodsByNamespace = {
+      eip155: "personal_sign",
+      sui: "sui_signPersonalMessage",
+      solana: "solana_signMessage",
+      bip122: "signMessage",
+    };
+
     // ----- build namespaces for fallback session proposal ----- //
     const namespaces = {
-      eip155: {
+      [namespace]: {
         chains,
-        // request `personal_sign` method by default to allow for fallback siwe
-        methods: [...new Set(["personal_sign", ...methods])],
+        // add sign method by default to allow for fallback siwe
+        methods: [...new Set([signMethodsByNamespace[namespace], ...methods])],
         events: ["chainChanged", "accountsChanged"],
       },
     };
 
-    const proposal = {
+    console.log("namespaces", namespaces);
+    const proposal: ProposalTypes.Struct = {
       requiredNamespaces: {},
       optionalNamespaces: namespaces,
       relays: [{ protocol: "irn" }],
@@ -924,14 +930,57 @@ export class Engine extends IEngine {
       id: payloadId(),
     };
 
+    if (namespace !== "eip155") {
+      const authPayload = populateAuthPayload({
+        authPayload: request.authPayload,
+        chains,
+        methods,
+      });
+      const iss = `did:pkh:${chains[0]}:<placeholder address>`;
+      const message = this.formatAuthMessage({
+        request: authPayload,
+        iss,
+      });
+      console.log("message", message);
+      proposal.sessionProperties = {
+        siwx: {
+          message,
+          request: {
+            method: signMethodsByNamespace[namespace],
+            params: {
+              type: "object",
+              // the address to be replaced with the actual address
+              address: "pubkey",
+              // none | base64 | base58
+              encoding: "base58",
+            },
+          },
+        },
+      };
+    }
+    console.log("proposal", JSON.stringify(proposal, null, 2));
+    return;
+
     const { done, resolve, reject } = createDelayedPromise(authRequestExpiry, "Request expired");
 
     const authenticateId = payloadId();
     const sessionConnectEventTarget = engineEvent("session_connect", proposal.id);
     const authenticateEventTarget = engineEvent("session_request", authenticateId);
 
+    const requestsToPublish = [
+      async () =>
+        await this.sendRequest({
+          topic: pairingTopic,
+          method: "wc_sessionPropose",
+          params: proposal,
+          expiry: ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl,
+          throwOnFailedPublish: true,
+          clientRpcId: proposal.id,
+        }),
+    ];
+
     // handle fallback session proposal response
-    const onSessionConnect = async ({ error, session }: any) => {
+    const onSessionConnect = ({ error, session }: any) => {
       // cleanup listener for authenticate response
       this.events.off(authenticateEventTarget, onAuthenticate);
       if (error) reject(error);
@@ -1057,6 +1106,22 @@ export class Engine extends IEngine {
       });
     };
 
+    // call wc_sessionAuthenticate only on eip155, the rest use wc_sessionPropose
+    if (namespace === "eip155") {
+      // Subscribe to response topic
+      await this.client.core.relayer.subscribe(responseTopic, { transportType });
+      requestsToPublish.push(
+        async () =>
+          await this.sendRequest({
+            topic: pairingTopic,
+            method: "wc_sessionAuthenticate",
+            params: request,
+            expiry: params.expiry,
+            throwOnFailedPublish: true,
+            clientRpcId: authenticateId,
+          }),
+      );
+    }
     // subscribe to response events
     this.events.once<"session_connect">(sessionConnectEventTarget, onSessionConnect);
     this.events.once(authenticateEventTarget, onAuthenticate);
@@ -1073,24 +1138,7 @@ export class Engine extends IEngine {
         linkModeURL = getLinkModeURL(walletUniversalLink, pairingTopic, message);
       } else {
         // send both (main & fallback) requests
-        await Promise.all([
-          this.sendRequest({
-            topic: pairingTopic,
-            method: "wc_sessionAuthenticate",
-            params: request,
-            expiry: params.expiry,
-            throwOnFailedPublish: true,
-            clientRpcId: authenticateId,
-          }),
-          this.sendRequest({
-            topic: pairingTopic,
-            method: "wc_sessionPropose",
-            params: proposal,
-            expiry: ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl,
-            throwOnFailedPublish: true,
-            clientRpcId: proposal.id,
-          }),
-        ]);
+        await Promise.all(requestsToPublish.map((request) => request()));
       }
     } catch (error) {
       // cleanup listeners on failed publish
@@ -2960,12 +3008,12 @@ export class Engine extends IEngine {
       );
     }
 
-    const { namespace } = parseChainId(chains[0]);
-    if (namespace !== "eip155") {
-      throw new Error(
-        "Only eip155 namespace is supported for authenticated sessions. Please use .connect() for non-eip155 chains.",
-      );
-    }
+    // const { namespace } = parseChainId(chains[0]);
+    // if (namespace !== "eip155") {
+    //   throw new Error(
+    //     "Only eip155 namespace is supported for authenticated sessions. Please use .connect() for non-eip155 chains.",
+    //   );
+    // }
   };
 
   private getVerifyContext = async (params: {
