@@ -203,19 +203,15 @@ export class Verify extends IVerify {
         return validation;
       }
     } catch (e) {
-      this.logger.error(e);
+      this.logger.error(e, (e as Error).message);
       this.logger.warn("error validating attestation");
     }
     const newKey = await this.fetchAndPersistPublicKey();
-    try {
-      if (newKey) {
-        const validation = this.validateAttestation(attestation, newKey);
-        return validation;
-      }
-    } catch (e) {
-      this.logger.error(e);
-      this.logger.warn("error validating attestation");
+    if (newKey) {
+      const validation = this.validateAttestation(attestation, newKey);
+      return validation;
     }
+
     return undefined;
   };
 
