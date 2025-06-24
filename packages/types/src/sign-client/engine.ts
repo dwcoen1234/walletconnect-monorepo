@@ -426,5 +426,9 @@ export abstract class IEngine {
 
   public abstract rejectSessionAuthenticate(params: EngineTypes.RejectParams): Promise<void>;
 
+  /**
+   * no longer used as the client initializes instantly without waiting to connect+subscribe
+   * @deprecated
+   */
   public abstract processRelayMessageCache(): void;
 }

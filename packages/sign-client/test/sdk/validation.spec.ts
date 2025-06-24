@@ -440,6 +440,17 @@ describe("Sign Client Validation", () => {
   });
 
   describe("request", () => {
+    it("should emit session_request event once", async () => {
+      const request = { id: 1, topic, params: TEST_REQUEST_PARAMS };
+      let requestsReceived = 0;
+      clients.A.on("session_request", (args) => {
+        requestsReceived++;
+      });
+      for (let i = 0; i < 100; i++) {
+        await clients.A.engine.emitSessionRequest(request);
+      }
+      expect(requestsReceived).toBe(1);
+    });
     it("throws when no params are passed", async () => {
       await expect(clients.A.request()).rejects.toThrowError(
         "Missing or invalid. request() params: undefined",
