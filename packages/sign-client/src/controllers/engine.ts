@@ -2476,7 +2476,6 @@ export class Engine extends IEngine {
 
   private emitSessionRequest = (request: PendingRequestTypes.Struct) => {
     if (this.emittedSessionRequests.has(request.id)) {
-      console.log("skipping session_request", request.id);
       return;
     }
     this.emittedSessionRequests.add(request.id);
