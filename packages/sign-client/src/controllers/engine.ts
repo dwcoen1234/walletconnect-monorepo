@@ -538,7 +538,7 @@ export class Engine extends IEngine {
           attestation: proposal.attestation,
           encryptedId: proposal.encryptedId,
         });
-      }, 1000);
+      }, 500);
     }
 
     return {
@@ -954,8 +954,12 @@ export class Engine extends IEngine {
     // reassign resources to remove reference as the array is modified and might cause side effects
     const resources = [...(params.resources || [])];
 
+    const { namespace } = parseChainId(chains[0]);
+    const isNonEvm = namespace !== "eip155";
+
     const { topic: pairingTopic, uri: connectionUri } = await this.client.core.pairing.create({
-      methods: ["wc_sessionAuthenticate"],
+      // only request wc_sessionAuthenticate for evm chains
+      methods: isNonEvm ? undefined : ["wc_sessionAuthenticate"],
       transportType,
     });
 
@@ -974,7 +978,6 @@ export class Engine extends IEngine {
 
     this.client.logger.info(`sending request to new pairing topic: ${pairingTopic}`);
 
-    const { namespace } = parseChainId(chains[0]);
     if (methods.length > 0) {
       let recap = createEncodedRecap(namespace, "request", methods);
       const existingRecap = getRecapFromResources(resources);
@@ -1041,9 +1044,8 @@ export class Engine extends IEngine {
       expiryTimestamp: calcExpiry(ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl),
       id: payloadId(),
     };
-
     const nonEvmAuthenticateId = payloadId();
-    if (namespace !== "eip155") {
+    if (isNonEvm) {
       const authPayload = populateAuthPayload({
         authPayload: request.authPayload,
         chains,
