@@ -561,28 +561,30 @@ export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export class LimitedSet {
+export class LimitedSet<T> {
   private limit: number;
-  private set: Set<any>;
+  private set: Set<T>;
 
-  constructor(limit: number) {
+  constructor({ limit }: { limit: number }) {
     this.limit = limit;
-    this.set = new Set();
+    this.set = new Set<T>();
   }
 
-  add(item: any) {
+  add(item: T) {
     if (this.set.has(item)) return;
 
     if (this.set.size >= this.limit) {
       // Remove the oldest entry (FIFO)
       const firstKey = this.set.values().next().value;
-      this.set.delete(firstKey);
+      if (firstKey) {
+        this.set.delete(firstKey);
+      }
     }
 
     this.set.add(item);
   }
 
-  has(item: any) {
+  has(item: T) {
     return this.set.has(item);
   }
 }

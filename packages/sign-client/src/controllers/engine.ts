@@ -147,7 +147,7 @@ export class Engine extends IEngine {
 
   // a set to track session requests that have been emitted via `session_request` event
   // this is to make sure we don't emit the same request multiple times
-  private emittedSessionRequests = new LimitedSet(500);
+  private emittedSessionRequests = new LimitedSet({ limit: 500 });
 
   private requestQueueDelay = ONE_SECOND;
   private expectedPairingMethodMap: Map<string, string[]> = new Map();
