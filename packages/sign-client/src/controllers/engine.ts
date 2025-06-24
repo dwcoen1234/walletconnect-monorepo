@@ -106,6 +106,10 @@ import {
   buildSignedExtrinsicHash,
   getSignDirectHash,
   populateAuthPayload,
+  getAddressFromAccount,
+  encodeBase58,
+  encodeBase64,
+  buildAuthObject,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -484,11 +488,85 @@ export class Engine extends IEngine {
     await this.deleteProposal(id);
     await this.client.core.pairing.activate({ topic: pairingTopic });
     await this.setExpiry(sessionTopic, calcExpiry(SESSION_EXPIRY));
+
+    console.log("sessionProperties.siwx", proposal.sessionProperties?.siwx);
+    if (proposal.sessionProperties?.siwx) {
+      setTimeout(async () => {
+        console.log("onSessionRequest");
+
+        // siwx: {
+        //   message,
+        //   request: {
+        //     method: signMethodsByNamespace[namespace],
+        //     params: {
+        //       type: "object",
+        //       // the address to be replaced with the actual address
+        //       address: "pubkey",
+        //       // none | base64 | base58
+        //       encoding: "base58",
+        //     },
+        //     chainId: chains[0],
+        //     id: authenticateId,
+        //   },
+        // },
+        const siwx = proposal.sessionProperties?.siwx as any;
+        const { namespace: siwxNamespace } = parseChainId(siwx.request.chainId);
+        console.log("siwxNamespace", siwxNamespace);
+        const siwxAccount = namespaces[siwxNamespace]?.accounts[0];
+        console.log("siwxAccount", siwxAccount);
+        const siwxAddress = getAddressFromAccount(siwxAccount);
+        console.log("siwxAddress", siwxAddress);
+        this.client.core.history.set(
+          sessionTopic,
+          formatJsonRpcRequest("wc_sessionRequest", siwx, siwx.request.id),
+        );
+        console.log("history set", siwx.request.id);
+        await this.onSessionRequest({
+          topic: sessionTopic,
+          payload: {
+            jsonrpc: "2.0",
+            method: "wc_sessionRequest",
+            params: {
+              request: {
+                method: siwx.request.method,
+                params: this.getSiwxParams(siwx.request.params, siwx.message, siwxAddress),
+              },
+              chainId: siwx.request.chainId,
+            },
+            id: siwx.request.id,
+          },
+          attestation: proposal.attestation,
+          encryptedId: proposal.encryptedId,
+        });
+      }, 1000);
+    }
+
     return {
       topic: sessionTopic,
       acknowledged: () => Promise.resolve(this.client.session.get(sessionTopic)),
     };
   };
+
+  private getSiwxParams(params: any, nonFormattedMessage: string, address: string) {
+    console.log("getSiwxParams params", params);
+    const message = nonFormattedMessage.replace("<placeholder address>", address);
+    let encodedMessage = "";
+    switch (params.encoding) {
+      case "base58":
+        encodedMessage = encodeBase58(message);
+        break;
+      case "base64":
+        encodedMessage = encodeBase64(message);
+        break;
+      default:
+        encodedMessage = message;
+    }
+
+    return {
+      message: encodedMessage,
+      [params.address]: address,
+    };
+  }
 
   public reject: IEngine["reject"] = async (params) => {
     this.isInitialized();
@@ -713,10 +791,13 @@ export class Engine extends IEngine {
         result: response.result,
         throwOnFailedPublish: true,
         appLink,
+      }).catch((error) => {
+        console.log("error", error);
       });
     } else if (isJsonRpcError(response)) {
       await this.sendError({ id, topic, error: response.error, appLink });
     }
+    console.log("respond sent", id);
     this.cleanupAfterResponse(params);
   };
 
@@ -809,6 +890,37 @@ export class Engine extends IEngine {
   };
 
   // ---------- Auth ------------------------------------------------ //
+
+  private getSiwxParamsBlueprint(namespace: string) {
+    switch (namespace) {
+      case "bip122":
+        return {
+          type: "object",
+          address: "account",
+          encoding: "none",
+        };
+      case "solana":
+        return {
+          type: "object",
+          address: "pubkey",
+          encoding: "base58",
+        };
+      case "sui":
+        return {
+          type: "object",
+          address: "address",
+          encoding: "none",
+        };
+      case "tezos":
+        return {
+          type: "object",
+          address: "account",
+          encoding: "none",
+        };
+      default:
+        return {};
+    }
+  }
 
   public authenticate: IEngine["authenticate"] = async (params, walletUniversalLink) => {
     this.isInitialized();
@@ -930,6 +1042,7 @@ export class Engine extends IEngine {
       id: payloadId(),
     };
 
+    const nonEvmAuthenticateId = payloadId();
     if (namespace !== "eip155") {
       const authPayload = populateAuthPayload({
         authPayload: request.authPayload,
@@ -947,25 +1060,21 @@ export class Engine extends IEngine {
           message,
           request: {
             method: signMethodsByNamespace[namespace],
-            params: {
-              type: "object",
-              // the address to be replaced with the actual address
-              address: "pubkey",
-              // none | base64 | base58
-              encoding: "base58",
-            },
+            params: this.getSiwxParamsBlueprint(namespace),
+            chainId: chains[0],
+            id: nonEvmAuthenticateId,
           },
         },
       };
     }
-    console.log("proposal", JSON.stringify(proposal, null, 2));
-    return;
 
     const { done, resolve, reject } = createDelayedPromise(authRequestExpiry, "Request expired");
 
-    const authenticateId = payloadId();
     const sessionConnectEventTarget = engineEvent("session_connect", proposal.id);
+
+    const authenticateId = payloadId();
     const authenticateEventTarget = engineEvent("session_request", authenticateId);
+    const nonEvmAuthenticateEventTarget = engineEvent("session_request", nonEvmAuthenticateId);
 
     const requestsToPublish = [
       async () =>
@@ -979,15 +1088,52 @@ export class Engine extends IEngine {
         }),
     ];
 
+    let session: SessionTypes.Struct | undefined;
+    const onNonEvmAuthenticate = async (payload: any) => {
+      console.log("onNonEvmAuthenticate", JSON.stringify(payload, null, 2));
+
+      if (payload.error) {
+        reject(payload.error);
+      } else {
+        const { signature } = payload.result;
+        console.log("signature", signature);
+        resolve({
+          session,
+          auths: [
+            buildAuthObject(
+              request.authPayload,
+              {
+                t: signMethodsByNamespace[namespace],
+                s: signature,
+              },
+              `did:pkh:${session?.namespaces[namespace]?.accounts[0]}`,
+            ),
+          ],
+        });
+      }
+    };
+
+    this.events.once(nonEvmAuthenticateEventTarget, onNonEvmAuthenticate);
+
     // handle fallback session proposal response
-    const onSessionConnect = ({ error, session }: any) => {
+    const onSessionConnect = ({ error, session: _session }: any) => {
       // cleanup listener for authenticate response
       this.events.off(authenticateEventTarget, onAuthenticate);
       if (error) reject(error);
-      else if (session) {
-        resolve({
-          session,
-        });
+      else if (_session) {
+        session = _session;
+        if (proposal.sessionProperties?.siwx) {
+          console.log("setting history for siwx");
+          this.client.core.history.set(
+            session?.topic || "",
+            formatJsonRpcRequest("wc_sessionRequest", {}, nonEvmAuthenticateId),
+          );
+          console.log("dapp history set", nonEvmAuthenticateId);
+        } else {
+          resolve({
+            session,
+          });
+        }
       }
     };
     // handle session authenticate response
@@ -2317,6 +2463,8 @@ export class Engine extends IEngine {
         this.processSessionRequestQueue();
       }
     } catch (err: any) {
+      console.log("onSessionRequest error", err);
+
       await this.sendError({
         id,
         topic,
@@ -2330,6 +2478,7 @@ export class Engine extends IEngine {
     _topic,
     payload,
   ) => {
+    console.log("onSessionRequestResponse", JSON.stringify(payload, null, 2));
     const { id } = payload;
     const target = engineEvent("session_request", id);
     const listeners = this.events.listenerCount(target);
