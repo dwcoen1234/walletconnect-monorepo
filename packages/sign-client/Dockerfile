@@ -10,7 +10,7 @@ FROM base AS build
 WORKDIR /
 
 COPY ../ ./
-RUN npm ci
+RUN npm cache clean --force && npm ci
 RUN npm run build
 
 WORKDIR /packages/sign-client/
