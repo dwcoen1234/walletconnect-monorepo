@@ -7,12 +7,13 @@ RUN apk --update --no-cache \
 
 FROM base AS build
 
-WORKDIR /
+# setting the workdir resolves npm Error: Tracker "idealTree" already exists
+WORKDIR /sdk
 
 COPY ../ ./
 RUN npm ci
 RUN npm run build
 
-WORKDIR /packages/sign-client/
+WORKDIR /sdk/packages/sign-client/
 
 CMD ["node", "-v"]
