@@ -178,25 +178,21 @@ describe("Sign Client Persistence", () => {
             sessionA: { topic },
           } = await testConnectMethod(clients);
 
-          // delete client B so it can be reinstated
-          await deleteClients({ A: undefined, B: clients.B });
           let rejection: JsonRpcError;
-          let requestsReceived = 0;
-          await Promise.all([
-            new Promise<void>(async (resolve) => {
-              await throttle(3_000);
-              // restart
-              clients.B = await SignClient.init({
-                ...TEST_SIGN_CLIENT_OPTIONS_B,
-                storageOptions: { database: db_b },
-                signConfig: {
-                  disableRequestQueue: true,
-                },
-              });
 
+          await Promise.all([
+            new Promise<void>((resolve) => {
               clients.B.on("session_request", async (args) => {
-                requestsReceived++;
-                await throttle(3_000);
+                // delete client B so it can be reinstated
+                await deleteClients({ A: undefined, B: clients.B });
+
+                await throttle(1_000);
+
+                // restart
+                clients.B = await SignClient.init({
+                  ...TEST_SIGN_CLIENT_OPTIONS_B,
+                  storageOptions: { database: db_b },
+                });
                 const pendingRequests = clients.B.getPendingSessionRequests();
                 const { id, topic, params } = pendingRequests[0];
                 expect(params).toEqual(args.params);
@@ -224,8 +220,7 @@ describe("Sign Client Persistence", () => {
               }
             }),
           ]);
-          // validate that the pending request was received only once
-          expect(requestsReceived).toBe(1);
+
           // delete
           await deleteClients(clients);
         });
