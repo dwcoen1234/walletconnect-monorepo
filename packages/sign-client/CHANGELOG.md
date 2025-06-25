@@ -1,5 +1,18 @@
 # @walletconnect/sign-client
 
+## 2.21.4
+
+### Patch Changes
+
+- [#6778](https://github.com/WalletConnect/walletconnect-monorepo/pull/6778) [`664a9d4a6fcd56ed67620081d9c2ebb1a8053433`](https://github.com/WalletConnect/walletconnect-monorepo/commit/664a9d4a6fcd56ed67620081d9c2ebb1a8053433) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixed a bug where duplicate session_request was emitted after client restart affecting sign-client instances with disabled session request queue.
+
+- [#6762](https://github.com/WalletConnect/walletconnect-monorepo/pull/6762) [`e608240d51cfe347de69e4c43ca63b2ed8c8101f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/e608240d51cfe347de69e4c43ca63b2ed8c8101f) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Implemented the new 5792 handling in universal-provider according to ChainAgnostic/namespaces#139
+
+- Updated dependencies [[`664a9d4a6fcd56ed67620081d9c2ebb1a8053433`](https://github.com/WalletConnect/walletconnect-monorepo/commit/664a9d4a6fcd56ed67620081d9c2ebb1a8053433), [`e608240d51cfe347de69e4c43ca63b2ed8c8101f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/e608240d51cfe347de69e4c43ca63b2ed8c8101f)]:
+  - @walletconnect/types@2.21.4
+  - @walletconnect/utils@2.21.4
+  - @walletconnect/core@2.21.4
+
 ## 2.21.3
 
 ### Patch Changes
