@@ -2467,7 +2467,6 @@ export class Engine extends IEngine {
     }
 
     try {
-      this.sessionRequestQueue.state = ENGINE_QUEUE_STATES.active;
       this.emitSessionRequest(request);
     } catch (error) {
       this.client.logger.error(error);
@@ -2476,8 +2475,15 @@ export class Engine extends IEngine {
 
   private emitSessionRequest = (request: PendingRequestTypes.Struct) => {
     if (this.emittedSessionRequests.has(request.id)) {
+      this.client.logger.warn(
+        {
+          id: request.id,
+        },
+        `Skipping emitting \`session_request\` event for duplicate request. id: ${request.id}`,
+      );
       return;
     }
+    this.sessionRequestQueue.state = ENGINE_QUEUE_STATES.active;
     this.emittedSessionRequests.add(request.id);
     this.client.events.emit("session_request", request);
   };
