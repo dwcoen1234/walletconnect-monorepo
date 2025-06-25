@@ -105,6 +105,7 @@ import {
   getAlgorandTransactionId,
   buildSignedExtrinsicHash,
   getSignDirectHash,
+  LimitedSet,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -143,6 +144,10 @@ export class Engine extends IEngine {
     state: ENGINE_QUEUE_STATES.idle,
     queue: [],
   };
+
+  // a set to track session requests that have been emitted via `session_request` event
+  // this is to make sure we don't emit the same request multiple times
+  private emittedSessionRequests = new LimitedSet({ limit: 500 });
 
   private requestQueueDelay = ONE_SECOND;
   private expectedPairingMethodMap: Map<string, string[]> = new Map();
@@ -1336,6 +1341,10 @@ export class Engine extends IEngine {
     return formatMessage(request, iss);
   };
 
+  /**
+   * no longer used as the client initializes instantly without waiting to connect+subscribe
+   * @deprecated
+   */
   public processRelayMessageCache: IEngine["processRelayMessageCache"] = () => {
     // process the relay messages cache in the next tick to allow event listeners to be registered by the implementing app
     setTimeout(async () => {
@@ -2458,7 +2467,6 @@ export class Engine extends IEngine {
     }
 
     try {
-      this.sessionRequestQueue.state = ENGINE_QUEUE_STATES.active;
       this.emitSessionRequest(request);
     } catch (error) {
       this.client.logger.error(error);
@@ -2466,6 +2474,17 @@ export class Engine extends IEngine {
   };
 
   private emitSessionRequest = (request: PendingRequestTypes.Struct) => {
+    if (this.emittedSessionRequests.has(request.id)) {
+      this.client.logger.warn(
+        {
+          id: request.id,
+        },
+        `Skipping emitting \`session_request\` event for duplicate request. id: ${request.id}`,
+      );
+      return;
+    }
+    this.sessionRequestQueue.state = ENGINE_QUEUE_STATES.active;
+    this.emittedSessionRequests.add(request.id);
     this.client.events.emit("session_request", request);
   };
 
