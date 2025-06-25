@@ -14,6 +14,6 @@ COPY ../ ./
 RUN npm ci
 RUN npm run build
 
-WORKDIR /packages/sign-client/
+WORKDIR /sdk/packages/sign-client/
 
 CMD ["node", "-v"]
