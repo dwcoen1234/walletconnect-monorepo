@@ -2103,7 +2103,12 @@ export class Engine extends IEngine {
 
       event?.addTrace(EVENT_CLIENT_PAIRING_TRACES.emit_session_proposal);
 
-      this.client.events.emit("session_proposal", { id, params: proposal, verifyContext });
+      this.client.events.emit("session_proposal", {
+        id,
+        params: proposal,
+        verifyContext,
+        isSiwx: typeof proposal.sessionProperties?.siwx !== "undefined",
+      });
     } catch (err: any) {
       await this.sendError({
         id,

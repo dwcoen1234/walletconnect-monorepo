@@ -33,6 +33,7 @@ export declare namespace SignClientTypes {
   interface EventArguments {
     session_proposal: {
       verifyContext: Verify.Context;
+      isSiwx?: boolean;
     } & Omit<BaseEventArgs<ProposalTypes.Struct>, "topic">;
     session_update: BaseEventArgs<{ namespaces: SessionTypes.Namespaces }>;
     session_extend: Omit<BaseEventArgs, "params">;
