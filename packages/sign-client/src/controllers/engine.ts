@@ -421,6 +421,16 @@ export class Engine extends IEngine {
 
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribe_session_topic_success);
 
+    if (proposal.sessionProperties?.siwx) {
+      console.log("sessionProperties.siwx", proposal.sessionProperties?.siwx);
+      sessionSettle.sessionProperties = {
+        ...sessionSettle.sessionProperties,
+        siwx: {
+          ...proposal.sessionProperties?.siwx,
+        },
+      };
+    }
+
     const session = {
       ...sessionSettle,
       topic: sessionTopic,
@@ -1124,7 +1134,7 @@ export class Engine extends IEngine {
       if (error) reject(error);
       else if (_session) {
         session = _session;
-        if (proposal.sessionProperties?.siwx) {
+        if (_session.sessionProperties?.siwx) {
           console.log("setting history for siwx");
           this.client.core.history.set(
             session?.topic || "",
