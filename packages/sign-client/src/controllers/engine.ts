@@ -370,8 +370,15 @@ export class Engine extends IEngine {
       throw error;
     }
 
-    const { id, relayProtocol, namespaces, sessionProperties, scopedProperties, sessionConfig } =
-      params;
+    const {
+      id,
+      relayProtocol,
+      namespaces,
+      sessionProperties,
+      scopedProperties,
+      sessionConfig,
+      pendingRequestsResults,
+    } = params;
 
     const proposal = this.client.proposal.get(id);
 
@@ -421,6 +428,7 @@ export class Engine extends IEngine {
 
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribe_session_topic_success);
 
+    // TODO: remove this
     if (proposal.sessionProperties?.siwx) {
       console.log("sessionProperties.siwx", proposal.sessionProperties?.siwx);
       sessionSettle.sessionProperties = {
@@ -429,6 +437,27 @@ export class Engine extends IEngine {
           ...proposal.sessionProperties?.siwx,
         },
       };
+    }
+
+    if (pendingRequestsResults) {
+      Object.entries(pendingRequestsResults).forEach(([id, jsonRpcResult]) => {
+        if (proposal.sessionProperties?.pending_requests?.[id]) {
+          sessionSettle.sessionProperties = {
+            ...sessionSettle.sessionProperties,
+            pending_requests: {
+              ...proposal.sessionProperties.pending_requests,
+              [id]: {
+                ...proposal.sessionProperties.pending_requests[id],
+                result: jsonRpcResult?.result,
+              },
+            },
+          };
+        }
+      });
+      console.log(
+        "sessionSettle.sessionProperties.pending_requests",
+        sessionSettle.sessionProperties?.pending_requests,
+      );
     }
 
     const session = {
@@ -500,6 +529,8 @@ export class Engine extends IEngine {
     await this.setExpiry(sessionTopic, calcExpiry(SESSION_EXPIRY));
 
     console.log("sessionProperties.siwx", proposal.sessionProperties?.siwx);
+
+    // TODO: remove this
     if (proposal.sessionProperties?.siwx) {
       setTimeout(async () => {
         console.log("onSessionRequest");
@@ -1068,11 +1099,13 @@ export class Engine extends IEngine {
       });
       console.log("message", message);
       proposal.sessionProperties = {
-        siwx: {
-          message,
-          request: {
+        pending_requests: {
+          [nonEvmAuthenticateId]: {
+            // authentication | signature | transaction
+            type: "authentication",
+            message,
             method: signMethodsByNamespace[namespace],
-            params: this.getSiwxParamsBlueprint(namespace),
+            paramsBlueprint: this.getSiwxParamsBlueprint(namespace),
             chainId: chains[0],
             id: nonEvmAuthenticateId,
           },
@@ -1086,7 +1119,6 @@ export class Engine extends IEngine {
 
     const authenticateId = payloadId();
     const authenticateEventTarget = engineEvent("session_request", authenticateId);
-    const nonEvmAuthenticateEventTarget = engineEvent("session_request", nonEvmAuthenticateId);
 
     const requestsToPublish = [
       async () =>
@@ -1101,31 +1133,6 @@ export class Engine extends IEngine {
     ];
 
     let session: SessionTypes.Struct | undefined;
-    const onNonEvmAuthenticate = async (payload: any) => {
-      console.log("onNonEvmAuthenticate", JSON.stringify(payload, null, 2));
-
-      if (payload.error) {
-        reject(payload.error);
-      } else {
-        const { signature } = payload.result;
-        console.log("signature", signature);
-        resolve({
-          session,
-          auths: [
-            buildAuthObject(
-              request.authPayload,
-              {
-                t: signMethodsByNamespace[namespace],
-                s: signature,
-              },
-              `did:pkh:${session?.namespaces[namespace]?.accounts[0]}`,
-            ),
-          ],
-        });
-      }
-    };
-
-    this.events.once(nonEvmAuthenticateEventTarget, onNonEvmAuthenticate);
 
     // handle fallback session proposal response
     const onSessionConnect = ({ error, session: _session }: any) => {
@@ -1134,13 +1141,28 @@ export class Engine extends IEngine {
       if (error) reject(error);
       else if (_session) {
         session = _session;
-        if (_session.sessionProperties?.siwx) {
-          console.log("setting history for siwx");
-          this.client.core.history.set(
-            session?.topic || "",
-            formatJsonRpcRequest("wc_sessionRequest", {}, nonEvmAuthenticateId),
-          );
-          console.log("dapp history set", nonEvmAuthenticateId);
+        // wait for the authentication request to be resolved
+        const pendingAuthenticationRequest =
+          _session.sessionProperties?.pending_requests?.[nonEvmAuthenticateId];
+        console.log("pendingAuthenticationRequest", pendingAuthenticationRequest);
+        if (pendingAuthenticationRequest && pendingAuthenticationRequest.result) {
+          console.log("pendingAuthenticationRequest.result", pendingAuthenticationRequest.result);
+          // resolve the .authenticate
+          resolve({
+            session,
+            auths: [
+              buildAuthObject(
+                request.authPayload,
+                {
+                  t: signMethodsByNamespace[namespace],
+                  s:
+                    pendingAuthenticationRequest.result?.signature ||
+                    pendingAuthenticationRequest.result,
+                },
+                `did:pkh:${session?.namespaces[namespace]?.accounts[0]}`,
+              ),
+            ],
+          });
         } else {
           resolve({
             session,
@@ -1148,6 +1170,7 @@ export class Engine extends IEngine {
         }
       }
     };
+
     // handle session authenticate response
     const onAuthenticate = async (payload: any) => {
       // delete this auth request on response
@@ -1319,6 +1342,33 @@ export class Engine extends IEngine {
       uri: linkModeURL ?? connectionUri,
       response: done,
     } as EngineTypes.SessionAuthenticateResponsePromise;
+  };
+
+  public preparePendingRequests = ({
+    pendingRequests,
+    namespaces,
+  }: {
+    pendingRequests: any;
+    namespaces: SessionTypes.Namespaces;
+  }) => {
+    const preparedRequests = {};
+    Object.values(pendingRequests).forEach((request: any) => {
+      const { namespace } = parseChainId(request.chainId);
+      const accountToUse = namespaces[namespace]?.accounts[0];
+      const address = getAddressFromAccount(accountToUse);
+      const method = request.method;
+      const chainId = request.chainId;
+
+      preparedRequests[request.id] = {
+        request: {
+          method,
+          params: this.getSiwxParams(request.paramsBlueprint, request.message, address),
+        },
+        id: request.id,
+        chainId,
+      };
+    });
+    return preparedRequests;
   };
 
   public approveSessionAuthenticate: IEngine["approveSessionAuthenticate"] = async (
@@ -2117,7 +2167,6 @@ export class Engine extends IEngine {
         id,
         params: proposal,
         verifyContext,
-        isSiwx: typeof proposal.sessionProperties?.siwx !== "undefined",
       });
     } catch (err: any) {
       await this.sendError({

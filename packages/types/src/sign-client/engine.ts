@@ -80,6 +80,10 @@ export declare namespace EngineTypes {
     scopedProperties?: ProposalTypes.ScopedProperties;
     sessionConfig?: SessionTypes.SessionConfig;
     relayProtocol?: string;
+    pendingRequestsResults?: Record<
+      string,
+      JsonRpcResult<JsonRpcTypes.Results[JsonRpcTypes.WcMethod]>
+    >;
   }
 
   interface RejectParams {
