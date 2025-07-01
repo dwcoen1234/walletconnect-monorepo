@@ -113,8 +113,8 @@ dependencies {
 
 if (isNewArchitectureEnabled()) {
   react {
-    jsRootDir = file("../src/")
-    libraryName = "RNWalletConnectModule"
+    jsRootDir = file("../module/")
+    libraryName = "RNWalletConnectModuleSpec"
     codegenJavaPackageName = "com.walletconnect.reactnativemodule"
   }
 }

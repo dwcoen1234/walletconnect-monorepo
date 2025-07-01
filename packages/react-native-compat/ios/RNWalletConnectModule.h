@@ -1,6 +1,5 @@
-
 #ifdef RCT_NEW_ARCH_ENABLED
-#import "RNRNWalletConnectModuleSpec.h"
+#import "RNWalletConnectModuleSpec.h"
 
 @interface RNWalletConnectModule : NSObject <NativeRNWalletConnectModuleSpec>
 #else

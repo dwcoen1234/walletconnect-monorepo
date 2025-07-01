@@ -53,8 +53,8 @@
     }
   },
   "codegenConfig": {
-    "name": "RNRNWalletConnectModuleSpec",
+    "name": "RNWalletConnectModuleSpec",
     "type": "modules",
-    "jsSrcsDir": "."
+    "jsSrcsDir": "module"
   }
 }

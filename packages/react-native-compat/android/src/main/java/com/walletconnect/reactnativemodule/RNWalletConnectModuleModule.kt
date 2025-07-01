@@ -12,19 +12,19 @@ class RNWalletConnectModuleModule internal constructor(context: ReactApplication
     return NAME
   }
 
-  override protected fun getTypedExportedConstants(): Map<String, String> {
+  override fun getTypedExportedConstants(): Map<String, String> {
     var appName: String
 
     try {
-      appName = getReactApplicationContext().getApplicationInfo()
-        .loadLabel(getReactApplicationContext().getPackageManager()).toString()
+      appName = reactApplicationContext.applicationInfo
+        .loadLabel(reactApplicationContext.packageManager).toString()
     } catch (e: Exception) {
       appName = "unknown"
     }
 
     val constants: MutableMap<String, String> = HashMap()
-    constants.put("applicationId", getReactApplicationContext().getPackageName());
-    constants.put("applicationName", appName);
+    constants["applicationId"] = reactApplicationContext.packageName
+    constants["applicationName"] = appName
     return constants
   }
 
@@ -39,7 +39,7 @@ class RNWalletConnectModuleModule internal constructor(context: ReactApplication
   }
 
   private fun isPackageInstalled(packageName: String): Boolean {
-    val manager: PackageManager = getReactApplicationContext().getPackageManager()
+    val manager: PackageManager = reactApplicationContext.packageManager
     return try {
       @Suppress("DEPRECATION")
       manager.getPackageInfo(packageName, 0)
