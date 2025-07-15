@@ -1652,7 +1652,7 @@ export class Engine extends IEngine {
       payload: {
         sessionTopic,
         pairingTopic: proposal.pairingTopic,
-        pairingResponse: pairingResponseMessage,
+        sessionProposalResponse: pairingResponseMessage,
         sessionSettlementRequest: sessionSettlementRequestMessage,
       },
       opts: {
