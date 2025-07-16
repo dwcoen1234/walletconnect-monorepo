@@ -48,6 +48,12 @@ export function getAccountsFromSession(namespace: string, session: SessionTypes.
   return accounts;
 }
 
+export function filterNamespacesWithNoChains(namespaces: NamespaceConfig): NamespaceConfig {
+  return Object.fromEntries(
+    Object.entries(namespaces).filter(([_, ns]) => ns?.chains?.length && ns?.chains?.length > 0),
+  );
+}
+
 export function mergeRequiredOptionalNamespaces(
   required: NamespaceConfig = {},
   optional: NamespaceConfig = {},
@@ -119,8 +125,8 @@ export function populateNamespacesChains(
     const chains = isCaipNamespace(key)
       ? [key]
       : values.chains
-        ? values.chains
-        : getChainsFromApprovedSession(values.accounts);
+      ? values.chains
+      : getChainsFromApprovedSession(values.accounts);
     parsedNamespaces[key] = {
       chains,
       methods,

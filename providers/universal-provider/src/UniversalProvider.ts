@@ -8,6 +8,7 @@ import {
   getAccountsFromSession,
   getChainsFromApprovedSession,
   mergeRequiredOptionalNamespaces,
+  filterNamespacesWithNoChains,
   parseCaip10Account,
   populateNamespacesChains,
   setGlobal,
@@ -204,7 +205,9 @@ export class UniversalProvider implements IUniversalProvider {
     this.session = session;
     // assign namespaces from session if not already defined
     const approved = populateNamespacesChains(session.namespaces) as NamespaceConfig;
-    this.namespaces = mergeRequiredOptionalNamespaces(this.namespaces, approved);
+
+    const mergedNamespaces = mergeRequiredOptionalNamespaces(this.namespaces, approved);
+    this.namespaces = filterNamespacesWithNoChains(mergedNamespaces);
     await this.persist("namespaces", this.namespaces);
     await this.persist("optionalNamespaces", this.optionalNamespaces);
 
