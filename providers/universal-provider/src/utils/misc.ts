@@ -125,8 +125,8 @@ export function populateNamespacesChains(
     const chains = isCaipNamespace(key)
       ? [key]
       : values.chains
-      ? values.chains
-      : getChainsFromApprovedSession(values.accounts);
+        ? values.chains
+        : getChainsFromApprovedSession(values.accounts);
     parsedNamespaces[key] = {
       chains,
       methods,
