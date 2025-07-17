@@ -1405,6 +1405,64 @@ describe("buildApprovedNamespaces (validators)", () => {
       });
     },
   );
+  it("should build approved namespaces - matching namespace but no supported chains", () => {
+    const required = {};
+    const optional = {
+      eip155: {
+        chains: ["eip155:1", "eip155:2"],
+        events: ["chainChanged", "accountsChanged"],
+        methods: [
+          "personal_sign",
+          "eth_sendTransaction",
+          "eth_signTransaction",
+          "eth_signTypedData",
+        ],
+      },
+      bip122: {
+        chains: ["bip122:000000000019d6689c085ae165831e93"],
+        events: ["chainChanged"],
+        methods: ["bip122_signTransaction"],
+      },
+    };
+
+    const chainsEip = ["eip155:1"];
+    const methods = ["personal_sign", "eth_sendTransaction"];
+    const events = ["chainChanged"];
+    const accountsEip = ["eip155:1:0x57f48fAFeC1d76B27e3f29b8d277b6218CDE6092"];
+
+    const result = buildApprovedNamespaces({
+      proposal: {
+        ...TEST_PROPOSAL,
+        requiredNamespaces: required,
+        optionalNamespaces: optional,
+      },
+      supportedNamespaces: {
+        eip155: {
+          chains: chainsEip,
+          methods,
+          events,
+          accounts: accountsEip,
+        },
+        bip122: {
+          chains: ["bip122:000000000019d6689c085ae165831e92"],
+          events: ["chainChanged"],
+          methods: ["bip122_signTransaction"],
+          accounts: [
+            "bip122:000000000019d6689c085ae165831e92:0x57f48fAFeC1d76B27e3f29b8d277b6218CDE6092",
+          ],
+        },
+      },
+    });
+    // it should not inclide bip122 namespace since the supported chains do not match with the proposal
+    expect(result).toEqual({
+      eip155: {
+        chains: chainsEip,
+        events,
+        methods,
+        accounts: accountsEip,
+      },
+    });
+  });
 });
 
 describe("merge namespaces", () => {
