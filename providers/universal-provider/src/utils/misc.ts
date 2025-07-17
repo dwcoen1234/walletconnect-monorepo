@@ -58,8 +58,8 @@ export function mergeRequiredOptionalNamespaces(
   required: NamespaceConfig = {},
   optional: NamespaceConfig = {},
 ) {
-  const requiredNamespaces = normalizeNamespaces(required);
-  const optionalNamespaces = normalizeNamespaces(optional);
+  const requiredNamespaces = filterNamespacesWithNoChains(normalizeNamespaces(required));
+  const optionalNamespaces = filterNamespacesWithNoChains(normalizeNamespaces(optional));
   return merge(requiredNamespaces, optionalNamespaces);
 }
 
