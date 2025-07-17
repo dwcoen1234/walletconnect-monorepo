@@ -180,6 +180,13 @@ export function buildApprovedNamespaces(
     };
   });
 
+  // remove namespaces with no chains or accounts
+  for (const [namespace, values] of Object.entries(approvedNamespaces)) {
+    if (values.accounts.length === 0 || values?.chains?.length === 0) {
+      delete approvedNamespaces[namespace];
+    }
+  }
+
   return approvedNamespaces;
 }
 
