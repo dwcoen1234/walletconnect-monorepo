@@ -67,6 +67,19 @@ export declare namespace SignClientTypes {
   type Metadata = CoreTypes.Metadata;
 
   type SignConfig = {
+    /**
+     * Disables the sequential processing of session requests.
+     *
+     * WARNING: The WalletConnect system has an at-least-once delivery guarantee,
+     * which means the same message may be delivered multiple times.
+     *
+     * When this option is enabled, you MUST implement your own message
+     * deduplication logic to prevent processing duplicate requests.
+     * This is especially important during the first second after
+     * initialization when duplicate events are more likely to occur.
+     *
+     * @default false
+     */
     disableRequestQueue?: boolean;
   };
 

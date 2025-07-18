@@ -1,18 +1,19 @@
-FROM node:21-alpine as base
+FROM node:21-alpine AS base
 
 WORKDIR /
 
 RUN apk --update --no-cache \
     add g++ make python3
 
-FROM base as build
+FROM base AS build
 
-WORKDIR /
+# setting the workdir resolves npm Error: Tracker "idealTree" already exists
+WORKDIR /sdk
 
 COPY ../ ./
 RUN npm ci
 RUN npm run build
 
-WORKDIR /packages/sign-client/
+WORKDIR /sdk/packages/sign-client/
 
 CMD ["node", "-v"]

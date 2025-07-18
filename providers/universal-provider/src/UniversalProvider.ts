@@ -320,6 +320,9 @@ export class UniversalProvider implements IUniversalProvider {
     providersToCreate.forEach((namespace) => {
       if (!this.session) return;
       const accounts = getAccountsFromSession(namespace, this.session);
+      if (accounts?.length === 0) {
+        return;
+      }
       const approvedChains = getChainsFromApprovedSession(accounts);
       const mergedNamespaces = mergeRequiredOptionalNamespaces(
         this.namespaces,

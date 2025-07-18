@@ -560,3 +560,31 @@ export function fromBase64(encodedString: string): string {
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+export class LimitedSet<T> {
+  private limit: number;
+  private set: Set<T>;
+
+  constructor({ limit }: { limit: number }) {
+    this.limit = limit;
+    this.set = new Set<T>();
+  }
+
+  add(item: T) {
+    if (this.set.has(item)) return;
+
+    if (this.set.size >= this.limit) {
+      // Remove the oldest entry (FIFO)
+      const firstKey = this.set.values().next().value;
+      if (firstKey) {
+        this.set.delete(firstKey);
+      }
+    }
+
+    this.set.add(item);
+  }
+
+  has(item: T) {
+    return this.set.has(item);
+  }
+}

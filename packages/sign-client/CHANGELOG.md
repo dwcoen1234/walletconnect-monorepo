@@ -1,5 +1,33 @@
 # @walletconnect/sign-client
 
+## 2.21.5
+
+### Patch Changes
+
+- [#6806](https://github.com/WalletConnect/walletconnect-monorepo/pull/6806) [`8dc0a08ffcaeadee11d38a9af131388cdb2c6df0`](https://github.com/WalletConnect/walletconnect-monorepo/commit/8dc0a08ffcaeadee11d38a9af131388cdb2c6df0) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - fixed a bug that caused `universal-provider` to throw unhandled when it tried to create sub provider for a namespace without accounts
+
+- [#6799](https://github.com/WalletConnect/walletconnect-monorepo/pull/6799) [`f32d8fea0a37da7dd54d58da166d133238f7ed93`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f32d8fea0a37da7dd54d58da166d133238f7ed93) Thanks [@arein](https://github.com/arein)! - Updated the `skipped transport open due to no topics` relayer log message level to `info`
+
+- [#6807](https://github.com/WalletConnect/walletconnect-monorepo/pull/6807) [`c3c9bf7b4cc01a4099482648605f4a2278c90441`](https://github.com/WalletConnect/walletconnect-monorepo/commit/c3c9bf7b4cc01a4099482648605f4a2278c90441) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - fixed a bug within `buildApprovedNamespaces` that didn't discard namespace when there were no matching chains or accounts
+
+- Updated dependencies [[`8dc0a08ffcaeadee11d38a9af131388cdb2c6df0`](https://github.com/WalletConnect/walletconnect-monorepo/commit/8dc0a08ffcaeadee11d38a9af131388cdb2c6df0), [`f32d8fea0a37da7dd54d58da166d133238f7ed93`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f32d8fea0a37da7dd54d58da166d133238f7ed93), [`c3c9bf7b4cc01a4099482648605f4a2278c90441`](https://github.com/WalletConnect/walletconnect-monorepo/commit/c3c9bf7b4cc01a4099482648605f4a2278c90441)]:
+  - @walletconnect/core@2.21.5
+  - @walletconnect/types@2.21.5
+  - @walletconnect/utils@2.21.5
+
+## 2.21.4
+
+### Patch Changes
+
+- [#6778](https://github.com/WalletConnect/walletconnect-monorepo/pull/6778) [`664a9d4a6fcd56ed67620081d9c2ebb1a8053433`](https://github.com/WalletConnect/walletconnect-monorepo/commit/664a9d4a6fcd56ed67620081d9c2ebb1a8053433) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixed a bug where duplicate session_request was emitted after client restart affecting sign-client instances with disabled session request queue.
+
+- [#6762](https://github.com/WalletConnect/walletconnect-monorepo/pull/6762) [`e608240d51cfe347de69e4c43ca63b2ed8c8101f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/e608240d51cfe347de69e4c43ca63b2ed8c8101f) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Implemented the new 5792 handling in universal-provider according to ChainAgnostic/namespaces#139
+
+- Updated dependencies [[`664a9d4a6fcd56ed67620081d9c2ebb1a8053433`](https://github.com/WalletConnect/walletconnect-monorepo/commit/664a9d4a6fcd56ed67620081d9c2ebb1a8053433), [`e608240d51cfe347de69e4c43ca63b2ed8c8101f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/e608240d51cfe347de69e4c43ca63b2ed8c8101f)]:
+  - @walletconnect/types@2.21.4
+  - @walletconnect/utils@2.21.4
+  - @walletconnect/core@2.21.4
+
 ## 2.21.3
 
 ### Patch Changes

@@ -1806,6 +1806,65 @@ describe("UniversalProvider", function () {
 
       await deleteProviders({ A: dapp, B: wallet });
     });
+
+    it("should gracefully handle invalid namespaces without chains/accounts", async () => {
+      const dapp = await UniversalProvider.init({
+        ...TEST_PROVIDER_OPTS,
+        name: "dapp",
+      });
+      const wallet = await UniversalProvider.init({
+        ...TEST_PROVIDER_OPTS,
+        name: "wallet",
+      });
+      const optionalNamespaces = {
+        eip155: {
+          chains: ["eip155:1"],
+          events: ["chainChanged"],
+          methods: ["personal_sign", "eth_sendTransaction"],
+        },
+        bip122: {
+          chains: ["bip122:000000000019d6689c085ae165831e93"],
+          events: ["chainChanged"],
+          methods: ["bip122_signTransaction"],
+        },
+      };
+      await testConnectMethod(
+        {
+          dapp,
+          wallet,
+        },
+        {
+          requiredNamespaces: {},
+          optionalNamespaces,
+          namespaces: {
+            bip122: {
+              accounts: [],
+              chains: [],
+              methods: ["bip122_signTransaction"],
+              events: ["chainChanged"],
+            },
+            eip155: {
+              accounts: ["eip155:1:0x57f48fAFeC1d76B27e3f29b8d277b6218CDE6092"],
+              chains: ["eip155:1"],
+              methods: ["personal_sign", "eth_sendTransaction"],
+              events: ["chainChanged"],
+            },
+          },
+        },
+      );
+      await throttle(1_000);
+      expect(dapp.rpcProviders).to.be.an("object");
+      expect(dapp.rpcProviders.eip155).to.exist;
+      expect(dapp.rpcProviders.eip155).to.be.an("object");
+      // verify bip122(generic) provider is not created
+      expect(dapp.rpcProviders.generic).to.not.exist;
+
+      const httpProviders = dapp.rpcProviders.eip155.httpProviders;
+
+      expect(Object.keys(httpProviders).length).is.greaterThan(0);
+
+      await deleteProviders({ A: dapp, B: wallet });
+    });
   });
 });
 
