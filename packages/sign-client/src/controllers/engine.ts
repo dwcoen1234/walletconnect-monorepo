@@ -145,8 +145,8 @@ export class Engine extends IEngine {
     queue: [],
   };
 
-  // a set to track session requests that have been emitted via `session_request` event
-  // this is to make sure we don't emit the same request multiple times
+  // This prevents duplicate emissions due to WalletConnect's at-least-once delivery guarantee.
+  // When disableRequestQueue is enabled, consumers must implement additional deduplication.
   private emittedSessionRequests = new LimitedSet({ limit: 500 });
 
   private requestQueueDelay = ONE_SECOND;
@@ -2271,6 +2271,8 @@ export class Engine extends IEngine {
         this.client.core.addLinkModeSupportedApp(session.peer.metadata.redirect?.universal);
       }
 
+      // without sequential processing. This bypasses deduplication provided by the queue,
+      // at-least-once delivery guarantee.
       if (this.client.signConfig?.disableRequestQueue) {
         this.emitSessionRequest(request);
       } else {
@@ -2413,6 +2415,12 @@ export class Engine extends IEngine {
     }
   };
 
+  /**
+   * Adds a session request to the sequential processing queue.
+   *
+   * The queue provides built-in deduplication and sequential processing,
+   * which helps handle WalletConnect's at-least-once delivery guarantee.
+   */
   private addSessionRequestToSessionRequestQueue = (request: PendingRequestTypes.Struct) => {
     this.sessionRequestQueue.queue.push(request);
   };
@@ -2473,6 +2481,13 @@ export class Engine extends IEngine {
     }
   };
 
+  /**
+   * Emits a session request event with built-in deduplication.
+   *
+   * This method implements deduplication using emittedSessionRequests set to handle
+   * WalletConnect's at-least-once delivery guarantee. However, when disableRequestQueue
+   * is enabled, additional deduplication may be needed at the consumer level.
+   */
   private emitSessionRequest = (request: PendingRequestTypes.Struct) => {
     if (this.emittedSessionRequests.has(request.id)) {
       this.client.logger.warn(
