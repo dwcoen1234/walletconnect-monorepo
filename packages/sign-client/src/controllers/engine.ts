@@ -111,7 +111,6 @@ import {
   encodeBase64,
   buildAuthObject,
   LimitedSet,
-  parseAccountId,
   getChainFromAccount,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
