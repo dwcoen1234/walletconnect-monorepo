@@ -111,6 +111,8 @@ import {
   encodeBase64,
   buildAuthObject,
   LimitedSet,
+  parseAccountId,
+  getChainFromAccount,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -247,6 +249,7 @@ export class Engine extends IEngine {
       sessionProperties,
       scopedProperties,
       relays,
+      walletPay,
     } = connectParams;
     let topic = pairingTopic;
     let uri: string | undefined;
@@ -278,7 +281,7 @@ export class Engine extends IEngine {
 
     const expiry = ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
     const expiryTimestamp = calcExpiry(expiry);
-    const proposal = {
+    const proposal: ProposalTypes.Struct = {
       requiredNamespaces,
       optionalNamespaces,
       relays: relays ?? [{ protocol: RELAYER_DEFAULT_PROTOCOL }],
@@ -291,8 +294,20 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       id: payloadId(),
+      pendingRequests: [
+        ...this.composeSignMessageFromProposedNamespaces({
+          namespaces: optionalNamespaces,
+          authenticationMessage: params.authentication?.messageToSign,
+        }),
+      ],
     };
+
+    if (walletPay) {
+      proposal.pendingRequests?.push(this.composeWalletPayRequest(walletPay));
+    }
+
     const sessionConnectTarget = engineEvent("session_connect", proposal.id);
+    console.log("proposal.pendingRequests", JSON.stringify(proposal.pendingRequests, null, 2));
 
     const {
       reject,
@@ -389,7 +404,8 @@ export class Engine extends IEngine {
 
     this.client.core.eventClient.deleteEvent({ eventId: configEvent.eventId });
 
-    const { pairingTopic, proposer, requiredNamespaces, optionalNamespaces } = proposal;
+    const { pairingTopic, proposer, requiredNamespaces, optionalNamespaces, pendingRequests } =
+      proposal;
 
     let event = this.client.core.eventClient?.getEvent({
       topic: pairingTopic,
@@ -418,6 +434,8 @@ export class Engine extends IEngine {
       namespaces,
       controller: { publicKey: selfPublicKey, metadata: this.client.metadata },
       expiry: calcExpiry(SESSION_EXPIRY),
+      pendingRequests,
+      pendingRequestsResults,
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       ...(sessionConfig && { sessionConfig }),
@@ -442,27 +460,6 @@ export class Engine extends IEngine {
           ...proposal.sessionProperties?.siwx,
         },
       };
-    }
-
-    if (pendingRequestsResults) {
-      Object.entries(pendingRequestsResults).forEach(([id, jsonRpcResult]) => {
-        if (proposal.sessionProperties?.pending_requests?.[id]) {
-          sessionSettle.sessionProperties = {
-            ...sessionSettle.sessionProperties,
-            pending_requests: {
-              ...proposal.sessionProperties.pending_requests,
-              [id]: {
-                ...proposal.sessionProperties.pending_requests[id],
-                result: jsonRpcResult?.result,
-              },
-            },
-          };
-        }
-      });
-      console.log(
-        "sessionSettle.sessionProperties.pending_requests",
-        sessionSettle.sessionProperties?.pending_requests,
-      );
     }
 
     const session = {
@@ -533,85 +530,72 @@ export class Engine extends IEngine {
     await this.client.core.pairing.activate({ topic: pairingTopic });
     await this.setExpiry(sessionTopic, calcExpiry(SESSION_EXPIRY));
 
-    console.log("sessionProperties.siwx", proposal.sessionProperties?.siwx);
-
-    // TODO: remove this
-    if (proposal.sessionProperties?.siwx) {
-      setTimeout(async () => {
-        console.log("onSessionRequest");
-
-        // siwx: {
-        //   message,
-        //   request: {
-        //     method: signMethodsByNamespace[namespace],
-        //     params: {
-        //       type: "object",
-        //       // the address to be replaced with the actual address
-        //       address: "pubkey",
-        //       // none | base64 | base58
-        //       encoding: "base58",
-        //     },
-        //     chainId: chains[0],
-        //     id: authenticateId,
-        //   },
-        // },
-        const siwx = proposal.sessionProperties?.siwx as any;
-        const { namespace: siwxNamespace } = parseChainId(siwx.request.chainId);
-        console.log("siwxNamespace", siwxNamespace);
-        const siwxAccount = namespaces[siwxNamespace]?.accounts[0];
-        console.log("siwxAccount", siwxAccount);
-        const siwxAddress = getAddressFromAccount(siwxAccount);
-        console.log("siwxAddress", siwxAddress);
-        this.client.core.history.set(
-          sessionTopic,
-          formatJsonRpcRequest("wc_sessionRequest", siwx, siwx.request.id),
-        );
-        console.log("history set", siwx.request.id);
-        await this.onSessionRequest({
-          topic: sessionTopic,
-          payload: {
-            jsonrpc: "2.0",
-            method: "wc_sessionRequest",
-            params: {
-              request: {
-                method: siwx.request.method,
-                params: this.getSiwxParams(siwx.request.params, siwx.message, siwxAddress),
-              },
-              chainId: siwx.request.chainId,
-            },
-            id: siwx.request.id,
-          },
-          attestation: proposal.attestation,
-          encryptedId: proposal.encryptedId,
-        });
-      }, 500);
-    }
-
     return {
       topic: sessionTopic,
       acknowledged: () => Promise.resolve(this.client.session.get(sessionTopic)),
     };
   };
 
-  private getSiwxParams(params: any, nonFormattedMessage: string, address: string) {
-    console.log("getSiwxParams params", params);
-    const message = nonFormattedMessage.replace("<placeholder address>", address);
-    let encodedMessage = "";
-    switch (params.encoding) {
-      case "base58":
-        encodedMessage = encodeBase58(message);
-        break;
-      case "base64":
-        encodedMessage = encodeBase64(message);
-        break;
-      default:
-        encodedMessage = message;
-    }
+  private getSiwxParams(
+    blueprint: ProposalTypes.BasePendingRequest["paramsBlueprint"],
+    message: string,
+    address: string,
+  ) {
+    // "paramsBlueprint": {
+    //   "type": "array",
+    //   "items": [
+    //     {
+    //       "position": 0,
+    //       "value": "message",
+    //       "encoding": "hex"
+    //     },
+    //     {
+    //       "position": 1,
+    //       "value": "address",
+    //       "encoding": "none"
+    //     }
+    //   ]
+    // },
+    try {
+      if (!blueprint) return;
 
-    return {
-      message: encodedMessage,
-      [params.address]: address,
-    };
+      const type = blueprint.type;
+      const params = type === "array" ? [] : {};
+
+      for (const item of blueprint.items) {
+        const value = item.value === "message" ? message : address;
+        switch (type) {
+          case "object":
+            params[item.key] = this.encodeMessage(value, item.encoding);
+            break;
+          case "array":
+            params[item.position] = this.encodeMessage(value, item.encoding);
+            break;
+        }
+      }
+
+      console.log("getSiwxParams params", params);
+
+      return params;
+    } catch (error) {
+      console.error("getSiwxParams error", error);
+      return null;
+    }
+  }
+
+  private encodeMessage(message: string, encoding: string) {
+    switch (encoding) {
+      case "base58":
+        return encodeBase58(message);
+      case "base64":
+        return encodeBase64(message);
+      case "hex":
+        return `0x${Buffer.from(message).toString("hex")}`;
+      case "none":
+        return message;
+      default:
+        return message;
+    }
   }
 
   public reject: IEngine["reject"] = async (params) => {
@@ -937,34 +921,102 @@ export class Engine extends IEngine {
 
   // ---------- Auth ------------------------------------------------ //
 
-  private getSiwxParamsBlueprint(namespace: string) {
+  private getSiwxParamsBlueprint(
+    namespace: string,
+  ): ProposalTypes.BasePendingRequest["paramsBlueprint"] {
     switch (namespace) {
+      case "eip155":
+        return {
+          type: "array",
+          items: [
+            {
+              position: 0,
+              value: "message",
+              key: "",
+              encoding: "hex",
+            },
+            {
+              position: 1,
+              value: "address",
+              key: "",
+              encoding: "none",
+            },
+          ],
+        };
       case "bip122":
         return {
           type: "object",
-          address: "account",
-          encoding: "none",
+          items: [
+            {
+              position: 0,
+              value: "message",
+              key: "message",
+              encoding: "none",
+            },
+            {
+              position: 1,
+              value: "address",
+              key: "account",
+              encoding: "none",
+            },
+          ],
         };
       case "solana":
         return {
           type: "object",
-          address: "pubkey",
-          encoding: "base58",
+          items: [
+            {
+              position: 0,
+              value: "message",
+              key: "message",
+              encoding: "base58",
+            },
+            {
+              position: 1,
+              value: "address",
+              key: "pubkey",
+              encoding: "none",
+            },
+          ],
         };
       case "sui":
         return {
           type: "object",
-          address: "address",
-          encoding: "none",
+          items: [
+            {
+              position: 0,
+              value: "message",
+              key: "message",
+              encoding: "none",
+            },
+            {
+              position: 1,
+              value: "address",
+              key: "address",
+              encoding: "none",
+            },
+          ],
         };
       case "tezos":
         return {
           type: "object",
-          address: "account",
-          encoding: "none",
+          items: [
+            {
+              position: 0,
+              value: "message",
+              key: "message",
+              encoding: "none",
+            },
+            {
+              position: 1,
+              value: "address",
+              key: "account",
+              encoding: "none",
+            },
+          ],
         };
       default:
-        return {};
+        throw new Error(`Unsupported namespace: ${namespace}`);
     }
   }
 
@@ -1349,31 +1401,67 @@ export class Engine extends IEngine {
     } as EngineTypes.SessionAuthenticateResponsePromise;
   };
 
-  public preparePendingRequests = ({
+  public preparePendingRequests = async ({
     pendingRequests,
     namespaces,
   }: {
-    pendingRequests: any;
+    pendingRequests: ProposalTypes.PendingRequest[];
     namespaces: SessionTypes.Namespaces;
   }) => {
-    const preparedRequests = {};
-    Object.values(pendingRequests).forEach((request: any) => {
-      const { namespace } = parseChainId(request.chainId);
-      const accountToUse = namespaces[namespace]?.accounts[0];
-      const address = getAddressFromAccount(accountToUse);
-      const method = request.method;
-      const chainId = request.chainId;
+    const preparedRequests: EngineTypes.PreparedPendingRequest[] = [];
+    Object.values(pendingRequests).forEach((request) => {
+      if (request.type === "wallet_pay") {
+        preparedRequests.push({
+          type: "wallet_pay",
+          request: {
+            method: request.method,
+            params: request.data,
+          },
+          id: payloadId(),
+        });
+        return;
+      }
 
-      preparedRequests[request.id] = {
-        request: {
-          method,
-          params: this.getSiwxParams(request.paramsBlueprint, request.message, address),
-        },
-        id: request.id,
-        chainId,
-      };
+      const { namespace } = parseChainId(request.chainIds[0]);
+      const namespaceData = namespaces[namespace];
+      if (!namespaceData) {
+        console.log("no namespace data found for namespace", namespace);
+        return;
+      }
+
+      const chainIds = new Set([
+        ...namespaceData.accounts.map((account) => getChainFromAccount(account)),
+      ]);
+
+      console.log("chainIds", chainIds, namespaceData.accounts);
+
+      for (const chainId of chainIds) {
+        const accountToUse = namespaceData.accounts.find((account) => {
+          return account.startsWith(`${chainId}:`);
+        });
+
+        if (!accountToUse) {
+          console.log("no account found for chainId", namespace, chainId);
+          return;
+        }
+        const address = getAddressFromAccount(accountToUse);
+        const method = request.method;
+
+        if (request.type === "authentication") {
+          preparedRequests.push({
+            type: request.type,
+            request: {
+              method,
+              params: this.getSiwxParams(request.paramsBlueprint, request.data.message, address),
+            },
+            id: payloadId(),
+            chainId,
+          });
+        }
+      }
     });
-    return preparedRequests;
+
+    return await Promise.resolve(preparedRequests);
   };
 
   public approveSessionAuthenticate: IEngine["approveSessionAuthenticate"] = async (
@@ -2257,6 +2345,8 @@ export class Engine extends IEngine {
         sessionProperties,
         scopedProperties,
         sessionConfig,
+        pendingRequests,
+        pendingRequestsResults,
       } = payload.params;
       const pendingSession = [...this.pendingSessions.values()].find(
         (s) => s.sessionTopic === topic,
@@ -2290,6 +2380,8 @@ export class Engine extends IEngine {
         ...(scopedProperties && { scopedProperties }),
         ...(sessionConfig && { sessionConfig }),
         transportType: TRANSPORT_TYPES.relay,
+        pendingRequests,
+        pendingRequestsResults,
       };
 
       await this.client.session.set(session.topic, session);
@@ -3529,5 +3621,53 @@ export class Engine extends IEngine {
       this.client.logger.warn("Error extracting tx hashes from result", e);
     }
     return [];
+  };
+
+  private composeSignMessageFromProposedNamespaces = (params: {
+    namespaces: ProposalTypes.RequiredNamespaces;
+    authenticationMessage?: string;
+  }) => {
+    const { namespaces, authenticationMessage } = params;
+    const signMethodsByNamespace = {
+      eip155: "personal_sign",
+      sui: "sui_signPersonalMessage",
+      solana: "solana_signMessage",
+      bip122: "signMessage",
+    };
+    const signRequests: ProposalTypes.PendingRequests = [];
+    Object.entries(namespaces).forEach(([namespace, namespaceData]) => {
+      // check if the namespace is supported
+      const signMethod = signMethodsByNamespace[namespace as keyof typeof signMethodsByNamespace];
+      console.log("signMethod", signMethod);
+      if (signMethod) {
+        try {
+          signRequests.push({
+            type: "authentication",
+            data: {
+              message:
+                authenticationMessage?.trim() ||
+                `${this.client.metadata.url} requests a signature from your ${namespace} account.`,
+            },
+            method: signMethodsByNamespace[namespace],
+            paramsBlueprint: this.getSiwxParamsBlueprint(namespace),
+            // cater to inline defined chains e.g. `eip155:1`: {}
+            chainIds: namespaceData?.chains || [namespace],
+          });
+        } catch (e) {
+          console.warn(`Error composing sign message from namespace: ${namespace}`, e);
+        }
+      }
+    });
+
+    return signRequests;
+  };
+
+  private composeWalletPayRequest = (walletPay: EngineTypes.WalletPayParams) => {
+    const request: ProposalTypes.PendingRequest = {
+      type: "wallet_pay",
+      method: "wallet_pay",
+      data: walletPay,
+    };
+    return request;
   };
 }
