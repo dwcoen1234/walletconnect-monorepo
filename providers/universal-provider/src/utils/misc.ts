@@ -1,5 +1,6 @@
 import { SessionTypes } from "@walletconnect/types";
 import {
+  calcExpiry,
   isCaipNamespace,
   isValidObject,
   mergeArrays,
@@ -145,4 +146,8 @@ export function convertChainIdToNumber(chainId: string | number): number | strin
 
   chainId = chainId.includes(":") ? chainId.split(":")[1] : chainId;
   return isNaN(Number(chainId)) ? chainId : Number(chainId);
+}
+
+export function hasExpired(expiry: number): boolean {
+  return calcExpiry(expiry) < Date.now();
 }

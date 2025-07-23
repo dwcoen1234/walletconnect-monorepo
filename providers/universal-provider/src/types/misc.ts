@@ -129,3 +129,40 @@ export interface IEthereumProvider extends EIP1193Provider {
   // legacy alias for EIP-1102
   enable(): Promise<ProviderAccounts>;
 }
+
+type Capability = {
+  [key: string]: unknown;
+  optional?: boolean;
+};
+
+export interface SendCallsParams {
+  version: string;
+  id?: string;
+  from?: `0x${string}`;
+  chainId: `0x${string}`;
+  atomicRequired: boolean;
+  calls: {
+    to?: `0x${string}`;
+    data?: `0x${string}`;
+    value?: `0x${string}`;
+    capabilities?: Record<string, Capability>;
+  }[];
+  capabilities?: Record<string, Capability>;
+}
+export interface SendCallsResult {
+  id: string;
+  capabilities: {
+    caip345: {
+      caip2: string;
+      transactionHashes: string[];
+    };
+  };
+}
+export interface StoreSendCallsParams {
+  request: SendCallsParams;
+  result: SendCallsResult;
+}
+
+export type StoredSendCalls = StoreSendCallsParams & {
+  expiry: number;
+};

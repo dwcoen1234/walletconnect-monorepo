@@ -2,6 +2,7 @@ import Client from "@walletconnect/sign-client";
 import { JsonRpcProvider } from "@walletconnect/jsonrpc-provider";
 import { HttpConnection } from "@walletconnect/jsonrpc-http-connection";
 import { EngineTypes, SessionTypes } from "@walletconnect/types";
+import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 
 import {
   IProvider,
@@ -9,12 +10,27 @@ import {
   SubProviderOpts,
   RequestParams,
   SessionNamespace,
+  SendCallsResult,
+  StoreSendCallsParams,
+  StoredSendCalls,
 } from "../types";
 
-import { extractCapabilitiesFromSession, getChainId, getGlobal, getRpcUrl } from "../utils";
+import {
+  extractCapabilitiesFromSession,
+  getChainId,
+  getGlobal,
+  getRpcUrl,
+  hasExpired,
+  Storage,
+} from "../utils";
 import EventEmitter from "events";
-import { BUNDLER_URL, PROVIDER_EVENTS } from "../constants";
-import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
+import {
+  BUNDLER_URL,
+  CALL_STATUS_RESULT_EXPIRY,
+  CALL_STATUS_STORAGE_KEY,
+  PROVIDER_EVENTS,
+} from "../constants";
+import { calcExpiry, parseChainId } from "@walletconnect/utils";
 
 class Eip155Provider implements IProvider {
   public name = "eip155";
@@ -24,6 +40,7 @@ class Eip155Provider implements IProvider {
   public namespace: SessionNamespace;
   public httpProviders: RpcProvidersMap;
   public events: EventEmitter;
+  public storage: Storage;
 
   constructor(opts: SubProviderOpts) {
     this.namespace = opts.namespace;
@@ -31,6 +48,7 @@ class Eip155Provider implements IProvider {
     this.client = getGlobal("client");
     this.httpProviders = this.createHttpProviders();
     this.chainId = parseInt(this.getDefaultChain());
+    this.storage = Storage.getStorage(this.client.core.storage);
   }
 
   public async request<T = unknown>(args: RequestParams): Promise<T> {
@@ -48,6 +66,8 @@ class Eip155Provider implements IProvider {
         return (await this.getCapabilities(args)) as unknown as T;
       case "wallet_getCallsStatus":
         return (await this.getCallStatus(args)) as unknown as T;
+      case "wallet_sendCalls":
+        return (await this.sendCalls(args)) as unknown as T;
       default:
         break;
     }
@@ -131,13 +151,18 @@ class Eip155Provider implements IProvider {
     ];
   }
 
-  private getHttpProvider(): JsonRpcProvider {
-    const chain = this.chainId;
+  private getHttpProvider(chainId?: number): JsonRpcProvider {
+    const chain = chainId || this.chainId;
     const http = this.httpProviders[chain];
-    if (typeof http === "undefined") {
-      throw new Error(`JSON-RPC provider for ${chain} not found`);
+    if (http) {
+      return http;
     }
-    return http;
+
+    this.httpProviders = {
+      ...this.httpProviders,
+      [chain]: this.createHttpProvider(chain),
+    };
+    return this.httpProviders[chain];
   }
 
   private async handleSwitchChain(args: RequestParams): Promise<any> {
@@ -230,7 +255,7 @@ class Eip155Provider implements IProvider {
 
   private async getCallStatus(args: RequestParams) {
     const session = this.client.session.get(args.topic);
-    const bundlerName = session.sessionProperties?.bundler_name;
+    const bundlerName = session.sessionProperties?.bundler_name as string;
     if (bundlerName) {
       const bundlerUrl = this.getBundlerUrl(args.chainId, bundlerName);
       try {
@@ -239,7 +264,7 @@ class Eip155Provider implements IProvider {
         console.warn("Failed to fetch call status from bundler", error, bundlerUrl);
       }
     }
-    const customUrl = session.sessionProperties?.bundler_url;
+    const customUrl = session.sessionProperties?.bundler_url as string;
     if (customUrl) {
       try {
         return await this.getUserOperationReceipt(customUrl, args);
@@ -248,11 +273,53 @@ class Eip155Provider implements IProvider {
       }
     }
 
+    const storedSendCalls = await this.getStoredSendCalls(args.request.params?.[0] as string);
+    if (storedSendCalls) {
+      try {
+        return await this.prepareCallStatusFromStoredSendCalls(storedSendCalls);
+      } catch (error) {
+        console.warn("Failed to fetch call status from stored send calls", error, storedSendCalls);
+      }
+    }
+
     if (this.namespace.methods.includes(args.request.method)) {
       return await this.client.request(args as EngineTypes.RequestParams);
     }
 
     throw new Error("Fetching call status not approved by the wallet.");
+  }
+
+  private async prepareCallStatusFromStoredSendCalls(storedSendCalls: StoredSendCalls) {
+    const chainId = parseChainId(storedSendCalls.result.capabilities.caip345.caip2);
+    const hashes = storedSendCalls.result.capabilities.caip345.transactionHashes;
+    const allPromises = await Promise.allSettled(
+      hashes.map((hash) => this.getTransactionReceipt(chainId.reference, hash)),
+    );
+
+    const receipts = allPromises.filter((r) => r.status === "fulfilled").map((r) => r.value);
+
+    // log failed transactions
+    allPromises
+      .filter((r) => r.status === "rejected")
+      .forEach((r) => console.warn("Failed to fetch transaction receipt:", r.reason));
+
+    const allReceiptsSuccessful = receipts.every((r) => r.status === "0x1");
+
+    return {
+      id: storedSendCalls.request.id,
+      version: storedSendCalls.request.version,
+      atomic: storedSendCalls.request.atomicRequired,
+      capabilities: storedSendCalls.result.capabilities,
+      receipts,
+      // 200 = success, 100 = pending
+      status: allReceiptsSuccessful ? 200 : 100,
+    };
+  }
+
+  private async getTransactionReceipt(chainId: string, transactionHash: string) {
+    return await this.getHttpProvider(parseInt(chainId)).request(
+      formatJsonRpcRequest("eth_getTransactionReceipt", [transactionHash]),
+    );
   }
 
   private async getUserOperationReceipt(bundlerUrl: string, args: RequestParams) {
@@ -274,6 +341,67 @@ class Eip155Provider implements IProvider {
 
   private getBundlerUrl(cap2ChainId: string, bundlerName: string) {
     return `${BUNDLER_URL}?projectId=${this.client.core.projectId}&chainId=${cap2ChainId}&bundler=${bundlerName}`;
+  }
+
+  private async sendCalls(args: RequestParams) {
+    const result = await this.client.request<SendCallsResult>(args as EngineTypes.RequestParams);
+    const sendCallsParams = args.request.params?.[0];
+    const resultId = result?.id;
+    const capabilities = result?.capabilities || {};
+    const caip2 = capabilities?.caip345?.caip2;
+    const transactionHashes = capabilities?.caip345?.transactionHashes;
+
+    if (!resultId || !caip2 || !transactionHashes?.length) {
+      return result;
+    }
+
+    await this.storeSendCalls({ request: sendCallsParams, result });
+    return result;
+  }
+
+  private async storeSendCalls(sendCalls: StoreSendCallsParams) {
+    const sendCallsStatusResults =
+      await this.storage.getItem<Record<string, StoredSendCalls>>(CALL_STATUS_STORAGE_KEY);
+
+    this.storage.setItem(CALL_STATUS_STORAGE_KEY, {
+      ...sendCallsStatusResults,
+      [sendCalls.result.id]: {
+        request: sendCalls.request,
+        result: sendCalls.result,
+        expiry: calcExpiry(CALL_STATUS_RESULT_EXPIRY),
+      },
+    });
+  }
+
+  private async deleteSendCallsResult(resultId: string) {
+    const sendCallsStatusResults =
+      await this.storage.getItem<Record<string, StoredSendCalls>>(CALL_STATUS_STORAGE_KEY);
+    if (sendCallsStatusResults) {
+      delete sendCallsStatusResults[resultId];
+      this.storage.setItem(CALL_STATUS_STORAGE_KEY, sendCallsStatusResults);
+    }
+
+    // delete old expired results
+    for (const resultId in sendCallsStatusResults) {
+      if (hasExpired(sendCallsStatusResults[resultId].expiry)) {
+        delete sendCallsStatusResults[resultId];
+      }
+    }
+    await this.storage.setItem(CALL_STATUS_STORAGE_KEY, sendCallsStatusResults);
+  }
+
+  private async getStoredSendCalls(resultId: string): Promise<StoredSendCalls | undefined> {
+    const storedSendCalls =
+      await this.storage.getItem<Record<string, StoredSendCalls>>(CALL_STATUS_STORAGE_KEY);
+
+    const result = storedSendCalls?.[resultId];
+    if (result && !hasExpired(result.expiry)) {
+      return result;
+    } else {
+      await this.deleteSendCallsResult(resultId);
+    }
+
+    return undefined;
   }
 }
 
