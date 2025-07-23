@@ -218,12 +218,7 @@ export class UniversalProvider implements IUniversalProvider {
       if (!this.session) return;
       const [namespace, chainId] = this.validateChain(chain);
       const provider = this.getProvider(namespace);
-      // @ts-expect-error
-      if (provider.name === GENERIC_SUBPROVIDER_NAME) {
-        provider.setDefaultChain(`${namespace}:${chainId}`, rpcUrl);
-      } else {
-        provider.setDefaultChain(chainId, rpcUrl);
-      }
+      provider.setDefaultChain(chainId, rpcUrl);
     } catch (error) {
       // ignore the error if the fx is used prematurely before namespaces are set
       if (!/Please call connect/.test((error as Error).message)) throw error;
@@ -385,13 +380,9 @@ export class UniversalProvider implements IUniversalProvider {
           });
           break;
         default:
-          if (!this.rpcProviders[GENERIC_SUBPROVIDER_NAME]) {
-            this.rpcProviders[GENERIC_SUBPROVIDER_NAME] = new GenericProvider({
-              namespace: combinedNamespace,
-            });
-          } else {
-            this.rpcProviders[GENERIC_SUBPROVIDER_NAME].updateNamespace(combinedNamespace);
-          }
+          this.rpcProviders[namespace] = new GenericProvider({
+            namespace: combinedNamespace,
+          });
       }
     });
   }
