@@ -1,6 +1,5 @@
 import { SessionTypes } from "@walletconnect/types";
 import {
-  calcExpiry,
   isCaipNamespace,
   isValidObject,
   mergeArrays,
