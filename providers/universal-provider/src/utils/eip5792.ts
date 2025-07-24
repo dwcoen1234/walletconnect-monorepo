@@ -1,11 +1,10 @@
-import { calcExpiry, parseChainId } from "@walletconnect/utils";
+import { calcExpiry, isExpired, parseChainId } from "@walletconnect/utils";
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import JsonRpcProvider from "@walletconnect/jsonrpc-provider";
 
 import { StoredSendCalls, StoreSendCallsParams } from "../types";
 import { CALL_STATUS_RESULT_EXPIRY, CALL_STATUS_STORAGE_KEY } from "../constants";
 import { Storage } from "./storage";
-import { hasExpired } from "./misc";
 
 export async function prepareCallStatusFromStoredSendCalls(
   storedSendCalls: StoredSendCalls,
@@ -16,18 +15,20 @@ export async function prepareCallStatusFromStoredSendCalls(
   const allPromises = await Promise.allSettled(
     hashes.map((hash) => getTransactionReceipt(chainId.reference, hash, getHttpProvider)),
   );
-
-  const receipts = allPromises.filter((r) => r.status === "fulfilled").map((r) => r.value);
+  const receipts = allPromises
+    .filter((r) => r.status === "fulfilled")
+    .map((r) => r.value)
+    .filter((r) => r);
 
   // log failed transactions
   allPromises
     .filter((r) => r.status === "rejected")
     .forEach((r) => console.warn("Failed to fetch transaction receipt:", r.reason));
 
-  const someReceiptsPending = receipts.some((r) => !r);
-  const allReceiptsSuccessful = receipts.every((r) => r.status === "0x1");
-  const allReceiptsFailed = receipts.every((r) => r.status === "0x0");
-  const someReceiptsFailed = receipts.some((r) => r.status === "0x0");
+  const someReceiptsPending = !receipts.length || receipts.some((r) => !r);
+  const allReceiptsSuccessful = receipts.every((r) => r?.status === "0x1");
+  const allReceiptsFailed = receipts.every((r) => r?.status === "0x0");
+  const someReceiptsFailed = receipts.some((r) => r?.status === "0x0");
 
   let status;
   if (someReceiptsPending) {
@@ -45,7 +46,7 @@ export async function prepareCallStatusFromStoredSendCalls(
   }
 
   return {
-    id: storedSendCalls.request.id,
+    id: storedSendCalls.result.id,
     version: storedSendCalls.request.version,
     atomic: storedSendCalls.request.atomicRequired,
     chainId: storedSendCalls.request.chainId,
@@ -101,7 +102,7 @@ export async function deleteSendCallsResult({
 
   // delete old expired results
   for (const resultId in sendCallsStatusResults) {
-    if (hasExpired(sendCallsStatusResults[resultId].expiry)) {
+    if (isExpired(sendCallsStatusResults[resultId].expiry)) {
       delete sendCallsStatusResults[resultId];
     }
   }
@@ -119,7 +120,7 @@ export async function getStoredSendCalls({
     await storage.getItem<Record<string, StoredSendCalls>>(CALL_STATUS_STORAGE_KEY);
 
   const result = storedSendCalls?.[resultId];
-  if (result && !hasExpired(result.expiry)) {
+  if (result && !isExpired(result.expiry)) {
     return result;
   } else {
     await deleteSendCallsResult({ resultId, storage });
