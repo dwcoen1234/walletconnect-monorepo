@@ -11,8 +11,6 @@ import {
   RequestParams,
   SessionNamespace,
   SendCallsResult,
-  StoreSendCallsParams,
-  StoredSendCalls,
 } from "../types";
 
 import {
@@ -20,17 +18,13 @@ import {
   getChainId,
   getGlobal,
   getRpcUrl,
-  hasExpired,
+  getStoredSendCalls,
+  prepareCallStatusFromStoredSendCalls,
   Storage,
+  storeSendCalls,
 } from "../utils";
 import EventEmitter from "events";
-import {
-  BUNDLER_URL,
-  CALL_STATUS_RESULT_EXPIRY,
-  CALL_STATUS_STORAGE_KEY,
-  PROVIDER_EVENTS,
-} from "../constants";
-import { calcExpiry, parseChainId } from "@walletconnect/utils";
+import { BUNDLER_URL, PROVIDER_EVENTS } from "../constants";
 
 class Eip155Provider implements IProvider {
   public name = "eip155";
@@ -273,10 +267,16 @@ class Eip155Provider implements IProvider {
       }
     }
 
-    const storedSendCalls = await this.getStoredSendCalls(args.request.params?.[0] as string);
+    const storedSendCalls = await getStoredSendCalls({
+      resultId: args.request.params?.[0] as string,
+      storage: this.storage,
+    });
     if (storedSendCalls) {
       try {
-        return await this.prepareCallStatusFromStoredSendCalls(storedSendCalls);
+        return await prepareCallStatusFromStoredSendCalls(
+          storedSendCalls,
+          this.getHttpProvider.bind(this),
+        );
       } catch (error) {
         console.warn("Failed to fetch call status from stored send calls", error, storedSendCalls);
       }
@@ -287,39 +287,6 @@ class Eip155Provider implements IProvider {
     }
 
     throw new Error("Fetching call status not approved by the wallet.");
-  }
-
-  private async prepareCallStatusFromStoredSendCalls(storedSendCalls: StoredSendCalls) {
-    const chainId = parseChainId(storedSendCalls.result.capabilities.caip345.caip2);
-    const hashes = storedSendCalls.result.capabilities.caip345.transactionHashes;
-    const allPromises = await Promise.allSettled(
-      hashes.map((hash) => this.getTransactionReceipt(chainId.reference, hash)),
-    );
-
-    const receipts = allPromises.filter((r) => r.status === "fulfilled").map((r) => r.value);
-
-    // log failed transactions
-    allPromises
-      .filter((r) => r.status === "rejected")
-      .forEach((r) => console.warn("Failed to fetch transaction receipt:", r.reason));
-
-    const allReceiptsSuccessful = receipts.every((r) => r.status === "0x1");
-
-    return {
-      id: storedSendCalls.request.id,
-      version: storedSendCalls.request.version,
-      atomic: storedSendCalls.request.atomicRequired,
-      capabilities: storedSendCalls.result.capabilities,
-      receipts,
-      // 200 = success, 100 = pending
-      status: allReceiptsSuccessful ? 200 : 100,
-    };
-  }
-
-  private async getTransactionReceipt(chainId: string, transactionHash: string) {
-    return await this.getHttpProvider(parseInt(chainId)).request(
-      formatJsonRpcRequest("eth_getTransactionReceipt", [transactionHash]),
-    );
   }
 
   private async getUserOperationReceipt(bundlerUrl: string, args: RequestParams) {
@@ -355,53 +322,11 @@ class Eip155Provider implements IProvider {
       return result;
     }
 
-    await this.storeSendCalls({ request: sendCallsParams, result });
-    return result;
-  }
-
-  private async storeSendCalls(sendCalls: StoreSendCallsParams) {
-    const sendCallsStatusResults =
-      await this.storage.getItem<Record<string, StoredSendCalls>>(CALL_STATUS_STORAGE_KEY);
-
-    this.storage.setItem(CALL_STATUS_STORAGE_KEY, {
-      ...sendCallsStatusResults,
-      [sendCalls.result.id]: {
-        request: sendCalls.request,
-        result: sendCalls.result,
-        expiry: calcExpiry(CALL_STATUS_RESULT_EXPIRY),
-      },
+    await storeSendCalls({
+      sendCalls: { request: sendCallsParams, result },
+      storage: this.storage,
     });
-  }
-
-  private async deleteSendCallsResult(resultId: string) {
-    const sendCallsStatusResults =
-      await this.storage.getItem<Record<string, StoredSendCalls>>(CALL_STATUS_STORAGE_KEY);
-    if (sendCallsStatusResults) {
-      delete sendCallsStatusResults[resultId];
-      this.storage.setItem(CALL_STATUS_STORAGE_KEY, sendCallsStatusResults);
-    }
-
-    // delete old expired results
-    for (const resultId in sendCallsStatusResults) {
-      if (hasExpired(sendCallsStatusResults[resultId].expiry)) {
-        delete sendCallsStatusResults[resultId];
-      }
-    }
-    await this.storage.setItem(CALL_STATUS_STORAGE_KEY, sendCallsStatusResults);
-  }
-
-  private async getStoredSendCalls(resultId: string): Promise<StoredSendCalls | undefined> {
-    const storedSendCalls =
-      await this.storage.getItem<Record<string, StoredSendCalls>>(CALL_STATUS_STORAGE_KEY);
-
-    const result = storedSendCalls?.[resultId];
-    if (result && !hasExpired(result.expiry)) {
-      return result;
-    } else {
-      await this.deleteSendCallsResult(resultId);
-    }
-
-    return undefined;
+    return result;
   }
 }
 
