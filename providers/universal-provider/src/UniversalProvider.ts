@@ -136,7 +136,8 @@ export class UniversalProvider implements IUniversalProvider {
       throw new Error("Sign Client not initialized");
     }
     this.setNamespaces(opts);
-    await this.cleanupPendingPairings();
+    // omit `await` to avoid delaying the pairing flow
+    this.cleanupPendingPairings();
     if (opts.skipPairing) return;
 
     return await this.pair(opts.pairingTopic);
@@ -226,20 +227,24 @@ export class UniversalProvider implements IUniversalProvider {
   }
 
   public async cleanupPendingPairings(opts: PairingsCleanupOpts = {}): Promise<void> {
-    this.logger.info("Cleaning up inactive pairings...");
-    const inactivePairings = this.client.pairing.getAll();
+    try {
+      this.logger.info("Cleaning up inactive pairings...");
+      const inactivePairings = this.client.pairing.getAll();
 
-    if (!isValidArray(inactivePairings)) return;
+      if (!isValidArray(inactivePairings)) return;
 
-    for (const pairing of inactivePairings) {
-      if (opts.deletePairings) {
-        this.client.core.expirer.set(pairing.topic, 0);
-      } else {
-        await this.client.core.relayer.subscriber.unsubscribe(pairing.topic);
+      for (const pairing of inactivePairings) {
+        if (opts.deletePairings) {
+          this.client.core.expirer.set(pairing.topic, 0);
+        } else {
+          await this.client.core.relayer.subscriber.unsubscribe(pairing.topic);
+        }
       }
-    }
 
-    this.logger.info(`Inactive pairings cleared: ${inactivePairings.length}`);
+      this.logger.info(`Inactive pairings cleared: ${inactivePairings.length}`);
+    } catch (error) {
+      this.logger.warn("Failed to cleanup pending pairings", error);
+    }
   }
 
   public abortPairingAttempt() {
@@ -587,7 +592,7 @@ export class UniversalProvider implements IUniversalProvider {
     await this.deleteFromStore("sessionProperties");
     // reset the session after removing from store as the topic is used there
     this.session = undefined;
-    await this.cleanupPendingPairings({ deletePairings: true });
+    this.cleanupPendingPairings({ deletePairings: true });
     await this.cleanupStorage();
   }
 
