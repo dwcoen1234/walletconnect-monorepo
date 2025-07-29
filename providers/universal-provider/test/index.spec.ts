@@ -1788,20 +1788,30 @@ describe("UniversalProvider", function () {
       );
       await throttle(1_000);
       expect(dapp.rpcProviders).to.be.an("object");
-      expect(dapp.rpcProviders.generic).to.exist;
-      expect(dapp.rpcProviders.generic).to.be.an("object");
+      expect(dapp.rpcProviders.zora).to.exist;
+      expect(dapp.rpcProviders.zora).to.be.an("object");
 
-      const httpProviders = dapp.rpcProviders.generic.httpProviders;
+      const zoraHttpProviders = dapp.rpcProviders.zora.httpProviders;
 
-      expect(Object.keys(httpProviders).length).is.greaterThan(0);
-      expect(Object.keys(httpProviders).length).to.eql(tronChains.length + zoraChains.length);
+      expect(Object.keys(zoraHttpProviders).length).is.greaterThan(0);
+      expect(Object.keys(zoraHttpProviders).length).to.eql(zoraChains.length);
 
-      const allChains = [...tronChains, ...zoraChains];
-      Object.values(httpProviders).forEach((provider, i) => {
+      Object.values(zoraHttpProviders).forEach((provider, i) => {
         const url = provider.connection.url as string;
         expect(url).to.include("https://");
         expect(url).to.include(RPC_URL);
-        expect(url).to.eql(getRpcUrl(allChains[i], {} as Namespace, TEST_PROVIDER_OPTS.projectId));
+        expect(url).to.eql(getRpcUrl(zoraChains[i], {} as Namespace, TEST_PROVIDER_OPTS.projectId));
+      });
+
+      const tronHttpProviders = dapp.rpcProviders.tron.httpProviders;
+      expect(Object.keys(tronHttpProviders).length).is.greaterThan(0);
+      expect(Object.keys(tronHttpProviders).length).to.eql(tronChains.length);
+
+      Object.values(tronHttpProviders).forEach((provider, i) => {
+        const url = provider.connection.url as string;
+        expect(url).to.include("https://");
+        expect(url).to.include(RPC_URL);
+        expect(url).to.eql(getRpcUrl(tronChains[i], {} as Namespace, TEST_PROVIDER_OPTS.projectId));
       });
 
       await deleteProviders({ A: dapp, B: wallet });
@@ -1856,13 +1866,72 @@ describe("UniversalProvider", function () {
       expect(dapp.rpcProviders).to.be.an("object");
       expect(dapp.rpcProviders.eip155).to.exist;
       expect(dapp.rpcProviders.eip155).to.be.an("object");
-      // verify bip122(generic) provider is not created
-      expect(dapp.rpcProviders.generic).to.not.exist;
+      // verify bip122 provider is not created
+      expect(dapp.rpcProviders.bip122).to.not.exist;
 
       const httpProviders = dapp.rpcProviders.eip155.httpProviders;
 
       expect(Object.keys(httpProviders).length).is.greaterThan(0);
 
+      await deleteProviders({ A: dapp, B: wallet });
+    });
+
+    it("should set default chain on generic providers", async () => {
+      const dapp = await UniversalProvider.init({
+        ...TEST_PROVIDER_OPTS,
+        name: "dapp",
+      });
+      const wallet = await UniversalProvider.init({
+        ...TEST_PROVIDER_OPTS,
+        name: "wallet",
+      });
+      const optionalNamespaces = {
+        bip122: {
+          chains: ["bip122:000000000019d6689c085ae165831e93"],
+          events: ["chainChanged"],
+          methods: ["bip122_signTransaction"],
+        },
+        zora: {
+          chains: ["zora:1"],
+          events: ["chainChanged"],
+          methods: ["zora_signTransaction"],
+        },
+      };
+      await testConnectMethod(
+        {
+          dapp,
+          wallet,
+        },
+        {
+          requiredNamespaces: {},
+          optionalNamespaces,
+          namespaces: {
+            bip122: {
+              accounts: [
+                "bip122:000000000019d6689c085ae165831e93:0x57f48fAFeC1d76B27e3f29b8d277b6218CDE6092",
+              ],
+              chains: ["bip122:000000000019d6689c085ae165831e93"],
+              methods: ["bip122_signTransaction"],
+              events: ["chainChanged"],
+            },
+            zora: {
+              accounts: ["zora:1:0x57f48fAFeC1d76B27e3f29b8d277b6218CDE6092"],
+              chains: ["zora:1"],
+              methods: ["zora_signTransaction"],
+              events: ["chainChanged"],
+            },
+          },
+        },
+      );
+      await throttle(1_000);
+      dapp.setDefaultChain("bip122:000000000019d6689c085ae165831e93");
+      expect(dapp.rpcProviders.bip122.getDefaultChain()).to.eql("000000000019d6689c085ae165831e93");
+      expect(Object.keys(dapp.rpcProviders.bip122.httpProviders)).to.eql([
+        "000000000019d6689c085ae165831e93",
+      ]);
+      dapp.setDefaultChain("zora:1");
+      expect(dapp.rpcProviders.zora.getDefaultChain()).to.eql("1");
+      expect(Object.keys(dapp.rpcProviders.zora.httpProviders)).to.eql(["1"]);
       await deleteProviders({ A: dapp, B: wallet });
     });
   });
