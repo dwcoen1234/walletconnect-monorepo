@@ -67,7 +67,7 @@ export class Publisher extends IPublisher {
         prompt,
         tag,
         attestation: opts?.attestation,
-        ...opts?.tvf,
+        ...(opts?.tvf && { tvf: opts.tvf }),
       },
     };
 

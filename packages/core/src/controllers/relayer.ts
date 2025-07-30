@@ -113,8 +113,8 @@ export class Relayer extends IRelayer {
     this.subscriber = new Subscriber(this, this.logger);
     this.publisher = new Publisher(this, this.logger);
 
-    this.relayUrl = RELAYER_DEFAULT_RELAY_URL;
-    this.projectId = "47a263e9e957d954353cb970f024e1d3";
+    this.projectId = opts?.projectId;
+    this.relayUrl = opts?.relayUrl || RELAYER_DEFAULT_RELAY_URL;
 
     if (isAndroid()) {
       this.packageName = getAppId();

@@ -95,8 +95,8 @@ export class Core extends ICore {
       }
     }
 
-    this.projectId = "47a263e9e957d954353cb970f024e1d3";
-    this.relayUrl = RELAYER_DEFAULT_RELAY_URL;
+    this.projectId = opts?.projectId;
+    this.relayUrl = opts?.relayUrl || RELAYER_DEFAULT_RELAY_URL;
     this.customStoragePrefix = opts?.customStoragePrefix ? `:${opts.customStoragePrefix}` : "";
 
     const loggerOptions = getDefaultLoggerOptions({

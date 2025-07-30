@@ -448,13 +448,6 @@ export class Engine extends IEngine {
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.store_session);
 
     try {
-      // await this.sendRequest({
-      //   topic: sessionTopic,
-      //   method: "wc_sessionSettle",
-      //   params: sessionSettle,
-      //   throwOnFailedPublish: true,
-      // });
-
       await this.sendApproveSession({
         sessionTopic,
         proposal,
@@ -472,35 +465,7 @@ export class Engine extends IEngine {
         },
       });
 
-      // event.addTrace(EVENT_CLIENT_SESSION_TRACES.publishing_session_settle);
-      // await this.sendRequest({
-      //   topic: sessionTopic,
-      //   method: "wc_sessionSettle",
-      //   params: sessionSettle,
-      //   throwOnFailedPublish: true,
-      // }).catch((error) => {
-      //   event?.setError(EVENT_CLIENT_SESSION_ERRORS.session_settle_publish_failure);
-      //   throw error;
-      // });
-      // console.log("session_settle request published");
-      // event.addTrace(EVENT_CLIENT_SESSION_TRACES.session_settle_publish_success);
-
-      // event.addTrace(EVENT_CLIENT_SESSION_TRACES.publishing_session_approve);
-      // await this.sendResult<"wc_sessionPropose">({
-      //   id,
-      //   topic: pairingTopic,
-      //   result: {
-      //     relay: {
-      //       protocol: relayProtocol ?? "irn",
-      //     },
-      //     responderPublicKey: selfPublicKey,
-      //   },
-      //   throwOnFailedPublish: true,
-      // }).catch((error) => {
-      //   event?.setError(EVENT_CLIENT_SESSION_ERRORS.session_approve_publish_failure);
-      //   throw error;
-      // });
-      console.log("wc_sessionPropose result published");
+      console.log("wc_sessionPropose result published", sessionTopic);
 
       event.addTrace(EVENT_CLIENT_SESSION_TRACES.session_approve_publish_success);
     } catch (error) {
@@ -1684,38 +1649,6 @@ export class Engine extends IEngine {
     });
   };
 
-  // private sendBatchRequest: EnginePrivate["sendBatchRequest"] = async (args) => {
-  //   const { sharedPayload, requests, throwOnFailedPublish, tvf, publishOpts = {} } = args;
-
-  //   const messages = {};
-  //   for (const [key, request] of Object.entries(requests)) {
-  //     const { topic, method, params, expiry, relayRpcId, clientRpcId } = request;
-  //     const payload = formatJsonRpcRequest(method, params, clientRpcId);
-
-  //     let message: string;
-
-  //     try {
-  //       message = await this.client.core.crypto.encode(topic, payload, {
-  //         encoding: BASE64,
-  //       });
-  //     } catch (error) {
-  //       await this.cleanup();
-  //       this.client.logger.error(
-  //         `sendBatchRequest() -> core.crypto.encode() for topic ${topic} failed`,
-  //       );
-  //       throw error;
-  //     }
-
-  //     this.client.core.history.set(topic, payload);
-
-  //     messages[key] = message;
-  //   }
-
-  //   await this.client.core.relayer.publishCustom({});
-
-  //   return payload.id;
-  // };
-
   private sendResult: EnginePrivate["sendResult"] = async (args) => {
     const { id, topic, result, throwOnFailedPublish, encodeOpts, appLink } = args;
     const payload = formatJsonRpcResult(id, result);
@@ -2078,7 +2011,7 @@ export class Engine extends IEngine {
     transportType,
   ) => {
     const { id } = payload;
-    console.log("wc_sessionPropose response received", payload);
+
     if (isJsonRpcResult(payload)) {
       const { result } = payload;
       this.client.logger.trace({ type: "method", method: "onSessionProposeResponse", result });
