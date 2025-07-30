@@ -1616,7 +1616,7 @@ export class Engine extends IEngine {
     const sessionSettlePayload = formatJsonRpcRequest(
       "wc_sessionSettle",
       sessionSettleRequest,
-      publishOpts.id,
+      publishOpts?.id,
     );
 
     const sessionSettlementRequestMessage = await this.client.core.crypto.encode(

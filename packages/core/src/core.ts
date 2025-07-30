@@ -33,7 +33,6 @@ import {
   Verify,
 } from "./controllers";
 
-globalThis.CoreId = Math.random().toString(36).substring(2, 15);
 export class Core extends ICore {
   public readonly protocol = CORE_PROTOCOL;
   public readonly version = CORE_VERSION;

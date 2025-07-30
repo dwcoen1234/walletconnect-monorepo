@@ -281,8 +281,7 @@ export class Relayer extends IRelayer {
   async transportOpen(relayUrl?: string) {
     if (!this.subscriber.hasAnyTopics) {
       this.logger.info(
-        "Starting WS connection skipped because the client has no topics to work with." +
-          globalThis.CoreId,
+        "Starting WS connection skipped because the client has no topics to work with.",
       );
       return;
     }
