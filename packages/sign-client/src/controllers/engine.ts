@@ -1590,12 +1590,12 @@ export class Engine extends IEngine {
       payload: {
         pairingTopic: proposal.pairingTopic,
         sessionProposal: proposeSessionMessage,
-        attestation,
       },
       opts: {
         ...publishOpts,
         id: proposal.id,
         publishMethod: "wc_proposeSession",
+        attestation,
       },
     });
   };
