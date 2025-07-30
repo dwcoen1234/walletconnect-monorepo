@@ -1619,8 +1619,6 @@ export class Engine extends IEngine {
       publishOpts.id,
     );
 
-    this.client.core.history.set(sessionTopic, sessionSettlePayload);
-
     const sessionSettlementRequestMessage = await this.client.core.crypto.encode(
       sessionTopic,
       sessionSettlePayload,

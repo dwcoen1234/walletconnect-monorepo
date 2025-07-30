@@ -462,7 +462,7 @@ export class Subscriber extends ISubscriber {
   }
 
   private restart = async () => {
-    // await this.restore();
+    await this.restore();
     await this.onRestart();
   };
 
