@@ -1,4 +1,4 @@
-import { expect, describe, it, beforeEach } from "vitest";
+import { expect, describe, it, beforeEach, vi } from "vitest";
 import { getDefaultLoggerOptions, pino } from "@walletconnect/logger";
 import * as utils from "@walletconnect/utils";
 import Sinon from "sinon";
@@ -33,8 +33,7 @@ describe("Crypto", () => {
     it("generates a keyPair, sets it in the keychain and returns publicKey", async () => {
       const privateKey = utils.generateRandomBytes32();
       const publicKey = utils.generateRandomBytes32();
-      // Stub `utils.generateKeyPair` to return predictable values.
-      Sinon.stub(utils, "generateKeyPair").returns({ publicKey, privateKey });
+      vi.spyOn(utils, "generateKeyPair").mockReturnValue({ publicKey, privateKey });
       const keychainSpy = Sinon.spy();
       crypto.keychain.set = keychainSpy;
       const returnedPublicKey = await crypto.generateKeyPair();

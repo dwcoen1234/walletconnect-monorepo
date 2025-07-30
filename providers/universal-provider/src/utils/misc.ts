@@ -48,12 +48,18 @@ export function getAccountsFromSession(namespace: string, session: SessionTypes.
   return accounts;
 }
 
+export function filterNamespacesWithNoChains(namespaces: NamespaceConfig): NamespaceConfig {
+  return Object.fromEntries(
+    Object.entries(namespaces).filter(([_, ns]) => ns?.chains?.length && ns?.chains?.length > 0),
+  );
+}
+
 export function mergeRequiredOptionalNamespaces(
   required: NamespaceConfig = {},
   optional: NamespaceConfig = {},
 ) {
-  const requiredNamespaces = normalizeNamespaces(required);
-  const optionalNamespaces = normalizeNamespaces(optional);
+  const requiredNamespaces = filterNamespacesWithNoChains(normalizeNamespaces(required));
+  const optionalNamespaces = filterNamespacesWithNoChains(normalizeNamespaces(optional));
   return merge(requiredNamespaces, optionalNamespaces);
 }
 
@@ -88,8 +94,14 @@ export function normalizeNamespaces(namespaces: NamespaceConfig): NamespaceConfi
       chains: mergeArrays(chains, normalizedNamespaces[normalizedKey]?.chains),
       methods: mergeArrays(methods, normalizedNamespaces[normalizedKey]?.methods),
       events: mergeArrays(events, normalizedNamespaces[normalizedKey]?.events),
-      rpcMap: { ...rpcMap, ...normalizedNamespaces[normalizedKey]?.rpcMap },
     };
+    // avoid adding empty `rpcMap: {}` if there are no values for it
+    if (isValidObject(rpcMap) || isValidObject(normalizedNamespaces[normalizedKey]?.rpcMap || {})) {
+      normalizedNamespaces[normalizedKey].rpcMap = {
+        ...rpcMap,
+        ...normalizedNamespaces[normalizedKey]?.rpcMap,
+      };
+    }
   }
   return normalizedNamespaces;
 }

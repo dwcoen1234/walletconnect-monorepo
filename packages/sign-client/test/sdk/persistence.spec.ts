@@ -78,6 +78,19 @@ describe("Sign Client Persistence", () => {
             },
           );
 
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.A.core.relayer.on(RELAYER_EVENTS.connect, () => {
+                resolve();
+              });
+            }),
+            new Promise<void>((resolve) => {
+              clients.B.core.relayer.on(RELAYER_EVENTS.connect, () => {
+                resolve();
+              });
+            }),
+          ]);
+
           expect(clients.A.core.relayer.connected).toBe(true);
           expect(clients.B.core.relayer.connected).toBe(true);
 
@@ -165,21 +178,25 @@ describe("Sign Client Persistence", () => {
             sessionA: { topic },
           } = await testConnectMethod(clients);
 
+          // delete client B so it can be reinstated
+          await deleteClients({ A: undefined, B: clients.B });
           let rejection: JsonRpcError;
-
+          let requestsReceived = 0;
           await Promise.all([
-            new Promise<void>((resolve) => {
+            new Promise<void>(async (resolve) => {
+              await throttle(3_000);
+              // restart
+              clients.B = await SignClient.init({
+                ...TEST_SIGN_CLIENT_OPTIONS_B,
+                storageOptions: { database: db_b },
+                signConfig: {
+                  disableRequestQueue: true,
+                },
+              });
+
               clients.B.on("session_request", async (args) => {
-                // delete client B so it can be reinstated
-                await deleteClients({ A: undefined, B: clients.B });
-
-                await throttle(1_000);
-
-                // restart
-                clients.B = await SignClient.init({
-                  ...TEST_SIGN_CLIENT_OPTIONS_B,
-                  storageOptions: { database: db_b },
-                });
+                requestsReceived++;
+                await throttle(3_000);
                 const pendingRequests = clients.B.getPendingSessionRequests();
                 const { id, topic, params } = pendingRequests[0];
                 expect(params).toEqual(args.params);
@@ -207,7 +224,8 @@ describe("Sign Client Persistence", () => {
               }
             }),
           ]);
-
+          // validate that the pending request was received only once
+          expect(requestsReceived).toBe(1);
           // delete
           await deleteClients(clients);
         });
@@ -395,7 +413,8 @@ describe("Sign Client Persistence", () => {
      * before the implementing client (sign-client) is ready to process it
      * the message should be queued and processed after the client is ready
      */
-    it("should process pending messages after restart", async () => {
+    // NOTE: this test is no longer applicable as we no longer await the relayer to connect during init
+    it.skip("should process pending messages after restart", async () => {
       const db_a = generateClientDbName("client_a");
       const clients = await initTwoClients(
         {

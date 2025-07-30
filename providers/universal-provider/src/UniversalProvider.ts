@@ -136,7 +136,8 @@ export class UniversalProvider implements IUniversalProvider {
       throw new Error("Sign Client not initialized");
     }
     this.setNamespaces(opts);
-    await this.cleanupPendingPairings();
+    // omit `await` to avoid delaying the pairing flow
+    this.cleanupPendingPairings();
     if (opts.skipPairing) return;
 
     return await this.pair(opts.pairingTopic);
@@ -218,12 +219,7 @@ export class UniversalProvider implements IUniversalProvider {
       if (!this.session) return;
       const [namespace, chainId] = this.validateChain(chain);
       const provider = this.getProvider(namespace);
-      // @ts-expect-error
-      if (provider.name === GENERIC_SUBPROVIDER_NAME) {
-        provider.setDefaultChain(`${namespace}:${chainId}`, rpcUrl);
-      } else {
-        provider.setDefaultChain(chainId, rpcUrl);
-      }
+      provider.setDefaultChain(chainId, rpcUrl);
     } catch (error) {
       // ignore the error if the fx is used prematurely before namespaces are set
       if (!/Please call connect/.test((error as Error).message)) throw error;
@@ -231,20 +227,24 @@ export class UniversalProvider implements IUniversalProvider {
   }
 
   public async cleanupPendingPairings(opts: PairingsCleanupOpts = {}): Promise<void> {
-    this.logger.info("Cleaning up inactive pairings...");
-    const inactivePairings = this.client.pairing.getAll();
+    try {
+      this.logger.info("Cleaning up inactive pairings...");
+      const inactivePairings = this.client.pairing.getAll();
 
-    if (!isValidArray(inactivePairings)) return;
+      if (!isValidArray(inactivePairings)) return;
 
-    for (const pairing of inactivePairings) {
-      if (opts.deletePairings) {
-        this.client.core.expirer.set(pairing.topic, 0);
-      } else {
-        await this.client.core.relayer.subscriber.unsubscribe(pairing.topic);
+      for (const pairing of inactivePairings) {
+        if (opts.deletePairings) {
+          this.client.core.expirer.set(pairing.topic, 0);
+        } else {
+          await this.client.core.relayer.subscriber.unsubscribe(pairing.topic);
+        }
       }
-    }
 
-    this.logger.info(`Inactive pairings cleared: ${inactivePairings.length}`);
+      this.logger.info(`Inactive pairings cleared: ${inactivePairings.length}`);
+    } catch (error) {
+      this.logger.warn("Failed to cleanup pending pairings", error);
+    }
   }
 
   public abortPairingAttempt() {
@@ -320,6 +320,9 @@ export class UniversalProvider implements IUniversalProvider {
     providersToCreate.forEach((namespace) => {
       if (!this.session) return;
       const accounts = getAccountsFromSession(namespace, this.session);
+      if (accounts?.length === 0) {
+        return;
+      }
       const approvedChains = getChainsFromApprovedSession(accounts);
       const mergedNamespaces = mergeRequiredOptionalNamespaces(
         this.namespaces,
@@ -382,13 +385,9 @@ export class UniversalProvider implements IUniversalProvider {
           });
           break;
         default:
-          if (!this.rpcProviders[GENERIC_SUBPROVIDER_NAME]) {
-            this.rpcProviders[GENERIC_SUBPROVIDER_NAME] = new GenericProvider({
-              namespace: combinedNamespace,
-            });
-          } else {
-            this.rpcProviders[GENERIC_SUBPROVIDER_NAME].updateNamespace(combinedNamespace);
-          }
+          this.rpcProviders[namespace] = new GenericProvider({
+            namespace: combinedNamespace,
+          });
       }
     });
   }
@@ -468,14 +467,15 @@ export class UniversalProvider implements IUniversalProvider {
   }
 
   private setNamespaces(params: ConnectParams): void {
-    const { namespaces, optionalNamespaces, sessionProperties, scopedProperties } = params;
+    const {
+      namespaces = {},
+      optionalNamespaces = {},
+      sessionProperties,
+      scopedProperties,
+    } = params;
 
-    if (namespaces && Object.keys(namespaces).length) {
-      this.namespaces = namespaces;
-    }
-    if (optionalNamespaces && Object.keys(optionalNamespaces).length) {
-      this.optionalNamespaces = optionalNamespaces;
-    }
+    // requiredNamespaces are deprecated, assign them to optionalNamespaces
+    this.optionalNamespaces = mergeRequiredOptionalNamespaces(namespaces, optionalNamespaces);
     this.sessionProperties = sessionProperties;
     this.scopedProperties = scopedProperties;
   }
@@ -592,7 +592,7 @@ export class UniversalProvider implements IUniversalProvider {
     await this.deleteFromStore("sessionProperties");
     // reset the session after removing from store as the topic is used there
     this.session = undefined;
-    await this.cleanupPendingPairings({ deletePairings: true });
+    this.cleanupPendingPairings({ deletePairings: true });
     await this.cleanupStorage();
   }
 

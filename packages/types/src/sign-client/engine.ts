@@ -58,6 +58,9 @@ export declare namespace EngineTypes {
   }
 
   interface ConnectParams {
+    /**
+     * @deprecated Use `optionalNamespaces` instead.
+     */
     requiredNamespaces?: ProposalTypes.RequiredNamespaces;
     optionalNamespaces?: ProposalTypes.OptionalNamespaces;
     sessionProperties?: ProposalTypes.SessionProperties;
@@ -458,5 +461,9 @@ export abstract class IEngine {
 
   public abstract rejectSessionAuthenticate(params: EngineTypes.RejectParams): Promise<void>;
 
+  /**
+   * no longer used as the client initializes instantly without waiting to connect+subscribe
+   * @deprecated
+   */
   public abstract processRelayMessageCache(): void;
 }

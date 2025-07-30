@@ -170,12 +170,12 @@ export class WalletClient {
 
   private registerEventListeners() {
     if (typeof this.client === "undefined") {
-      throw new Error("Sign Client not inititialized");
+      throw new Error("Sign Client not initialized");
     }
 
     // auto-pair
     this.provider.on("display_uri", async (uri: string) => {
-      if (typeof this.client === "undefined") throw new Error("Sign Client not inititialized");
+      if (typeof this.client === "undefined") throw new Error("Sign Client not initialized");
       await this.client.pair({ uri });
     });
 
@@ -183,10 +183,15 @@ export class WalletClient {
     this.client.on(
       "session_proposal",
       async (proposal: SignClientTypes.EventArguments["session_proposal"]) => {
-        if (typeof this.client === "undefined") throw new Error("Sign Client not inititialized");
+        if (typeof this.client === "undefined") throw new Error("Sign Client not initialized");
         const { id, requiredNamespaces, optionalNamespaces, relays } = proposal.params;
+
+        if (Object.keys(requiredNamespaces).length !== 0) {
+          throw new Error("Unexpected required namespaces");
+        }
+
         const namespaces = {};
-        Object.entries(requiredNamespaces).forEach(([key, value]) => {
+        Object.entries(optionalNamespaces).forEach(([key, value]) => {
           namespaces[key] = {
             chains: value.chains,
             methods: value.methods,
@@ -210,7 +215,7 @@ export class WalletClient {
       "session_request",
       async (requestEvent: SignClientTypes.EventArguments["session_request"]) => {
         if (typeof this.client === "undefined") {
-          throw new Error("Sign Client not inititialized");
+          throw new Error("Sign Client not initialized");
         }
         const { topic, params, id } = requestEvent;
         const { chainId, request } = params;

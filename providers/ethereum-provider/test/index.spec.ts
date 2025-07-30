@@ -371,8 +371,8 @@ describe("EthereumProvider", function () {
               namespaces: {
                 eip155: {
                   accounts: [`eip155:${CHAIN_ID}:${walletAddress}`],
-                  methods: proposal.params.requiredNamespaces.eip155.methods,
-                  events: proposal.params.requiredNamespaces.eip155.events,
+                  methods: proposal.params.optionalNamespaces.eip155.methods,
+                  events: proposal.params.optionalNamespaces.eip155.events,
                 },
               },
             });
@@ -420,8 +420,8 @@ describe("EthereumProvider", function () {
               namespaces: {
                 [`eip155:${CHAIN_ID}`]: {
                   accounts: [`eip155:${CHAIN_ID}:${walletAddress}`],
-                  methods: proposal.params.requiredNamespaces.eip155.methods,
-                  events: proposal.params.requiredNamespaces.eip155.events,
+                  methods: proposal.params.optionalNamespaces.eip155.methods,
+                  events: proposal.params.optionalNamespaces.eip155.events,
                 },
               },
             });
@@ -534,8 +534,8 @@ describe("EthereumProvider", function () {
               namespaces: {
                 eip155: {
                   accounts: [`eip155:${CHAIN_ID}:${walletAddress}`],
-                  methods: proposal.params.requiredNamespaces.eip155.methods,
-                  events: proposal.params.requiredNamespaces.eip155.events,
+                  methods: proposal.params.optionalNamespaces.eip155.methods,
+                  events: proposal.params.optionalNamespaces.eip155.events,
                 },
               },
             });

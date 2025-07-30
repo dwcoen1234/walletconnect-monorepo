@@ -155,12 +155,12 @@ export class WalletClient {
 
   private registerEventListeners() {
     if (typeof this.client === "undefined") {
-      throw new Error("Sign Client not inititialized");
+      throw new Error("Sign Client not initialized");
     }
 
     // auto-pair
     this.provider.on("display_uri", async (uri: string) => {
-      if (typeof this.client === "undefined") throw new Error("Sign Client not inititialized");
+      if (typeof this.client === "undefined") throw new Error("Sign Client not initialized");
       await this.client.pair({ uri });
     });
 
@@ -168,10 +168,15 @@ export class WalletClient {
     this.client.on(
       "session_proposal",
       async (proposal: SignClientTypes.EventArguments["session_proposal"]) => {
-        if (typeof this.client === "undefined") throw new Error("Sign Client not inititialized");
+        if (typeof this.client === "undefined") throw new Error("Sign Client not initialized");
         const { id, requiredNamespaces, optionalNamespaces, relays } = proposal.params;
+
+        if (Object.keys(requiredNamespaces).length) {
+          throw new Error("Required namespaces are not supported");
+        }
         const namespaces = {};
-        Object.entries(requiredNamespaces).forEach(([key, value]) => {
+
+        Object.entries(optionalNamespaces).forEach(([key, value]) => {
           namespaces[key] = {
             methods: value.methods,
             events: value.events,
@@ -179,19 +184,6 @@ export class WalletClient {
           };
         });
 
-        Object.entries(optionalNamespaces).forEach(([key, value]) => {
-          namespaces[key] = {
-            ...namespaces[key],
-            methods: [...new Set(namespaces[key].methods.concat(value.methods))],
-            accounts: [
-              ...new Set(
-                namespaces[key].accounts.concat(
-                  value.chains?.map((chain) => `${chain}:${this.accounts[0]}`),
-                ),
-              ),
-            ],
-          };
-        });
         const { acknowledged } = await this.client.approve({
           id,
           relayProtocol: relays[0].protocol,
@@ -208,7 +200,7 @@ export class WalletClient {
       "session_request",
       async (requestEvent: SignClientTypes.EventArguments["session_request"]) => {
         if (typeof this.client === "undefined") {
-          throw new Error("Sign Client not inititialized");
+          throw new Error("Sign Client not initialized");
         }
         const { topic, params, id } = requestEvent;
         const { chainId, request } = params;

@@ -33,6 +33,9 @@ export declare namespace ProposalTypes {
     sessionProperties?: SessionProperties;
     scopedProperties?: ScopedProperties;
     pairingTopic: string;
+    // these two fields are for verifyContext
+    attestation?: string;
+    encryptedId?: string;
   }
 }
 

@@ -31,7 +31,7 @@ import {
 import { getChainId, getGlobal, getRpcUrl, setGlobal } from "../src/utils";
 import { BUNDLER_URL, RPC_URL } from "../src/constants";
 import { formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
-import { parseChainId } from "@walletconnect/utils";
+import { RELAYER_EVENTS } from "../../../packages/core/src/constants";
 
 const getDbName = (_prefix: string) => {
   return `./test/tmp/${_prefix}.db`;
@@ -314,6 +314,48 @@ describe("UniversalProvider", function () {
         const newChain5 = await dapp.request({ method: "eth_chainId" });
         expect(newChain5).to.eql(chains[4]);
 
+        await deleteProviders({ A: dapp, B: wallet });
+      });
+      it("should automatically assign namespaces to optionalNamespaces", async () => {
+        const dapp = await UniversalProvider.init({
+          ...TEST_PROVIDER_OPTS,
+          name: "dapp",
+        });
+        const wallet = await UniversalProvider.init({
+          ...TEST_PROVIDER_OPTS,
+          name: "wallet",
+        });
+
+        const requestedRequiredNamespaces = {
+          eip155: {
+            chains: ["eip155:1", "eip155:2"],
+            methods: ["eth_sendTransaction", "eth_sign"],
+            events: ["chainChanged", "accountsChanged"],
+          },
+        };
+        let uri;
+        dapp.on("display_uri", (connectionUri: string) => {
+          uri = connectionUri;
+        });
+        dapp.connect({
+          namespaces: requestedRequiredNamespaces,
+        });
+        expect(dapp.optionalNamespaces).to.eql(requestedRequiredNamespaces);
+        while (!uri) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+
+        await Promise.all([
+          new Promise<void>((resolve) => {
+            wallet.client.on("session_proposal", (proposal) => {
+              const { requiredNamespaces, optionalNamespaces } = proposal.params;
+              expect(requiredNamespaces).to.eql({});
+              expect(optionalNamespaces).to.eql(requestedRequiredNamespaces);
+              resolve();
+            });
+          }),
+          wallet.client.pair({ uri }),
+        ]);
         await deleteProviders({ A: dapp, B: wallet });
       });
     });
@@ -1455,7 +1497,7 @@ describe("UniversalProvider", function () {
           }),
         ]);
       });
-      it("should cache `wallet_getCapabilities` request", async () => {
+      it("should cache `wallet_getCapabilities` request with different chainIds", async () => {
         const dapp = await UniversalProvider.init({
           ...TEST_PROVIDER_OPTS,
           name: "dapp",
@@ -1498,7 +1540,7 @@ describe("UniversalProvider", function () {
         };
         await Promise.all([
           new Promise<void>((resolve) => {
-            wallet.client.on("session_request", async (event) => {
+            wallet.client.once("session_request", async (event) => {
               await wallet.client.respond({
                 topic: event.topic,
                 response: formatJsonRpcResult(event.id, sessionPropertiesResponse),
@@ -1525,6 +1567,105 @@ describe("UniversalProvider", function () {
           params: [walletAddress],
         });
         expect(cachedResult).to.eql(sessionPropertiesResponse);
+
+        const secondCapabilitiesResult = {
+          "0x1": {
+            atomicBatch: {
+              supported: true,
+            },
+          },
+        };
+
+        await Promise.all([
+          new Promise<void>((resolve) => {
+            wallet.client.once("session_request", async (event) => {
+              await wallet.client.respond({
+                topic: event.topic,
+                response: formatJsonRpcResult(event.id, secondCapabilitiesResult),
+              });
+              resolve();
+            });
+          }),
+          new Promise<void>(async (resolve) => {
+            const result = await dapp.request({
+              method: "wallet_getCapabilities",
+              // this req has additional chainId param so it should not use cached result but make a new request to the wallet
+              params: [walletAddress, ["0x1"]],
+            });
+            expect(result).to.eql(secondCapabilitiesResult);
+            resolve();
+          }),
+        ]);
+
+        const updatedSession2 = dapp.client.session.get(sessionA.topic);
+        expect(updatedSession2.sessionProperties).to.exist;
+        expect(updatedSession2.sessionProperties?.capabilities).to.exist;
+        expect(Object.keys(updatedSession2.sessionProperties?.capabilities || {}).length).to.eql(2);
+        expect(updatedSession2.sessionProperties?.capabilities[`${walletAddress}0x1`]).to.eql(
+          secondCapabilitiesResult,
+        );
+
+        await deleteProviders({ A: dapp, B: wallet });
+      });
+
+      it("should get `wallet_getCapabilities` from scoped properties", async () => {
+        const dapp = await UniversalProvider.init({
+          ...TEST_PROVIDER_OPTS,
+          name: "dapp",
+        });
+        const wallet = await UniversalProvider.init({
+          ...TEST_PROVIDER_OPTS,
+          name: "wallet",
+        });
+        const chains = ["eip155:1"];
+        const scopedProperties = {
+          "eip155:1": {
+            [`eip155:1:${walletAddress}`]: {
+              atomic: {
+                status: "supported",
+              },
+            },
+          },
+        };
+        const { sessionA } = await testConnectMethod(
+          {
+            dapp,
+            wallet,
+          },
+          {
+            requiredNamespaces: {
+              eip155: {
+                methods: ["wallet_getCapabilities"],
+                events,
+                chains,
+              },
+            },
+            namespaces: {
+              eip155: {
+                accounts: chains.map((chain) => `${chain}:${walletAddress}`),
+                methods: ["wallet_getCapabilities"],
+                events,
+              },
+            },
+            scopedProperties,
+          },
+        );
+        expect(sessionA).to.be.an("object");
+        expect(sessionA.scopedProperties).to.exist;
+        expect(sessionA.scopedProperties).to.eql(scopedProperties);
+
+        const result = await dapp.request({
+          method: "wallet_getCapabilities",
+          params: [walletAddress, ["0x1"]],
+        });
+
+        expect(result).to.eql({
+          "0x1": {
+            atomic: {
+              status: "supported",
+            },
+          },
+        });
         await deleteProviders({ A: dapp, B: wallet });
       });
     });
@@ -1647,22 +1788,150 @@ describe("UniversalProvider", function () {
       );
       await throttle(1_000);
       expect(dapp.rpcProviders).to.be.an("object");
-      expect(dapp.rpcProviders.generic).to.exist;
-      expect(dapp.rpcProviders.generic).to.be.an("object");
+      expect(dapp.rpcProviders.zora).to.exist;
+      expect(dapp.rpcProviders.zora).to.be.an("object");
 
-      const httpProviders = dapp.rpcProviders.generic.httpProviders;
+      const zoraHttpProviders = dapp.rpcProviders.zora.httpProviders;
 
-      expect(Object.keys(httpProviders).length).is.greaterThan(0);
-      expect(Object.keys(httpProviders).length).to.eql(tronChains.length + zoraChains.length);
+      expect(Object.keys(zoraHttpProviders).length).is.greaterThan(0);
+      expect(Object.keys(zoraHttpProviders).length).to.eql(zoraChains.length);
 
-      const allChains = [...tronChains, ...zoraChains];
-      Object.values(httpProviders).forEach((provider, i) => {
+      Object.values(zoraHttpProviders).forEach((provider, i) => {
         const url = provider.connection.url as string;
         expect(url).to.include("https://");
         expect(url).to.include(RPC_URL);
-        expect(url).to.eql(getRpcUrl(allChains[i], {} as Namespace, TEST_PROVIDER_OPTS.projectId));
+        expect(url).to.eql(getRpcUrl(zoraChains[i], {} as Namespace, TEST_PROVIDER_OPTS.projectId));
       });
 
+      const tronHttpProviders = dapp.rpcProviders.tron.httpProviders;
+      expect(Object.keys(tronHttpProviders).length).is.greaterThan(0);
+      expect(Object.keys(tronHttpProviders).length).to.eql(tronChains.length);
+
+      Object.values(tronHttpProviders).forEach((provider, i) => {
+        const url = provider.connection.url as string;
+        expect(url).to.include("https://");
+        expect(url).to.include(RPC_URL);
+        expect(url).to.eql(getRpcUrl(tronChains[i], {} as Namespace, TEST_PROVIDER_OPTS.projectId));
+      });
+
+      await deleteProviders({ A: dapp, B: wallet });
+    });
+
+    it("should gracefully handle invalid namespaces without chains/accounts", async () => {
+      const dapp = await UniversalProvider.init({
+        ...TEST_PROVIDER_OPTS,
+        name: "dapp",
+      });
+      const wallet = await UniversalProvider.init({
+        ...TEST_PROVIDER_OPTS,
+        name: "wallet",
+      });
+      const optionalNamespaces = {
+        eip155: {
+          chains: ["eip155:1"],
+          events: ["chainChanged"],
+          methods: ["personal_sign", "eth_sendTransaction"],
+        },
+        bip122: {
+          chains: ["bip122:000000000019d6689c085ae165831e93"],
+          events: ["chainChanged"],
+          methods: ["bip122_signTransaction"],
+        },
+      };
+      await testConnectMethod(
+        {
+          dapp,
+          wallet,
+        },
+        {
+          requiredNamespaces: {},
+          optionalNamespaces,
+          namespaces: {
+            bip122: {
+              accounts: [],
+              chains: [],
+              methods: ["bip122_signTransaction"],
+              events: ["chainChanged"],
+            },
+            eip155: {
+              accounts: ["eip155:1:0x57f48fAFeC1d76B27e3f29b8d277b6218CDE6092"],
+              chains: ["eip155:1"],
+              methods: ["personal_sign", "eth_sendTransaction"],
+              events: ["chainChanged"],
+            },
+          },
+        },
+      );
+      await throttle(1_000);
+      expect(dapp.rpcProviders).to.be.an("object");
+      expect(dapp.rpcProviders.eip155).to.exist;
+      expect(dapp.rpcProviders.eip155).to.be.an("object");
+      // verify bip122 provider is not created
+      expect(dapp.rpcProviders.bip122).to.not.exist;
+
+      const httpProviders = dapp.rpcProviders.eip155.httpProviders;
+
+      expect(Object.keys(httpProviders).length).is.greaterThan(0);
+
+      await deleteProviders({ A: dapp, B: wallet });
+    });
+
+    it("should set default chain on generic providers", async () => {
+      const dapp = await UniversalProvider.init({
+        ...TEST_PROVIDER_OPTS,
+        name: "dapp",
+      });
+      const wallet = await UniversalProvider.init({
+        ...TEST_PROVIDER_OPTS,
+        name: "wallet",
+      });
+      const optionalNamespaces = {
+        bip122: {
+          chains: ["bip122:000000000019d6689c085ae165831e93"],
+          events: ["chainChanged"],
+          methods: ["bip122_signTransaction"],
+        },
+        zora: {
+          chains: ["zora:1"],
+          events: ["chainChanged"],
+          methods: ["zora_signTransaction"],
+        },
+      };
+      await testConnectMethod(
+        {
+          dapp,
+          wallet,
+        },
+        {
+          requiredNamespaces: {},
+          optionalNamespaces,
+          namespaces: {
+            bip122: {
+              accounts: [
+                "bip122:000000000019d6689c085ae165831e93:0x57f48fAFeC1d76B27e3f29b8d277b6218CDE6092",
+              ],
+              chains: ["bip122:000000000019d6689c085ae165831e93"],
+              methods: ["bip122_signTransaction"],
+              events: ["chainChanged"],
+            },
+            zora: {
+              accounts: ["zora:1:0x57f48fAFeC1d76B27e3f29b8d277b6218CDE6092"],
+              chains: ["zora:1"],
+              methods: ["zora_signTransaction"],
+              events: ["chainChanged"],
+            },
+          },
+        },
+      );
+      await throttle(1_000);
+      dapp.setDefaultChain("bip122:000000000019d6689c085ae165831e93");
+      expect(dapp.rpcProviders.bip122.getDefaultChain()).to.eql("000000000019d6689c085ae165831e93");
+      expect(Object.keys(dapp.rpcProviders.bip122.httpProviders)).to.eql([
+        "000000000019d6689c085ae165831e93",
+      ]);
+      dapp.setDefaultChain("zora:1");
+      expect(dapp.rpcProviders.zora.getDefaultChain()).to.eql("1");
+      expect(Object.keys(dapp.rpcProviders.zora.httpProviders)).to.eql(["1"]);
       await deleteProviders({ A: dapp, B: wallet });
     });
   });
@@ -1677,6 +1946,14 @@ type ValidateProviderParams = {
 };
 const validateProvider = async (params: ValidateProviderParams) => {
   const { provider, defaultNamespace = "eip155", addresses, chains, expectedChainId } = params;
+  if (!provider.client.core.relayer.connected) {
+    await new Promise<void>((resolve) => {
+      provider.client.core.relayer.once(RELAYER_EVENTS.connect, () => {
+        resolve();
+      });
+    });
+  }
+
   expect(provider.client.core.relayer.connected).to.be.true;
   const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
   expect(accounts).to.be.an("array");

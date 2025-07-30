@@ -99,6 +99,13 @@ import {
   isTestRun,
   isValidArray,
   extractSolanaTransactionId,
+  getSuiDigest,
+  mergeRequiredAndOptionalNamespaces,
+  getNearTransactionIdFromSignedTransaction,
+  getAlgorandTransactionId,
+  buildSignedExtrinsicHash,
+  getSignDirectHash,
+  LimitedSet,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -137,6 +144,10 @@ export class Engine extends IEngine {
     state: ENGINE_QUEUE_STATES.idle,
     queue: [],
   };
+
+  // This prevents duplicate emissions due to WalletConnect's at-least-once delivery guarantee.
+  // When disableRequestQueue is enabled, consumers must implement additional deduplication.
+  private emittedSessionRequests = new LimitedSet({ limit: 500 });
 
   private requestQueueDelay = ONE_SECOND;
   private expectedPairingMethodMap: Map<string, string[]> = new Map();
@@ -215,6 +226,15 @@ export class Engine extends IEngine {
       optionalNamespaces: params.optionalNamespaces || {},
     };
     await this.isValidConnect(connectParams);
+
+    // requiredNamespaces are deprecated, assign them to optionalNamespaces
+    connectParams.optionalNamespaces = mergeRequiredAndOptionalNamespaces(
+      connectParams.requiredNamespaces,
+      connectParams.optionalNamespaces,
+    );
+
+    connectParams.requiredNamespaces = {};
+
     const {
       pairingTopic,
       requiredNamespaces,
@@ -497,7 +517,7 @@ export class Engine extends IEngine {
       topic: pairingTopic,
       metadata: proposer.metadata,
     });
-    await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
+    await this.deleteProposal(id);
     await this.client.core.pairing.activate({ topic: pairingTopic });
     await this.setExpiry(sessionTopic, calcExpiry(SESSION_EXPIRY));
     return {
@@ -532,8 +552,9 @@ export class Engine extends IEngine {
         error: reason,
         rpcOpts: ENGINE_RPC_OPTS.wc_sessionPropose.reject,
       });
-      await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
     }
+
+    await this.deleteProposal(id);
   };
 
   public update: IEngine["update"] = async (params) => {
@@ -673,7 +694,6 @@ export class Engine extends IEngine {
       },
       chainId,
     };
-    const shouldSetTVF = this.shouldSetTVF(protocolMethod, protocolRequestParams);
 
     return await Promise.all([
       new Promise<void>(async (resolve) => {
@@ -685,9 +705,7 @@ export class Engine extends IEngine {
           params: protocolRequestParams,
           expiry,
           throwOnFailedPublish: true,
-          ...(shouldSetTVF && {
-            tvf: this.getTVFParams(clientRpcId, protocolRequestParams),
-          }),
+          tvf: this.getTVFParams(clientRpcId, protocolRequestParams),
         }).catch((error) => reject(error));
         this.client.events.emit("session_request_sent", {
           topic,
@@ -1346,7 +1364,7 @@ export class Engine extends IEngine {
       ),
     });
     await this.client.auth.requests.delete(id, { message: "rejected", code: 0 });
-    await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
+    await this.deleteProposal(id);
   };
 
   public formatAuthMessage: IEngine["formatAuthMessage"] = (params) => {
@@ -1355,6 +1373,10 @@ export class Engine extends IEngine {
     return formatMessage(request, iss);
   };
 
+  /**
+   * no longer used as the client initializes instantly without waiting to connect+subscribe
+   * @deprecated
+   */
   public processRelayMessageCache: IEngine["processRelayMessageCache"] = () => {
     // process the relay messages cache in the next tick to allow event listeners to be registered by the implementing app
     setTimeout(async () => {
@@ -1718,11 +1740,11 @@ export class Engine extends IEngine {
       record = await this.client.core.history.get(topic, id);
       const request = record.request;
       try {
-        if (this.shouldSetTVF(request.method as JsonRpcTypes.WcMethod, request.params)) {
-          tvf = this.getTVFParams(id, request.params, result);
-        }
+        tvf = this.getTVFParams(id, request.params, result);
       } catch (error) {
-        this.client.logger.warn(`sendResult() -> getTVFParams() failed`, error);
+        this.client.logger.warn(
+          `sendResult() -> getTVFParams() failed: ${(error as Error)?.message}`,
+        );
       }
     } catch (error) {
       this.client.logger.error(`sendResult() -> history.get(${topic}, ${id}) failed`);
@@ -2019,7 +2041,14 @@ export class Engine extends IEngine {
       this.isValidConnect({ ...payload.params });
       const expiryTimestamp =
         params.expiryTimestamp || calcExpiry(ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl);
-      const proposal = { id, pairingTopic: topic, expiryTimestamp, ...params };
+      const proposal = {
+        id,
+        pairingTopic: topic,
+        expiryTimestamp,
+        attestation,
+        encryptedId,
+        ...params,
+      };
       await this.setProposal(id, proposal);
 
       const verifyContext = await this.getVerifyContext({
@@ -2088,7 +2117,7 @@ export class Engine extends IEngine {
       });
       await this.client.core.pairing.activate({ topic });
     } else if (isJsonRpcError(payload)) {
-      await this.client.proposal.delete(id, getSdkError("USER_DISCONNECTED"));
+      await this.deleteProposal(id);
       const target = engineEvent("session_connect", id);
       const listeners = this.events.listenerCount(target);
       if (listeners === 0) {
@@ -2167,7 +2196,6 @@ export class Engine extends IEngine {
         id: payload.id,
         topic,
         result: true,
-        throwOnFailedPublish: true,
       });
     } catch (err: any) {
       await this.sendError({
@@ -2217,7 +2245,6 @@ export class Engine extends IEngine {
           id,
           topic,
           result: true,
-          throwOnFailedPublish: true,
         });
       } catch (e) {
         MemoryStore.delete(memoryKey);
@@ -2267,7 +2294,6 @@ export class Engine extends IEngine {
         id,
         topic,
         result: true,
-        throwOnFailedPublish: true,
       });
       this.client.events.emit("session_extend", { id, topic });
     } catch (err: any) {
@@ -2353,7 +2379,6 @@ export class Engine extends IEngine {
           id,
           topic,
           result: true,
-          throwOnFailedPublish: true,
         }),
         this.cleanupPendingSentRequestsForTopic({ topic, error: getSdkError("USER_DISCONNECTED") }),
       ]).catch((err) => this.client.logger.error(err));
@@ -2391,6 +2416,8 @@ export class Engine extends IEngine {
         this.client.core.addLinkModeSupportedApp(session.peer.metadata.redirect?.universal);
       }
 
+      // without sequential processing. This bypasses deduplication provided by the queue,
+      // at-least-once delivery guarantee.
       if (this.client.signConfig?.disableRequestQueue) {
         this.emitSessionRequest(request);
       } else {
@@ -2533,6 +2560,12 @@ export class Engine extends IEngine {
     }
   };
 
+  /**
+   * Adds a session request to the sequential processing queue.
+   *
+   * The queue provides built-in deduplication and sequential processing,
+   * which helps handle WalletConnect's at-least-once delivery guarantee.
+   */
   private addSessionRequestToSessionRequestQueue = (request: PendingRequestTypes.Struct) => {
     this.sessionRequestQueue.queue.push(request);
   };
@@ -2587,14 +2620,31 @@ export class Engine extends IEngine {
     }
 
     try {
-      this.sessionRequestQueue.state = ENGINE_QUEUE_STATES.active;
       this.emitSessionRequest(request);
     } catch (error) {
       this.client.logger.error(error);
     }
   };
 
+  /**
+   * Emits a session request event with built-in deduplication.
+   *
+   * This method implements deduplication using emittedSessionRequests set to handle
+   * WalletConnect's at-least-once delivery guarantee. However, when disableRequestQueue
+   * is enabled, additional deduplication may be needed at the consumer level.
+   */
   private emitSessionRequest = (request: PendingRequestTypes.Struct) => {
+    if (this.emittedSessionRequests.has(request.id)) {
+      this.client.logger.warn(
+        {
+          id: request.id,
+        },
+        `Skipping emitting \`session_request\` event for duplicate request. id: ${request.id}`,
+      );
+      return;
+    }
+    this.sessionRequestQueue.state = ENGINE_QUEUE_STATES.active;
+    this.emittedSessionRequests.add(request.id);
     this.client.events.emit("session_request", request);
   };
 
@@ -2660,6 +2710,8 @@ export class Engine extends IEngine {
         },
         proposal.id,
       ),
+      attestation: proposal.attestation,
+      encryptedId: proposal.encryptedId,
     });
   };
 
@@ -2785,6 +2837,14 @@ export class Engine extends IEngine {
 
     // validate required namespaces only if they are defined
     if (!isUndefined(requiredNamespaces) && isValidObject(requiredNamespaces) !== 0) {
+      const warning =
+        "requiredNamespaces are deprecated and are automatically assigned to optionalNamespaces";
+      // if logger level is one of the following, the logger.warn will not be shown, so we need to use console.warn
+      if (["fatal", "error", "silent"].includes(this.client.logger.level)) {
+        console.warn(warning);
+      } else {
+        this.client.logger.warn(warning);
+      }
       this.validateNamespaces(requiredNamespaces, "requiredNamespaces");
     }
 
@@ -2806,7 +2866,8 @@ export class Engine extends IEngine {
       );
 
       const scopedNamespaces = Object.keys(scopedProperties);
-      const valid = scopedNamespaces.every((ns) => requestedNamespaces.includes(ns));
+      // .split(":")[0] to account for inline <namespace>:<chainId>
+      const valid = scopedNamespaces.every((ns) => requestedNamespaces.includes(ns.split(":")[0]));
       if (!valid) {
         throw new Error(
           `Scoped properties must be a subset of required/optional namespaces, received: ${JSON.stringify(
@@ -2862,7 +2923,8 @@ export class Engine extends IEngine {
       const scopedNamespaces = Object.keys(scopedProperties);
 
       // the approved scoped namespaces must be a subset of the approved namespaces
-      const valid = scopedNamespaces.every((ns) => approvedNamespaces.has(ns));
+      // .split(":")[0] to account for inline <namespace>:<chainId>
+      const valid = scopedNamespaces.every((ns) => approvedNamespaces.has(ns.split(":")[0]));
       if (!valid) {
         throw new Error(
           `Scoped properties must be a subset of approved namespaces, received: ${JSON.stringify(
@@ -3238,39 +3300,31 @@ export class Engine extends IEngine {
     }
   };
 
-  private shouldSetTVF = (
-    protocolMethod: JsonRpcTypes.WcMethod,
-    params: JsonRpcTypes.RequestParams["wc_sessionRequest"],
-  ) => {
-    if (!params) return false;
-    if (protocolMethod !== "wc_sessionRequest") return false;
-    const { request } = params;
-    return Object.keys(TVF_METHODS).includes(request.method);
-  };
-
   private getTVFParams = (
     id: number,
     params: JsonRpcTypes.RequestParams["wc_sessionRequest"],
     result?: any,
   ) => {
+    // this check will filter all Sign protocol methods since they don't have a method property
+    if (!params.request?.method) {
+      return {};
+    }
+
+    const tvf: RelayerTypes.ITVF = {
+      correlationId: id,
+      rpcMethods: [params.request.method],
+      chainId: params.chainId,
+    };
     try {
-      const requestMethod = params.request.method;
-      const txHashes = this.extractTxHashesFromResult(requestMethod, result);
-      const tvf: RelayerTypes.ITVF = {
-        correlationId: id,
-        rpcMethods: [requestMethod],
-        chainId: params.chainId,
-        ...(this.isValidContractData(params.request.params) && {
-          // initially only get contractAddresses from EVM txs
-          contractAddresses: [params.request.params?.[0]?.to],
-        }),
-        txHashes,
-      };
-      return tvf;
+      const txHashes = this.extractTxHashesFromResult(params.request, result);
+      tvf.txHashes = txHashes;
+      tvf.contractAddresses = this.isValidContractData(params.request.params)
+        ? [params.request.params?.[0]?.to]
+        : [];
     } catch (e) {
       this.client.logger.warn("Error getting TVF params", e);
     }
-    return {};
+    return tvf;
   };
 
   private isValidContractData = (params: any) => {
@@ -3288,9 +3342,51 @@ export class Engine extends IEngine {
     return false;
   };
 
-  private extractTxHashesFromResult = (method: string, result: any): string[] => {
+  private extractTxHashesFromResult = (
+    request: JsonRpcTypes.RequestParams["wc_sessionRequest"]["request"],
+    result: any,
+  ): string[] => {
     try {
+      if (!result) return [];
+
+      const method = request.method;
       const methodConfig = TVF_METHODS[method as keyof typeof TVF_METHODS];
+
+      if (method === "sui_signTransaction") {
+        return [getSuiDigest(result.transactionBytes)];
+      }
+
+      if (method === "near_signTransaction") {
+        return [getNearTransactionIdFromSignedTransaction(result)];
+      }
+
+      if (method === "near_signTransactions") {
+        return result.map((tx: any) => getNearTransactionIdFromSignedTransaction(tx));
+      }
+
+      if (method === "xrpl_signTransactionFor" || method === "xrpl_signTransaction") {
+        return [result.tx_json?.hash];
+      }
+
+      if (method === "polkadot_signTransaction") {
+        return [
+          buildSignedExtrinsicHash({
+            transaction: request.params.transactionPayload,
+            signature: result.signature,
+          }),
+        ];
+      }
+
+      if (method === "algo_signTxn") {
+        return isValidArray(result)
+          ? result.map((tx: any) => getAlgorandTransactionId(tx))
+          : [getAlgorandTransactionId(result)];
+      }
+
+      if (method === "cosmos_signDirect") {
+        return [getSignDirectHash(result)];
+      }
+
       // result = 0x...
       if (typeof result === "string") {
         return [result];

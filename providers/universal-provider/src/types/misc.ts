@@ -55,6 +55,9 @@ export interface SessionNamespace extends Namespace {
 }
 
 export interface ConnectParams {
+  /**
+   * @deprecated Use `optionalNamespaces` instead.
+   */
   namespaces?: NamespaceConfig;
   optionalNamespaces?: NamespaceConfig;
   sessionProperties?: SessionTypes.SessionProperties;
