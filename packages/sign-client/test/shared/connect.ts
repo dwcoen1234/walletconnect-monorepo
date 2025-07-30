@@ -17,6 +17,7 @@ import {
 } from "./values";
 import { Clients } from "./init";
 import { expect } from "vitest";
+import { RELAYER_EVENTS } from "../../../core/src";
 
 export interface TestConnectParams {
   requiredNamespaces?: ProposalTypes.RequiredNamespaces;
@@ -51,6 +52,12 @@ export async function testConnectMethod(clients: Clients, params?: TestConnectPa
       try {
         expect(proposal.params.requiredNamespaces).to.eql({});
         expect(proposal.params.sessionProperties).to.eql(TEST_SESSION_PROPERTIES);
+
+        B.core.relayer.once(RELAYER_EVENTS.publish, (payload) => {
+          if (payload.method !== "wc_approveSession") {
+            throw new Error("expected wc_approveSession, got " + payload.method);
+          }
+        });
         const { acknowledged } = await B.approve({
           id: proposal.id,
           ...approveParams,
@@ -58,6 +65,7 @@ export async function testConnectMethod(clients: Clients, params?: TestConnectPa
         if (!sessionB) {
           sessionB = await acknowledged();
         }
+
         resolve();
       } catch (e) {
         reject(e);
@@ -74,6 +82,11 @@ export async function testConnectMethod(clients: Clients, params?: TestConnectPa
       return reject(new Error(`Connect timed out after ${connectTimeoutMs}ms - ${A.core.name}`));
     }, connectTimeoutMs);
     try {
+      A.core.relayer.once(RELAYER_EVENTS.publish, (payload) => {
+        if (payload.method !== "wc_proposeSession") {
+          throw new Error("expected wc_proposeSession, got " + payload.method);
+        }
+      });
       const result = await A.connect(connectParams);
       resolve(result);
     } catch (error) {
