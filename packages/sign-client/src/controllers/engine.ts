@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {
   EVENT_CLIENT_AUTHENTICATE_ERRORS,
   EVENT_CLIENT_AUTHENTICATE_TRACES,
@@ -316,7 +315,6 @@ export class Engine extends IEngine {
         resolve(session);
       }
     });
-    console.log("sendProposeSession proposal", proposal.pairingTopic);
 
     await this.sendProposeSession({
       proposal,
@@ -464,8 +462,6 @@ export class Engine extends IEngine {
           },
         },
       });
-
-      console.log("wc_sessionPropose result published", sessionTopic);
 
       event.addTrace(EVENT_CLIENT_SESSION_TRACES.session_approve_publish_success);
     } catch (error) {

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { EventEmitter } from "events";
 import { HEARTBEAT_EVENTS } from "@walletconnect/heartbeat";
 import { ErrorResponse, RequestArguments } from "@walletconnect/jsonrpc-types";
@@ -94,13 +93,6 @@ export class Subscriber extends ISubscriber {
   }
 
   get hasAnyTopics() {
-    console.log(
-      "hasAnyTopics",
-      this.topicMap.topics.length,
-      this.pending.size,
-      this.cached.length,
-      this.subscriptions.size,
-    );
     return (
       this.topicMap.topics.length > 0 ||
       this.pending.size > 0 ||
@@ -114,8 +106,6 @@ export class Subscriber extends ISubscriber {
     this.logger.debug(`Subscribing Topic`);
     this.logger.trace({ type: "method", method: "subscribe", params: { topic, opts } });
     try {
-      console.log("rpcSubscribe opts", opts);
-
       const relay = getRelayProtocolName(opts);
       const params = { topic, relay, transportType: opts?.transportType };
       if (!opts?.internal?.skipSubscribe) {
@@ -124,7 +114,6 @@ export class Subscriber extends ISubscriber {
       const id = await this.rpcSubscribe(topic, relay, opts);
       if (typeof id === "string") {
         this.onSubscribe(id, params);
-        console.log("onSubscribe", this.hasAnyTopics, globalThis.CoreId);
         this.logger.debug(`Successfully Subscribed Topic`);
         this.logger.trace({ type: "method", method: "subscribe", params: { topic, opts } });
       }
@@ -227,7 +216,6 @@ export class Subscriber extends ISubscriber {
   private async unsubscribeById(topic: string, id: string, opts?: RelayerTypes.UnsubscribeOptions) {
     this.logger.debug(`Unsubscribing Topic`);
     this.logger.trace({ type: "method", method: "unsubscribe", params: { topic, id, opts } });
-    console.log("unsubscribeById", topic, id, opts, globalThis.CoreId);
     try {
       const relay = getRelayProtocolName(opts);
       await this.restartToComplete({ topic, id, relay });
@@ -250,12 +238,6 @@ export class Subscriber extends ISubscriber {
   ) {
     const subId = await this.getSubscriptionId(topic);
     if (opts?.internal?.skipSubscribe) {
-      console.log(
-        "rpcSubscribe opts.internal.skipSubscribe",
-        opts.internal.skipSubscribe,
-        topic,
-        this.hasAnyTopics,
-      );
       return subId;
     }
     if (!opts || opts?.transportType === TRANSPORT_TYPES.relay) {

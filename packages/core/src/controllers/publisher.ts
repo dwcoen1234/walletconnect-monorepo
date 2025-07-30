@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { HEARTBEAT_EVENTS } from "@walletconnect/heartbeat";
 import { JsonRpcPayload, RequestArguments } from "@walletconnect/jsonrpc-types";
 import { generateChildLogger, getLoggerContext, Logger } from "@walletconnect/logger";
@@ -72,7 +71,6 @@ export class Publisher extends IPublisher {
     };
 
     const failedPublishMessage = `Failed to publish payload, please try again. id:${id} tag:${tag}`;
-    console.log("publish params", opts);
     try {
       if (isUndefined(request.params?.prompt)) delete request.params?.prompt;
       if (isUndefined(request.params?.tag)) delete request.params?.tag;
@@ -151,9 +149,7 @@ export class Publisher extends IPublisher {
         ...tvf,
       },
     };
-    console.log("publishCustom request", request);
     const failedPublishMessage = `Failed to publish custom payload, please try again. id:${id} tag:${tag}`;
-    console.log("publish params", opts);
     try {
       if (isUndefined(request.params?.prompt)) delete request.params?.prompt;
       if (isUndefined(request.params?.tag)) delete request.params?.tag;
@@ -229,11 +225,9 @@ export class Publisher extends IPublisher {
   // ---------- Private ----------------------------------------------- //
 
   private async rpcPublish(request: RequestArguments, opts?: RelayerTypes.PublishOptions) {
-    console.log("rpcPublish params", request, globalThis.CoreId);
     this.logger.debug(`Outgoing Relay Payload`);
     this.logger.trace({ type: "message", direction: "outgoing", request });
     const result = await this.relayer.request(request);
-    console.log("rpcPublish result", result);
 
     this.relayer.events.emit(RELAYER_EVENTS.publish, { ...request, ...opts });
     this.logger.debug(`Successfully Published Payload`);
