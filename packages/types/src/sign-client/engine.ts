@@ -192,6 +192,26 @@ export interface EnginePrivate {
     throwOnFailedPublish?: boolean;
     appLink?: string;
     tvf?: RelayerTypes.ITVF;
+    publishOpts?: RelayerTypes.PublishOptions;
+  }): Promise<number>;
+
+  sendBatchRequest<M extends JsonRpcTypes.WcMethod>(args: {
+    sharedPayload: Record<string, any>;
+    requests: Record<
+      string,
+      {
+        topic: string;
+        method: M;
+        params: JsonRpcTypes.RequestParams[M];
+        expiry?: number;
+        relayRpcId?: number;
+        clientRpcId?: number;
+      }
+    >;
+    throwOnFailedPublish?: boolean;
+    appLink?: string;
+    tvf?: RelayerTypes.ITVF;
+    publishOpts?: RelayerTypes.PublishOptions;
   }): Promise<number>;
 
   sendResult<M extends JsonRpcTypes.WcMethod>(args: {
@@ -201,6 +221,7 @@ export interface EnginePrivate {
     throwOnFailedPublish?: boolean;
     encodeOpts?: CryptoTypes.EncodeOptions;
     appLink?: string;
+    publishOpts?: RelayerTypes.PublishOptions;
   }): Promise<void>;
 
   sendError(params: {
@@ -210,6 +231,20 @@ export interface EnginePrivate {
     encodeOpts?: CryptoTypes.EncodeOptions;
     rpcOpts?: RelayerTypes.PublishOptions;
     appLink?: string;
+    publishOpts?: RelayerTypes.PublishOptions;
+  }): Promise<void>;
+
+  sendApproveSession(params: {
+    sessionTopic: string;
+    proposal: ProposalTypes.Struct;
+    pairingProposalResponse: JsonRpcTypes.Results[JsonRpcTypes.WcMethod];
+    sessionSettleRequest: JsonRpcTypes.RequestParams[JsonRpcTypes.WcMethod];
+    publishOpts: RelayerTypes.PublishOptions;
+  }): Promise<void>;
+
+  sendProposeSession(params: {
+    proposal: ProposalTypes.Struct;
+    publishOpts: RelayerTypes.PublishOptions;
   }): Promise<void>;
 
   onRelayEventRequest(event: EngineTypes.EventCallback<JsonRpcRequest>): Promise<void>;

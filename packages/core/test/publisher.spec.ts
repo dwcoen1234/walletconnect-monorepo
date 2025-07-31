@@ -32,29 +32,59 @@ describe("Publisher", () => {
       const opts = { ttl: 1, prompt: true, relay: { protocol: "irn" }, tag: 0 };
       const items = [
         {
-          topic: generateRandomBytes32(),
-          message: "itemA",
+          request: {
+            method: "irn_publish",
+            params: {
+              topic: generateRandomBytes32(),
+              message: "itemA",
+            },
+          },
           opts: { ...opts, id: getId() },
+          attempt: 1,
         },
         {
-          topic: generateRandomBytes32(),
-          message: "itemB",
+          request: {
+            method: "irn_publish",
+            params: {
+              topic: generateRandomBytes32(),
+              message: "itemB",
+            },
+          },
           opts: { ...opts, id: getId() },
+          attempt: 1,
         },
         {
-          topic: generateRandomBytes32(),
-          message: "itemC",
+          request: {
+            method: "irn_publish",
+            params: {
+              topic: generateRandomBytes32(),
+              message: "itemC",
+            },
+          },
           opts: { ...opts, id: getId() },
+          attempt: 1,
         },
         {
-          topic: generateRandomBytes32(),
-          message: "itemD",
+          request: {
+            method: "irn_publish",
+            params: {
+              topic: generateRandomBytes32(),
+              message: "itemD",
+            },
+          },
           opts: { ...opts, id: getId() },
+          attempt: 1,
         },
         {
-          topic: generateRandomBytes32(),
-          message: "itemE",
+          request: {
+            method: "irn_publish",
+            params: {
+              topic: generateRandomBytes32(),
+              message: "itemE",
+            },
+          },
           opts: { ...opts, id: getId() },
+          attempt: 1,
         },
       ];
 
@@ -62,7 +92,16 @@ describe("Publisher", () => {
       publisher.relayer.request = requestSpy;
 
       // Manually set some items in the queue.
-      items.forEach((item) => publisher.queue.set(item.opts.id.toString(), item));
+      items.forEach((item) =>
+        publisher.queue.set(item.opts.id.toString(), {
+          request: {
+            method: "irn_publish",
+            params: item.message,
+          },
+          opts: item.opts,
+          attempt: 1,
+        }),
+      );
       expect(publisher.queue.size).to.equal(items.length);
       // Emit heartbeat pulse event
       publisher.relayer.core.heartbeat.events.emit(HEARTBEAT_EVENTS.pulse);
@@ -89,29 +128,59 @@ describe("Publisher", () => {
       const opts = { ttl: 1, prompt: true, relay: { protocol: "irn" }, tag: 0 };
       const items = [
         {
-          topic: generateRandomBytes32(),
-          message: "itemA",
+          request: {
+            method: "irn_publish",
+            params: {
+              topic: generateRandomBytes32(),
+              message: "itemA",
+            },
+          },
           opts: { ...opts, id: getId() },
+          attempt: 1,
         },
         {
-          topic: generateRandomBytes32(),
-          message: "itemB",
+          request: {
+            method: "irn_publish",
+            params: {
+              topic: generateRandomBytes32(),
+              message: "itemB",
+            },
+          },
           opts: { ...opts, id: getId() },
+          attempt: 1,
         },
         {
-          topic: generateRandomBytes32(),
-          message: "itemC",
+          request: {
+            method: "irn_publish",
+            params: {
+              topic: generateRandomBytes32(),
+              message: "itemC",
+            },
+          },
           opts: { ...opts, id: getId() },
+          attempt: 1,
         },
         {
-          topic: generateRandomBytes32(),
-          message: "itemD",
+          request: {
+            method: "irn_publish",
+            params: {
+              topic: generateRandomBytes32(),
+              message: "itemD",
+            },
+          },
           opts: { ...opts, id: getId() },
+          attempt: 1,
         },
         {
-          topic: generateRandomBytes32(),
-          message: "itemE",
+          request: {
+            method: "irn_publish",
+            params: {
+              topic: generateRandomBytes32(),
+              message: "itemE",
+            },
+          },
           opts: { ...opts, id: getId() },
+          attempt: 1,
         },
       ];
 

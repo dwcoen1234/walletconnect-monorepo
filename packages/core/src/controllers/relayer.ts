@@ -113,8 +113,8 @@ export class Relayer extends IRelayer {
     this.subscriber = new Subscriber(this, this.logger);
     this.publisher = new Publisher(this, this.logger);
 
+    this.projectId = opts?.projectId;
     this.relayUrl = opts?.relayUrl || RELAYER_DEFAULT_RELAY_URL;
-    this.projectId = opts.projectId;
 
     if (isAndroid()) {
       this.packageName = getAppId();
@@ -166,6 +166,11 @@ export class Relayer extends IRelayer {
       },
       MESSAGE_DIRECTION.outbound,
     );
+  }
+
+  public async publishCustom(params: { payload: any; opts?: RelayerTypes.PublishOptions }) {
+    this.isInitialized();
+    await this.publisher.publishCustom(params);
   }
 
   public async subscribe(topic: string, opts?: RelayerTypes.SubscribeOptions) {

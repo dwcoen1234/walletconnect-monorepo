@@ -28,4 +28,9 @@ export abstract class IPublisher extends IEvents {
     message: string,
     opts?: RelayerTypes.PublishOptions,
   ): Promise<void>;
+
+  public abstract publishCustom(params: {
+    payload: any;
+    opts?: RelayerTypes.PublishOptions;
+  }): Promise<void>;
 }

@@ -23,6 +23,7 @@ export declare namespace RelayerTypes {
     };
     tvf?: ITVF;
     attestation?: string;
+    publishMethod?: string;
   }
 
   export type TransportType = "relay" | "link_mode";
@@ -32,6 +33,7 @@ export declare namespace RelayerTypes {
     transportType?: TransportType;
     internal?: {
       throwOnFailedPublish?: boolean;
+      skipSubscribe?: boolean;
     };
   }
 
@@ -133,6 +135,11 @@ export abstract class IRelayer extends IEvents {
     message: string,
     opts?: RelayerTypes.PublishOptions,
   ): Promise<void>;
+
+  public abstract publishCustom(params: {
+    payload: any;
+    opts?: RelayerTypes.PublishOptions;
+  }): Promise<void>;
 
   public abstract request(request: RequestArguments): Promise<JsonRpcPayload>;
 

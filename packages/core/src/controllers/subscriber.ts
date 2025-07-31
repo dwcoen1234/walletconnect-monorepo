@@ -32,6 +32,7 @@ import { SubscriberTopicMap } from "./topicmap";
 
 export class Subscriber extends ISubscriber {
   public subscriptions = new Map<string, SubscriberTypes.Active>();
+
   public topicMap = new SubscriberTopicMap();
   public events = new EventEmitter();
   public name = SUBSCRIBER_CONTEXT;
@@ -107,7 +108,9 @@ export class Subscriber extends ISubscriber {
     try {
       const relay = getRelayProtocolName(opts);
       const params = { topic, relay, transportType: opts?.transportType };
-      this.pending.set(topic, params);
+      if (!opts?.internal?.skipSubscribe) {
+        this.pending.set(topic, params);
+      }
       const id = await this.rpcSubscribe(topic, relay, opts);
       if (typeof id === "string") {
         this.onSubscribe(id, params);
@@ -213,7 +216,6 @@ export class Subscriber extends ISubscriber {
   private async unsubscribeById(topic: string, id: string, opts?: RelayerTypes.UnsubscribeOptions) {
     this.logger.debug(`Unsubscribing Topic`);
     this.logger.trace({ type: "method", method: "unsubscribe", params: { topic, id, opts } });
-
     try {
       const relay = getRelayProtocolName(opts);
       await this.restartToComplete({ topic, id, relay });
@@ -234,6 +236,10 @@ export class Subscriber extends ISubscriber {
     relay: RelayerTypes.ProtocolOptions,
     opts?: RelayerTypes.SubscribeOptions,
   ) {
+    const subId = await this.getSubscriptionId(topic);
+    if (opts?.internal?.skipSubscribe) {
+      return subId;
+    }
     if (!opts || opts?.transportType === TRANSPORT_TYPES.relay) {
       await this.restartToComplete({ topic, id: topic, relay });
     }
@@ -248,7 +254,6 @@ export class Subscriber extends ISubscriber {
     this.logger.trace({ type: "payload", direction: "outgoing", request });
     const shouldThrow = opts?.internal?.throwOnFailedPublish;
     try {
-      const subId = await this.getSubscriptionId(topic);
       // in link mode, allow the app to update its network state (i.e. active airplane mode) with small delay before attempting to subscribe
       if (opts?.transportType === TRANSPORT_TYPES.link_mode) {
         setTimeout(() => {
@@ -483,7 +488,11 @@ export class Subscriber extends ISubscriber {
       const persisted = await this.getRelayerSubscriptions();
       if (typeof persisted === "undefined") return;
       if (!persisted.length) return;
-      if (this.subscriptions.size) {
+      if (
+        this.subscriptions.size &&
+        // throw only if the persisted topics differ
+        !persisted.every((s) => s.topic === this.subscriptions.get(s.id)?.topic)
+      ) {
         const { message } = getInternalError("RESTORE_WILL_OVERRIDE", this.name);
         this.logger.error(message);
         this.logger.error(`${this.name}: ${JSON.stringify(this.values)}`);
