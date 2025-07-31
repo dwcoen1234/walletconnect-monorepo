@@ -48,16 +48,6 @@ export async function testConnectMethod(clients: Clients, params?: TestConnectPa
   const randomAttestation = Math.random().toString(36).substring(2, 15);
   A.core.verify.register = async () => randomAttestation;
 
-  // validate that the attestation send by A is received by B during the propose session
-  const resolveAttestationValidator = new Promise<void>((resolve) => {
-    B.core.relayer.once(RELAYER_EVENTS.message, (payload) => {
-      const uriParams = parseUri(uri!);
-      expect(payload.attestation).to.eq(randomAttestation);
-      expect(payload.topic).to.eq(uriParams.topic);
-      resolve();
-    });
-  });
-
   // We need to kick off the promise that binds the listener for `session_proposal` before `A.connect()`
   // is called, to avoid race conditions.
   const resolveSessionProposal = new Promise<void>((resolve, reject) => {
@@ -152,6 +142,17 @@ export async function testConnectMethod(clients: Clients, params?: TestConnectPa
         clearTimeout(timeout);
       }
     });
+
+  // validate that the attestation send by A is received by B during the propose session
+  const resolveAttestationValidator = new Promise<void>((resolve) => {
+    B.core.relayer.once(RELAYER_EVENTS.message, (payload) => {
+      const uriParams = parseUri(uri!);
+      expect(payload.attestation).to.eq(randomAttestation);
+      expect(payload.topic).to.eq(uriParams.topic);
+      resolve();
+    });
+  });
+
   await Promise.all([
     resolveAttestationValidator,
     resolveSessionProposal,
