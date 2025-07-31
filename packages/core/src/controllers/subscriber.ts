@@ -488,7 +488,11 @@ export class Subscriber extends ISubscriber {
       const persisted = await this.getRelayerSubscriptions();
       if (typeof persisted === "undefined") return;
       if (!persisted.length) return;
-      if (this.subscriptions.size) {
+      if (
+        this.subscriptions.size &&
+        // throw only if the persisted topics differ
+        !persisted.every((s) => s.topic === this.subscriptions.get(s.id)?.topic)
+      ) {
         const { message } = getInternalError("RESTORE_WILL_OVERRIDE", this.name);
         this.logger.error(message);
         this.logger.error(`${this.name}: ${JSON.stringify(this.values)}`);
