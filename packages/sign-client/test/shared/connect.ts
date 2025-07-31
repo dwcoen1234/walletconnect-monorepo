@@ -99,6 +99,19 @@ export async function testConnectMethod(clients: Clients, params?: TestConnectPa
     }
   });
 
+  // validate that the attestation send by A is received by B during the propose session
+  const resolveAttestationValidator = new Promise<void>((resolve) => {
+    B.core.relayer.once(RELAYER_EVENTS.message, (payload) => {
+      // when pairing via pairingTopic, no uri is provided
+      if (!connectParams?.pairingTopic) {
+        const uriParams = parseUri(uri!);
+        expect(payload.topic).to.eq(uriParams.topic);
+      }
+      expect(payload.attestation).to.eq(randomAttestation);
+      resolve();
+    });
+  });
+
   const { uri, approval } = await connect;
   const clientAConnectLatencyMs = Date.now() - start;
 
@@ -142,16 +155,6 @@ export async function testConnectMethod(clients: Clients, params?: TestConnectPa
         clearTimeout(timeout);
       }
     });
-
-  // validate that the attestation send by A is received by B during the propose session
-  const resolveAttestationValidator = new Promise<void>((resolve) => {
-    B.core.relayer.once(RELAYER_EVENTS.message, (payload) => {
-      const uriParams = parseUri(uri!);
-      expect(payload.attestation).to.eq(randomAttestation);
-      expect(payload.topic).to.eq(uriParams.topic);
-      resolve();
-    });
-  });
 
   await Promise.all([
     resolveAttestationValidator,
