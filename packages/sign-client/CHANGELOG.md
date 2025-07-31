@@ -1,5 +1,20 @@
 # @walletconnect/sign-client
 
+## 2.21.6
+
+### Patch Changes
+
+- [#6814](https://github.com/WalletConnect/walletconnect-monorepo/pull/6814) [`743fdadd794e31ef3db278836d0e4bbabb3beebb`](https://github.com/WalletConnect/walletconnect-monorepo/commit/743fdadd794e31ef3db278836d0e4bbabb3beebb) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixed an unhandled exception when setting default chain of a generic subProvider in `universal-provider`
+
+- [#6647](https://github.com/WalletConnect/walletconnect-monorepo/pull/6647) [`b74edc105d8f2ce31d7b328147c5404042b97517`](https://github.com/WalletConnect/walletconnect-monorepo/commit/b74edc105d8f2ce31d7b328147c5404042b97517) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Implemented new relay methods `wc_proposeSession` and `wc_approveSession`
+
+- [#6813](https://github.com/WalletConnect/walletconnect-monorepo/pull/6813) [`c9a87a87e28ea252dd56a1de61c0dddf1f6d0a08`](https://github.com/WalletConnect/walletconnect-monorepo/commit/c9a87a87e28ea252dd56a1de61c0dddf1f6d0a08) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - No longer awaits `cleanupPendingPairings` when initiating a connection in `universal-provider` to avoid delaying/blocking the pairing flow
+
+- Updated dependencies [[`743fdadd794e31ef3db278836d0e4bbabb3beebb`](https://github.com/WalletConnect/walletconnect-monorepo/commit/743fdadd794e31ef3db278836d0e4bbabb3beebb), [`b74edc105d8f2ce31d7b328147c5404042b97517`](https://github.com/WalletConnect/walletconnect-monorepo/commit/b74edc105d8f2ce31d7b328147c5404042b97517), [`c9a87a87e28ea252dd56a1de61c0dddf1f6d0a08`](https://github.com/WalletConnect/walletconnect-monorepo/commit/c9a87a87e28ea252dd56a1de61c0dddf1f6d0a08)]:
+  - @walletconnect/core@2.21.6
+  - @walletconnect/types@2.21.6
+  - @walletconnect/utils@2.21.6
+
 ## 2.21.5
 
 ### Patch Changes
