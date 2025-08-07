@@ -1,5 +1,16 @@
 # @walletconnect/signer-connection
 
+## 2.21.7
+
+### Patch Changes
+
+- [#6842](https://github.com/WalletConnect/walletconnect-monorepo/pull/6842) [`291755eded9168f52f0de7c9608a026fe5ea4887`](https://github.com/WalletConnect/walletconnect-monorepo/commit/291755eded9168f52f0de7c9608a026fe5ea4887) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Added `correlationId` to `wc_proposeSession` and `wc_approveSession`
+
+- Updated dependencies [[`291755eded9168f52f0de7c9608a026fe5ea4887`](https://github.com/WalletConnect/walletconnect-monorepo/commit/291755eded9168f52f0de7c9608a026fe5ea4887)]:
+  - @walletconnect/sign-client@2.21.7
+  - @walletconnect/types@2.21.7
+  - @walletconnect/utils@2.21.7
+
 ## 2.21.6
 
 ### Patch Changes
