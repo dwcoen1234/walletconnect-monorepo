@@ -27,6 +27,7 @@ class GenericProvider implements IProvider {
     this.events = getGlobal("events");
     this.client = getGlobal("client");
     this.chainId = this.getDefaultChain();
+    this.name = this.getNamespaceName();
     this.httpProviders = this.createHttpProviders();
   }
 
@@ -76,6 +77,13 @@ class GenericProvider implements IProvider {
     return chainId.split(":")[1];
   }
 
+  public getNamespaceName(): string {
+    const chainId = this.namespace.chains[0];
+    if (!chainId) throw new Error(`ChainId not found`);
+
+    return parseChainId(chainId).namespace;
+  }
+
   // --------- PRIVATE --------- //
 
   private getAccounts(): string[] {
@@ -99,7 +107,7 @@ class GenericProvider implements IProvider {
     const http = {};
     this.namespace?.accounts?.forEach((account) => {
       const chain = parseChainId(account);
-      http[`${chain.namespace}:${chain.reference}`] = this.createHttpProvider(account);
+      http[chain.reference] = this.createHttpProvider(account);
     });
     return http;
   }

@@ -79,6 +79,7 @@ export abstract class IPairing {
   public abstract create(params?: {
     methods?: string[];
     transportType?: RelayerTypes.SubscribeOptions["transportType"];
+    internal?: RelayerTypes.SubscribeOptions["internal"];
   }): Promise<{ topic: string; uri: string }>;
 
   // for either to activate a previously created pairing

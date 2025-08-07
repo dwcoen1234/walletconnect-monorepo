@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {
   EVENT_CLIENT_AUTHENTICATE_ERRORS,
   EVENT_CLIENT_AUTHENTICATE_TRACES,
@@ -259,7 +258,9 @@ export class Engine extends IEngine {
       throw error;
     }
     if (!topic || !active) {
-      const { topic: newTopic, uri: newUri } = await this.client.core.pairing.create();
+      const { topic: newTopic, uri: newUri } = await this.client.core.pairing.create({
+        internal: { skipSubscribe: true },
+      });
       topic = newTopic;
       uri = newUri;
     }
@@ -315,12 +316,13 @@ export class Engine extends IEngine {
       }
     });
 
-    await this.sendRequest({
-      topic,
-      method: "wc_sessionPropose",
-      params: proposal,
-      throwOnFailedPublish: true,
-      clientRpcId: proposal.id,
+    await this.sendProposeSession({
+      proposal,
+      publishOpts: {
+        internal: {
+          throwOnFailedPublish: true,
+        },
+      },
     });
 
     await this.setProposal(proposal.id, proposal);
@@ -413,7 +415,10 @@ export class Engine extends IEngine {
     const transportType = TRANSPORT_TYPES.relay;
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribing_session_topic);
     try {
-      await this.client.core.relayer.subscribe(sessionTopic, { transportType });
+      await this.client.core.relayer.subscribe(sessionTopic, {
+        transportType,
+        internal: { skipSubscribe: true },
+      });
     } catch (error) {
       event.setError(EVENT_CLIENT_SESSION_ERRORS.subscribe_session_topic_failure);
       throw error;
@@ -441,33 +446,21 @@ export class Engine extends IEngine {
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.store_session);
 
     try {
-      event.addTrace(EVENT_CLIENT_SESSION_TRACES.publishing_session_settle);
-      await this.sendRequest({
-        topic: sessionTopic,
-        method: "wc_sessionSettle",
-        params: sessionSettle,
-        throwOnFailedPublish: true,
-      }).catch((error) => {
-        event?.setError(EVENT_CLIENT_SESSION_ERRORS.session_settle_publish_failure);
-        throw error;
-      });
-
-      event.addTrace(EVENT_CLIENT_SESSION_TRACES.session_settle_publish_success);
-
-      event.addTrace(EVENT_CLIENT_SESSION_TRACES.publishing_session_approve);
-      await this.sendResult<"wc_sessionPropose">({
-        id,
-        topic: pairingTopic,
-        result: {
+      await this.sendApproveSession({
+        sessionTopic,
+        proposal,
+        pairingProposalResponse: {
           relay: {
             protocol: relayProtocol ?? "irn",
           },
           responderPublicKey: selfPublicKey,
         },
-        throwOnFailedPublish: true,
-      }).catch((error) => {
-        event?.setError(EVENT_CLIENT_SESSION_ERRORS.session_approve_publish_failure);
-        throw error;
+        sessionSettleRequest: sessionSettle,
+        publishOpts: {
+          internal: {
+            throwOnFailedPublish: true,
+          },
+        },
       });
 
       event.addTrace(EVENT_CLIENT_SESSION_TRACES.session_approve_publish_success);
@@ -1516,6 +1509,7 @@ export class Engine extends IEngine {
       throwOnFailedPublish,
       appLink,
       tvf,
+      publishOpts = {},
     } = args;
     const payload = formatJsonRpcRequest(method, params, clientRpcId);
 
@@ -1537,7 +1531,12 @@ export class Engine extends IEngine {
       const id = hashMessage(message);
       attestation = await this.client.core.verify.register({ id, decryptedId });
     }
-    const opts = ENGINE_RPC_OPTS[method].req;
+
+    const opts = {
+      ...ENGINE_RPC_OPTS[method].req,
+      ...publishOpts,
+    };
+
     opts.attestation = attestation;
     if (expiry) opts.ttl = expiry;
     if (relayRpcId) opts.id = relayRpcId;
@@ -1547,10 +1546,6 @@ export class Engine extends IEngine {
       const redirectURL = getLinkModeURL(appLink, topic, message);
       await (global as any).Linking.openURL(redirectURL, this.client.name);
     } else {
-      const opts = ENGINE_RPC_OPTS[method].req;
-      if (expiry) opts.ttl = expiry;
-      if (relayRpcId) opts.id = relayRpcId;
-
       opts.tvf = {
         ...tvf,
         correlationId: payload.id,
@@ -1570,6 +1565,82 @@ export class Engine extends IEngine {
     }
 
     return payload.id;
+  };
+
+  private sendProposeSession: EnginePrivate["sendProposeSession"] = async (params) => {
+    const { proposal, publishOpts } = params;
+
+    const proposeSessionPayload = formatJsonRpcRequest("wc_sessionPropose", proposal, proposal.id);
+
+    this.client.core.history.set(proposal.pairingTopic, proposeSessionPayload);
+
+    const proposeSessionMessage = await this.client.core.crypto.encode(
+      proposal.pairingTopic,
+      proposeSessionPayload,
+      {
+        encoding: BASE64,
+      },
+    );
+
+    const decryptedId = hashMessage(JSON.stringify(proposeSessionPayload));
+    const attestationId = hashMessage(proposeSessionMessage);
+    const attestation = await this.client.core.verify.register({ id: attestationId, decryptedId });
+
+    await this.client.core.relayer.publishCustom({
+      payload: {
+        pairingTopic: proposal.pairingTopic,
+        sessionProposal: proposeSessionMessage,
+      },
+      opts: {
+        ...publishOpts,
+        id: proposal.id,
+        publishMethod: "wc_proposeSession",
+        attestation,
+      },
+    });
+  };
+
+  private sendApproveSession: EnginePrivate["sendApproveSession"] = async (params) => {
+    const { sessionTopic, pairingProposalResponse, proposal, sessionSettleRequest, publishOpts } =
+      params;
+    const pairingPayload = formatJsonRpcResult(proposal.id, pairingProposalResponse);
+
+    const pairingResponseMessage = await this.client.core.crypto.encode(
+      proposal.pairingTopic,
+      pairingPayload,
+      {
+        encoding: BASE64,
+      },
+    );
+
+    const sessionSettlePayload = formatJsonRpcRequest(
+      "wc_sessionSettle",
+      sessionSettleRequest,
+      publishOpts?.id,
+    );
+
+    const sessionSettlementRequestMessage = await this.client.core.crypto.encode(
+      sessionTopic,
+      sessionSettlePayload,
+      {
+        encoding: BASE64,
+      },
+    );
+
+    this.client.core.history.set(sessionTopic, sessionSettlePayload);
+
+    await this.client.core.relayer.publishCustom({
+      payload: {
+        sessionTopic,
+        pairingTopic: proposal.pairingTopic,
+        sessionProposalResponse: pairingResponseMessage,
+        sessionSettlementRequest: sessionSettlementRequestMessage,
+      },
+      opts: {
+        ...publishOpts,
+        publishMethod: "wc_approveSession",
+      },
+    });
   };
 
   private sendResult: EnginePrivate["sendResult"] = async (args) => {
@@ -1934,6 +2005,7 @@ export class Engine extends IEngine {
     transportType,
   ) => {
     const { id } = payload;
+
     if (isJsonRpcResult(payload)) {
       const { result } = payload;
       this.client.logger.trace({ type: "method", method: "onSessionProposeResponse", result });
@@ -2223,7 +2295,7 @@ export class Engine extends IEngine {
     const { id } = payload;
     try {
       this.isValidDisconnect({ topic, reason: payload.params });
-      Promise.all([
+      await Promise.all([
         new Promise((resolve) => {
           // RPC request needs to happen before deletion as it utalises session encryption
           this.client.core.relayer.once(RELAYER_EVENTS.publish, async () => {

@@ -76,11 +76,9 @@ describe("Sign Client Integration", () => {
 
   describe("connect", () => {
     it("connect (with new pairing)", async () => {
-      const { clients, sessionA, pairingA } = await initTwoPairedClients(
-        {},
-        {},
-        { logger: "error" },
-      );
+      const clients = await initTwoClients({}, {}, { logger: "warn" });
+      const { pairingA, sessionA } = await testConnectMethod(clients);
+
       expect(pairingA).to.be.exist;
       expect(sessionA).to.be.exist;
       expect(pairingA.topic).to.eq(sessionA.pairingTopic);
@@ -330,6 +328,9 @@ describe("Sign Client Integration", () => {
         topic: sessionA.topic,
         reason: getSdkError("USER_DISCONNECTED"),
       });
+      expect(clients.A.session.getAll().length).to.eq(0);
+      await throttle(2_000);
+      expect(clients.B.session.getAll().length).to.eq(0);
       expect(clients.A.pairing.getAll().length).to.eq(1);
       const { pairingA: pairingAfter, sessionA: sessionAfter } = await testConnectMethod(clients);
       await throttle(1_000);
