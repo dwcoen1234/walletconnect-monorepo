@@ -16,7 +16,9 @@ import { WalletClient } from "./shared/WalletClient";
 import { TestNetwork } from "ethereum-test-network";
 import { formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
 import { getStoredSendCalls } from "../src/utils";
+import { deleteProviders, testConnectMethod } from "./shared";
 const CHAIN_ID = 1;
+const events = ["chainChanged"];
 describe("UniversalProvider 5792 utils", function () {
   let testNetwork: TestNetwork;
   let provider: UniversalProvider;
@@ -26,7 +28,7 @@ describe("UniversalProvider 5792 utils", function () {
   beforeAll(async () => {
     testNetwork = await TestNetwork.init({
       chainId: CHAIN_ID,
-      port: PORT,
+      port: PORT + 1,
       genesisAccounts: [ACCOUNTS.a, ACCOUNTS.b],
     });
     provider = await UniversalProvider.init(TEST_PROVIDER_OPTS);
@@ -85,8 +87,6 @@ describe("UniversalProvider 5792 utils", function () {
     const sendCallsResult = await Promise.all([
       new Promise<void>((resolve) => {
         walletClient.client?.once("session_request", async (payload) => {
-          console.log("session_request", JSON.stringify(payload, null, 2));
-
           await walletClient.client?.respond({
             topic: payload.topic,
             response: formatJsonRpcResult(payload.id, {
@@ -188,5 +188,264 @@ describe("UniversalProvider 5792 utils", function () {
       ],
       status: 200,
     });
+  });
+  it("should cache `wallet_getCapabilities` request with different chainIds", async () => {
+    const dapp = await UniversalProvider.init({
+      ...TEST_PROVIDER_OPTS,
+      name: "dapp",
+    });
+    const wallet = await UniversalProvider.init({
+      ...TEST_PROVIDER_OPTS,
+      name: "wallet",
+    });
+    const chains = ["eip155:1"];
+    const { sessionA } = await testConnectMethod(
+      {
+        dapp,
+        wallet,
+      },
+      {
+        requiredNamespaces: {
+          eip155: {
+            methods: ["wallet_getCapabilities"],
+            events,
+            chains,
+          },
+        },
+        namespaces: {
+          eip155: {
+            accounts: chains.map((chain) => `${chain}:${walletAddress}`),
+            methods: ["wallet_getCapabilities"],
+            events,
+          },
+        },
+      },
+    );
+    expect(sessionA).to.be.an("object");
+    expect(sessionA.sessionProperties).to.be.undefined;
+    const sessionPropertiesResponse = {
+      "0x2105": {
+        atomicBatch: {
+          supported: true,
+        },
+      },
+    };
+    await Promise.all([
+      new Promise<void>((resolve) => {
+        wallet.client.once("session_request", async (event) => {
+          await wallet.client.respond({
+            topic: event.topic,
+            response: formatJsonRpcResult(event.id, sessionPropertiesResponse),
+          });
+          resolve();
+        });
+      }),
+      new Promise<void>(async (resolve) => {
+        const result = await dapp.request({
+          method: "wallet_getCapabilities",
+          params: [walletAddress],
+        });
+        expect(result).to.eql(sessionPropertiesResponse);
+        resolve();
+      }),
+    ]);
+    // now the sessionProperties should be cached
+    const updatedSession = dapp.client.session.get(sessionA.topic);
+    expect(updatedSession.sessionProperties).to.exist;
+    expect(updatedSession.sessionProperties?.capabilities).to.exist;
+
+    const cachedResult = await dapp.request({
+      method: "wallet_getCapabilities",
+      params: [walletAddress],
+    });
+    expect(cachedResult).to.eql(sessionPropertiesResponse);
+
+    const secondCapabilitiesResult = {
+      "0x1": {
+        atomicBatch: {
+          supported: true,
+        },
+      },
+    };
+
+    await Promise.all([
+      new Promise<void>((resolve) => {
+        wallet.client.once("session_request", async (event) => {
+          await wallet.client.respond({
+            topic: event.topic,
+            response: formatJsonRpcResult(event.id, secondCapabilitiesResult),
+          });
+          resolve();
+        });
+      }),
+      new Promise<void>(async (resolve) => {
+        const result = await dapp.request({
+          method: "wallet_getCapabilities",
+          // this req has additional chainId param so it should not use cached result but make a new request to the wallet
+          params: [walletAddress, ["0x1"]],
+        });
+        expect(result).to.eql(secondCapabilitiesResult);
+        resolve();
+      }),
+    ]);
+
+    const updatedSession2 = dapp.client.session.get(sessionA.topic);
+    expect(updatedSession2.sessionProperties).to.exist;
+    expect(updatedSession2.sessionProperties?.capabilities).to.exist;
+    expect(Object.keys(updatedSession2.sessionProperties?.capabilities || {}).length).to.eql(2);
+    expect(updatedSession2.sessionProperties?.capabilities[`${walletAddress}0x1`]).to.eql(
+      secondCapabilitiesResult,
+    );
+
+    await deleteProviders({ A: dapp, B: wallet });
+  });
+
+  it("should get `wallet_getCapabilities` from scoped properties", async () => {
+    const dapp = await UniversalProvider.init({
+      ...TEST_PROVIDER_OPTS,
+      name: "dapp",
+    });
+    const wallet = await UniversalProvider.init({
+      ...TEST_PROVIDER_OPTS,
+      name: "wallet",
+    });
+    const chains = ["eip155:1"];
+    // should handle both string and object values
+    const scopedProperties = {
+      "eip155:1": {
+        [`eip155:1:${walletAddress}`]: {
+          atomic: JSON.stringify({
+            status: "supported",
+          }),
+          auxiliaryFunds: JSON.stringify({
+            supported: false,
+          }),
+          "flow-control": {
+            loose: ["halt", "continue"],
+            strict: ["continue"],
+          },
+        },
+      },
+    };
+    const { sessionA } = await testConnectMethod(
+      {
+        dapp,
+        wallet,
+      },
+      {
+        requiredNamespaces: {
+          eip155: {
+            methods: ["wallet_getCapabilities"],
+            events,
+            chains,
+          },
+        },
+        namespaces: {
+          eip155: {
+            accounts: chains.map((chain) => `${chain}:${walletAddress}`),
+            methods: ["wallet_getCapabilities"],
+            events,
+          },
+        },
+        scopedProperties,
+      },
+    );
+    expect(sessionA).to.be.an("object");
+    expect(sessionA.scopedProperties).to.exist;
+    expect(sessionA.scopedProperties).to.eql(scopedProperties);
+
+    const result = await dapp.request({
+      method: "wallet_getCapabilities",
+      params: [walletAddress, ["0x1"]],
+    });
+
+    expect(result).to.eql({
+      "0x1": {
+        atomic: {
+          status: "supported",
+        },
+        auxiliaryFunds: {
+          supported: false,
+        },
+        "flow-control": {
+          loose: ["halt", "continue"],
+          strict: ["continue"],
+        },
+      },
+    });
+    await deleteProviders({ A: dapp, B: wallet });
+  });
+  it("should get `wallet_getCapabilities` from sessionProperties", async () => {
+    const dapp = await UniversalProvider.init({
+      ...TEST_PROVIDER_OPTS,
+      name: "dapp",
+    });
+    const wallet = await UniversalProvider.init({
+      ...TEST_PROVIDER_OPTS,
+      name: "wallet",
+    });
+    const chains = ["eip155:1"];
+
+    // should handle both string and object values
+    const sessionProperties = {
+      atomic: JSON.stringify({
+        status: "supported",
+      }),
+      auxiliaryFunds: JSON.stringify({
+        supported: false,
+      }),
+      "flow-control": {
+        loose: ["halt", "continue"],
+        strict: ["continue"],
+      },
+    } as Record<string, any>;
+
+    const { sessionA } = await testConnectMethod(
+      {
+        dapp,
+        wallet,
+      },
+      {
+        requiredNamespaces: {
+          eip155: {
+            methods: ["wallet_getCapabilities"],
+            events,
+            chains,
+          },
+        },
+        namespaces: {
+          eip155: {
+            accounts: chains.map((chain) => `${chain}:${walletAddress}`),
+            methods: ["wallet_getCapabilities"],
+            events,
+          },
+        },
+        sessionProperties,
+      },
+    );
+    expect(sessionA).to.be.an("object");
+    expect(sessionA.sessionProperties).to.exist;
+    expect(sessionA.sessionProperties).to.eql(sessionProperties);
+
+    const result = await dapp.request({
+      method: "wallet_getCapabilities",
+      params: [walletAddress, ["0x1"]],
+    });
+
+    expect(result).to.eql({
+      "0x1": {
+        atomic: {
+          status: "supported",
+        },
+        auxiliaryFunds: {
+          supported: false,
+        },
+        "flow-control": {
+          loose: ["halt", "continue"],
+          strict: ["continue"],
+        },
+      },
+    });
+    await deleteProviders({ A: dapp, B: wallet });
   });
 });
