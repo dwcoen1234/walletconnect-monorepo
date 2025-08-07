@@ -72,8 +72,6 @@ export const EIP155_TEST_METHODS = [
   "personal_sign",
   "eth_signTypedData",
   "wallet_switchEthereumChain",
-  "wallet_sendCalls",
-  "wallet_getCallsStatus",
 ];
 
 export const ALGORAND_TEST_METHODS = ["algo_signTxn"];

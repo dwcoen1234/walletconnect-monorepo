@@ -41,7 +41,7 @@ describe("UniversalProvider 5792 utils", function () {
     await provider.connect({
       namespaces: {
         eip155: {
-          methods: EIP155_TEST_METHODS,
+          methods: [...EIP155_TEST_METHODS, "wallet_getCallsStatus", "wallet_sendCalls"],
           chains: [`eip155:${CHAIN_ID}`, `eip155:${CHAIN_ID_B}`],
           events: ["chainChanged", "accountsChanged"],
         },
