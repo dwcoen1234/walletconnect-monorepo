@@ -1876,6 +1876,77 @@ describe("UniversalProvider", function () {
       await deleteProviders({ A: dapp, B: wallet });
     });
 
+    it("should switch btc account on bip122 chainChanged event", async () => {
+      const dapp = await UniversalProvider.init({
+        ...TEST_PROVIDER_OPTS,
+        name: "dapp",
+      });
+      const wallet = await UniversalProvider.init({
+        ...TEST_PROVIDER_OPTS,
+        name: "wallet",
+      });
+      const optionalNamespaces = {
+        bip122: {
+          chains: [
+            "bip122:000000000019d6689c085ae165831e91",
+            "bip122:000000000019d6689c085ae165831e92",
+          ],
+          events: ["chainChanged"],
+          methods: ["bip122_signTransaction"],
+        },
+      };
+      const { sessionA } = await testConnectMethod(
+        {
+          dapp,
+          wallet,
+        },
+        {
+          requiredNamespaces: {},
+          optionalNamespaces,
+          namespaces: {
+            bip122: {
+              accounts: [
+                "bip122:000000000019d6689c085ae165831e91:0x1",
+                "bip122:000000000019d6689c085ae165831e92:0x2",
+              ],
+              chains: [
+                "bip122:000000000019d6689c085ae165831e91",
+                "bip122:000000000019d6689c085ae165831e92",
+              ],
+              methods: ["bip122_signTransaction"],
+              events: ["chainChanged"],
+            },
+          },
+        },
+      );
+      let chainChangedCount = 0;
+      let accountsChangedCount = 0;
+      dapp.on("chainChanged", (chainId) => {
+        expect(chainId).to.eql("000000000019d6689c085ae165831e92");
+        chainChangedCount++;
+      });
+      dapp.on("accountsChanged", (accounts) => {
+        expect(accounts).to.eql(["0x2"]);
+        accountsChangedCount++;
+      });
+
+      await wallet.client.emit({
+        event: {
+          name: "chainChanged",
+          data: "000000000019d6689c085ae165831e92",
+        },
+        chainId: "bip122:000000000019d6689c085ae165831e92",
+        topic: sessionA.topic,
+      });
+
+      await throttle(2_000);
+
+      expect(chainChangedCount).to.eql(1);
+      expect(accountsChangedCount).to.eql(1);
+
+      await deleteProviders({ A: dapp, B: wallet });
+    });
+
     it("should set default chain on generic providers", async () => {
       const dapp = await UniversalProvider.init({
         ...TEST_PROVIDER_OPTS,

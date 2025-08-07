@@ -519,14 +519,17 @@ export class UniversalProvider implements IUniversalProvider {
 
     this.updateNamespaceChain(namespace, chainId);
 
-    this.events.emit("chainChanged", chainId);
-
     const previousChainId = this.getProvider(namespace).getDefaultChain();
     if (!internal) {
       this.getProvider(namespace).setDefaultChain(chainId);
+    } else {
+      // emit the events during the `internal` cycle of chain change
+      // otherwise events are emitted twice
+      // once on the chainChanged event and once triggered by `this.getProvider(namespace).setDefaultChain(chainId);`
+      this.events.emit("chainChanged", chainId);
+      this.emitAccountsChangedOnChainChange({ namespace, previousChainId, newChainId: caip2Chain });
     }
 
-    this.emitAccountsChangedOnChainChange({ namespace, previousChainId, newChainId: caip2Chain });
     await this.persist("namespaces", this.namespaces);
   }
 
