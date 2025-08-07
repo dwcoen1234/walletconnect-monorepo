@@ -146,3 +146,12 @@ export function convertChainIdToNumber(chainId: string | number): number | strin
   chainId = chainId.includes(":") ? chainId.split(":")[1] : chainId;
   return isNaN(Number(chainId)) ? chainId : Number(chainId);
 }
+
+export function isValidJSONObject(str: string): boolean {
+  try {
+    const parsed = JSON.parse(str);
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed);
+  } catch {
+    return false;
+  }
+}

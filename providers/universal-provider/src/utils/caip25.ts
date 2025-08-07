@@ -1,6 +1,8 @@
 import { SessionTypes } from "@walletconnect/types";
 import { isValidObject } from "@walletconnect/utils";
 
+import { isValidJSONObject } from "./misc";
+
 const EIP155_PREFIX = "eip155";
 const CAPABILITIES_KEYS = [
   "atomic",
@@ -23,11 +25,18 @@ const getCapabilitiesFromObject = (object: Record<string, any>) => {
 
   return capabilitiesKeys.reduce(
     (acc, key) => {
-      acc[key] = object[key];
+      acc[key] = parseCapabilityValue(object[key]);
       return acc;
     },
     {} as Record<string, any>,
   );
+};
+
+const parseCapabilityValue = (value: any) => {
+  if (typeof value === "string" && isValidJSONObject(value)) {
+    return JSON.parse(value);
+  }
+  return value;
 };
 
 export const extractCapabilitiesFromSession = (
