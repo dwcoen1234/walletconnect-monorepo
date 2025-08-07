@@ -95,10 +95,10 @@ export async function deleteSendCallsResult({
 }) {
   const sendCallsStatusResults =
     await storage.getItem<Record<string, StoredSendCalls>>(CALL_STATUS_STORAGE_KEY);
-  if (sendCallsStatusResults) {
-    delete sendCallsStatusResults[resultId];
-    storage.setItem(CALL_STATUS_STORAGE_KEY, sendCallsStatusResults);
-  }
+  if (!sendCallsStatusResults) return;
+
+  delete sendCallsStatusResults[resultId];
+  await storage.setItem(CALL_STATUS_STORAGE_KEY, sendCallsStatusResults);
 
   // delete old expired results
   for (const resultId in sendCallsStatusResults) {
