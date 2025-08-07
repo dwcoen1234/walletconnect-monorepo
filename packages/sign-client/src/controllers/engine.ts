@@ -322,6 +322,9 @@ export class Engine extends IEngine {
         internal: {
           throwOnFailedPublish: true,
         },
+        tvf: {
+          correlationId: proposal.id,
+        },
       },
     });
 
@@ -459,6 +462,9 @@ export class Engine extends IEngine {
         publishOpts: {
           internal: {
             throwOnFailedPublish: true,
+          },
+          tvf: {
+            correlationId: id,
           },
         },
       });
@@ -1593,7 +1599,6 @@ export class Engine extends IEngine {
       },
       opts: {
         ...publishOpts,
-        id: proposal.id,
         publishMethod: "wc_proposeSession",
         attestation,
       },
