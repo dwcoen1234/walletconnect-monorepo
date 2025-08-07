@@ -77,7 +77,32 @@ describe("Sign Client Integration", () => {
   describe("connect", () => {
     it("connect (with new pairing)", async () => {
       const clients = await initTwoClients({}, {}, { logger: "warn" });
+
+      let proposeSessionPayload: { method: string; params: { correlationId: number } } | undefined;
+      let approveSessionPayload: { method: string; params: { correlationId: number } } | undefined;
+
+      clients.A.core.relayer.once(RELAYER_EVENTS.publish, (payload) => {
+        if (payload.method === "wc_proposeSession") {
+          proposeSessionPayload = payload;
+        }
+      });
+      clients.B.core.relayer.once(RELAYER_EVENTS.publish, (payload) => {
+        if (payload.method === "wc_approveSession") {
+          approveSessionPayload = payload;
+        }
+      });
+
       const { pairingA, sessionA } = await testConnectMethod(clients);
+
+      expect(proposeSessionPayload).to.exist;
+      expect(approveSessionPayload).to.exist;
+      expect(proposeSessionPayload?.params.correlationId).to.exist;
+      expect(approveSessionPayload?.params.correlationId).to.exist;
+      expect(proposeSessionPayload?.params.correlationId).to.be.a("number");
+      expect(proposeSessionPayload?.params.correlationId).to.be.greaterThan(0);
+      expect(proposeSessionPayload?.params.correlationId).to.eq(
+        approveSessionPayload?.params.correlationId,
+      );
 
       expect(pairingA).to.be.exist;
       expect(sessionA).to.be.exist;
