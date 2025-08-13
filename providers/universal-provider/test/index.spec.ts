@@ -1741,11 +1741,15 @@ describe("UniversalProvider", function () {
         const url = provider.connection.url as string;
         expect(url).to.include("https://");
         expect(url).to.include(RPC_URL);
-        expect(url).to.eql(
-          getRpcUrl(getChainId(chains[i]), {} as Namespace, TEST_PROVIDER_OPTS.projectId),
-        );
+        expect(url).to.eql(getRpcUrl(chains[i], {} as Namespace, TEST_PROVIDER_OPTS.projectId));
       });
 
+      expect(httpProviders["4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZ"].connection.url).to.eql(
+        `https://rpc.walletconnect.org/v1/?chainId=solana:4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZ&projectId=${TEST_PROVIDER_OPTS.projectId}`,
+      );
+      expect(httpProviders["8E9rvCKLFQia2Y35HXjjpWzj8weVo44K"].connection.url).to.eql(
+        `https://rpc.walletconnect.org/v1/?chainId=solana:8E9rvCKLFQia2Y35HXjjpWzj8weVo44K&projectId=${TEST_PROVIDER_OPTS.projectId}`,
+      );
       await deleteProviders({ A: dapp, B: wallet });
     });
     it("should init generic provider if provider for given namespace doesn't exist", async () => {

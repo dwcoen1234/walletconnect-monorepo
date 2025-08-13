@@ -107,7 +107,8 @@ class GenericProvider implements IProvider {
     const http = {};
     this.namespace?.accounts?.forEach((account) => {
       const chain = parseChainId(account);
-      http[chain.reference] = this.createHttpProvider(account);
+      const customRpcUrl = this.namespace?.rpcMap?.[`${chain.namespace}:${chain.reference}`];
+      http[chain.reference] = this.createHttpProvider(account, customRpcUrl);
     });
     return http;
   }
