@@ -1581,11 +1581,10 @@ describe("UniversalProvider", function () {
       );
 
       // @ts-expect-error - private property
-      const firstProvider =
-        dapp.rpcProviders[namespace].httpProviders["4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZ"];
+      const firstProvider = dapp.rpcProviders[namespace].getHttpProvider(chains[0]);
       expect(firstProvider).to.deep.equal(httpProviders["4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZ"]);
-      const secondProvider =
-        dapp.rpcProviders[namespace].httpProviders["8E9rvCKLFQia2Y35HXjjpWzj8weVo44K"];
+      // @ts-expect-error - private property
+      const secondProvider = dapp.rpcProviders[namespace].getHttpProvider(chains[1]);
       expect(secondProvider).to.deep.equal(httpProviders["8E9rvCKLFQia2Y35HXjjpWzj8weVo44K"]);
 
       await deleteProviders({ A: dapp, B: wallet });
