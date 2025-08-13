@@ -289,7 +289,8 @@ export class WalletClient {
               result = null;
               break;
             default:
-              throw new Error(`Method not supported: ${request.method}`);
+              // ignore other methods
+              return;
           }
 
           // reject if undefined result

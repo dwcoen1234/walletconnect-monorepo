@@ -2,6 +2,7 @@ import Client from "@walletconnect/sign-client";
 import { JsonRpcProvider } from "@walletconnect/jsonrpc-provider";
 import { HttpConnection } from "@walletconnect/jsonrpc-http-connection";
 import { EngineTypes, SessionTypes } from "@walletconnect/types";
+import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 
 import {
   IProvider,
@@ -9,12 +10,21 @@ import {
   SubProviderOpts,
   RequestParams,
   SessionNamespace,
+  SendCallsResult,
 } from "../types";
 
-import { extractCapabilitiesFromSession, getChainId, getGlobal, getRpcUrl } from "../utils";
+import {
+  extractCapabilitiesFromSession,
+  getChainId,
+  getGlobal,
+  getRpcUrl,
+  getStoredSendCalls,
+  prepareCallStatusFromStoredSendCalls,
+  Storage,
+  storeSendCalls,
+} from "../utils";
 import EventEmitter from "events";
 import { BUNDLER_URL, PROVIDER_EVENTS } from "../constants";
-import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 
 class Eip155Provider implements IProvider {
   public name = "eip155";
@@ -24,6 +34,7 @@ class Eip155Provider implements IProvider {
   public namespace: SessionNamespace;
   public httpProviders: RpcProvidersMap;
   public events: EventEmitter;
+  public storage: Storage;
 
   constructor(opts: SubProviderOpts) {
     this.namespace = opts.namespace;
@@ -31,6 +42,7 @@ class Eip155Provider implements IProvider {
     this.client = getGlobal("client");
     this.httpProviders = this.createHttpProviders();
     this.chainId = parseInt(this.getDefaultChain());
+    this.storage = Storage.getStorage(this.client.core.storage);
   }
 
   public async request<T = unknown>(args: RequestParams): Promise<T> {
@@ -48,6 +60,8 @@ class Eip155Provider implements IProvider {
         return (await this.getCapabilities(args)) as unknown as T;
       case "wallet_getCallsStatus":
         return (await this.getCallStatus(args)) as unknown as T;
+      case "wallet_sendCalls":
+        return (await this.sendCalls(args)) as unknown as T;
       default:
         break;
     }
@@ -131,13 +145,18 @@ class Eip155Provider implements IProvider {
     ];
   }
 
-  private getHttpProvider(): JsonRpcProvider {
-    const chain = this.chainId;
+  private getHttpProvider(chainId?: number): JsonRpcProvider {
+    const chain = chainId || this.chainId;
     const http = this.httpProviders[chain];
-    if (typeof http === "undefined") {
-      throw new Error(`JSON-RPC provider for ${chain} not found`);
+    if (http) {
+      return http;
     }
-    return http;
+
+    this.httpProviders = {
+      ...this.httpProviders,
+      [chain]: this.createHttpProvider(chain),
+    };
+    return this.httpProviders[chain];
   }
 
   private async handleSwitchChain(args: RequestParams): Promise<any> {
@@ -230,7 +249,7 @@ class Eip155Provider implements IProvider {
 
   private async getCallStatus(args: RequestParams) {
     const session = this.client.session.get(args.topic);
-    const bundlerName = session.sessionProperties?.bundler_name;
+    const bundlerName = session.sessionProperties?.bundler_name as string;
     if (bundlerName) {
       const bundlerUrl = this.getBundlerUrl(args.chainId, bundlerName);
       try {
@@ -239,12 +258,27 @@ class Eip155Provider implements IProvider {
         console.warn("Failed to fetch call status from bundler", error, bundlerUrl);
       }
     }
-    const customUrl = session.sessionProperties?.bundler_url;
+    const customUrl = session.sessionProperties?.bundler_url as string;
     if (customUrl) {
       try {
         return await this.getUserOperationReceipt(customUrl, args);
       } catch (error) {
         console.warn("Failed to fetch call status from custom bundler", error, customUrl);
+      }
+    }
+
+    const storedSendCalls = await getStoredSendCalls({
+      resultId: args.request.params?.[0] as string,
+      storage: this.storage,
+    });
+    if (storedSendCalls) {
+      try {
+        return await prepareCallStatusFromStoredSendCalls(
+          storedSendCalls,
+          this.getHttpProvider.bind(this),
+        );
+      } catch (error) {
+        console.warn("Failed to fetch call status from stored send calls", error, storedSendCalls);
       }
     }
 
@@ -274,6 +308,25 @@ class Eip155Provider implements IProvider {
 
   private getBundlerUrl(cap2ChainId: string, bundlerName: string) {
     return `${BUNDLER_URL}?projectId=${this.client.core.projectId}&chainId=${cap2ChainId}&bundler=${bundlerName}`;
+  }
+
+  private async sendCalls(args: RequestParams) {
+    const result = await this.client.request<SendCallsResult>(args as EngineTypes.RequestParams);
+    const sendCallsParams = args.request.params?.[0];
+    const resultId = result?.id;
+    const capabilities = result?.capabilities || {};
+    const caip2 = capabilities?.caip345?.caip2;
+    const transactionHashes = capabilities?.caip345?.transactionHashes;
+
+    if (!resultId || !caip2 || !transactionHashes?.length) {
+      return result;
+    }
+
+    await storeSendCalls({
+      sendCalls: { request: sendCallsParams, result },
+      storage: this.storage,
+    });
+    return result;
   }
 }
 

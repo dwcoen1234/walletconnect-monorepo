@@ -1,5 +1,16 @@
 # @walletconnect/universal-provider
 
+## 2.21.8
+
+### Patch Changes
+
+- [#6815](https://github.com/WalletConnect/walletconnect-monorepo/pull/6815) [`9225650cd2ee32e5e02495ad18eafd4354950e0c`](https://github.com/WalletConnect/walletconnect-monorepo/commit/9225650cd2ee32e5e02495ad18eafd4354950e0c) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Implemented 5792 capabilities fetching and send calls status proxy
+
+- Updated dependencies [[`9225650cd2ee32e5e02495ad18eafd4354950e0c`](https://github.com/WalletConnect/walletconnect-monorepo/commit/9225650cd2ee32e5e02495ad18eafd4354950e0c)]:
+  - @walletconnect/sign-client@2.21.8
+  - @walletconnect/types@2.21.8
+  - @walletconnect/utils@2.21.8
+
 ## 2.21.7
 
 ### Patch Changes
