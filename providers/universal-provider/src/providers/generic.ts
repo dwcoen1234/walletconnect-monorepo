@@ -114,7 +114,8 @@ class GenericProvider implements IProvider {
   }
 
   private getHttpProvider(chain: string): JsonRpcProvider {
-    const http = this.httpProviders[chain];
+    const chainReference = parseChainId(chain).reference;
+    const http = this.httpProviders[chainReference];
     if (typeof http === "undefined") {
       throw new Error(`JSON-RPC provider for ${chain} not found`);
     }
