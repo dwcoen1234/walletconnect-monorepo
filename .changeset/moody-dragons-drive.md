@@ -9,4 +9,4 @@
 "@walletconnect/signer-connection": patch
 ---
 
-Fixes redudnant `accountsChanged` emit due to incorrect if statement
+Fixes redundant `accountsChanged` emit due to incorrect if statement
