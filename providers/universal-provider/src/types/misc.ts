@@ -166,3 +166,20 @@ export interface StoreSendCallsParams {
 export type StoredSendCalls = StoreSendCallsParams & {
   expiry: number;
 };
+
+export type DefaultChainChanged = {
+  currentCaipChainId: string;
+  previousCaipChainId: string;
+};
+
+export type OnChainChanged = {
+  currentCaipChainId: string;
+  previousCaipChainId?: string;
+  internal?: boolean;
+};
+
+export type EmitAccountsChangedOnChainChange = {
+  namespace: string;
+  currentCaipChainId: string;
+  previousCaipChainId?: string;
+};
