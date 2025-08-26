@@ -105,6 +105,7 @@ import {
   buildSignedExtrinsicHash,
   getSignDirectHash,
   LimitedSet,
+  getWalletSendCallsHashes,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -3317,6 +3318,10 @@ export class Engine extends IEngine {
 
       if (method === "cosmos_signDirect") {
         return [getSignDirectHash(result)];
+      }
+
+      if (method === "wallet_sendCalls") {
+        return getWalletSendCallsHashes(result);
       }
 
       // result = 0x...
