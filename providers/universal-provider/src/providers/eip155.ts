@@ -80,8 +80,12 @@ class Eip155Provider implements IProvider {
     if (!this.httpProviders[chainId]) {
       this.setHttpProvider(parseInt(chainId), rpcUrl);
     }
+    const previous = this.chainId;
     this.chainId = parseInt(chainId);
-    this.events.emit(PROVIDER_EVENTS.DEFAULT_CHAIN_CHANGED, `${this.name}:${chainId}`);
+    this.events.emit(PROVIDER_EVENTS.DEFAULT_CHAIN_CHANGED, {
+      currentCaipChainId: `${this.name}:${chainId}`,
+      previousCaipChainId: `${this.name}:${previous}`,
+    });
   }
 
   public requestAccounts(): string[] {

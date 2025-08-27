@@ -63,8 +63,12 @@ class GenericProvider implements IProvider {
     if (!this.httpProviders[chainId]) {
       this.setHttpProvider(chainId, rpcUrl);
     }
+    const previous = this.chainId;
     this.chainId = chainId;
-    this.events.emit(PROVIDER_EVENTS.DEFAULT_CHAIN_CHANGED, `${this.name}:${chainId}`);
+    this.events.emit(PROVIDER_EVENTS.DEFAULT_CHAIN_CHANGED, {
+      currentCaipChainId: `${this.name}:${chainId}`,
+      previousCaipChainId: `${this.name}:${previous}`,
+    });
   }
 
   public getDefaultChain(): string {
