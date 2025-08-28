@@ -12,16 +12,7 @@ import {
   populateNamespacesChains,
   setGlobal,
 } from "./utils";
-import PolkadotProvider from "./providers/polkadot";
 import Eip155Provider from "./providers/eip155";
-import SolanaProvider from "./providers/solana";
-import CosmosProvider from "./providers/cosmos";
-import AlgorandProvider from "./providers/algorand";
-import CardanoProvider from "./providers/cardano";
-import ElrondProvider from "./providers/elrond";
-import MultiversXProvider from "./providers/multiversx";
-import NearProvider from "./providers/near";
-import TezosProvider from "./providers/tezos";
 import GenericProvider from "./providers/generic";
 
 import {
@@ -35,6 +26,9 @@ import {
   PairingsCleanupOpts,
   ProviderAccounts,
   AuthenticateParams,
+  DefaultChainChanged,
+  OnChainChanged,
+  EmitAccountsChangedOnChainChange,
 } from "./types";
 
 import { RELAY_URL, LOGGER, STORAGE, PROVIDER_EVENTS, GENERIC_SUBPROVIDER_NAME } from "./constants";
@@ -339,51 +333,6 @@ export class UniversalProvider implements IUniversalProvider {
             namespace: combinedNamespace,
           });
           break;
-        case "algorand":
-          this.rpcProviders[namespace] = new AlgorandProvider({
-            namespace: combinedNamespace,
-          });
-          break;
-        case "solana":
-          this.rpcProviders[namespace] = new SolanaProvider({
-            namespace: combinedNamespace,
-          });
-          break;
-        case "cosmos":
-          this.rpcProviders[namespace] = new CosmosProvider({
-            namespace: combinedNamespace,
-          });
-          break;
-        case "polkadot":
-          this.rpcProviders[namespace] = new PolkadotProvider({
-            namespace: combinedNamespace,
-          });
-          break;
-        case "cip34":
-          this.rpcProviders[namespace] = new CardanoProvider({
-            namespace: combinedNamespace,
-          });
-          break;
-        case "elrond":
-          this.rpcProviders[namespace] = new ElrondProvider({
-            namespace: combinedNamespace,
-          });
-          break;
-        case "multiversx":
-          this.rpcProviders[namespace] = new MultiversXProvider({
-            namespace: combinedNamespace,
-          });
-          break;
-        case "near":
-          this.rpcProviders[namespace] = new NearProvider({
-            namespace: combinedNamespace,
-          });
-          break;
-        case "tezos":
-          this.rpcProviders[namespace] = new TezosProvider({
-            namespace: combinedNamespace,
-          });
-          break;
         default:
           this.rpcProviders[namespace] = new GenericProvider({
             namespace: combinedNamespace,
@@ -422,7 +371,7 @@ export class UniversalProvider implements IUniversalProvider {
             ? `${namespace}:${convertChainIdToNumber(payloadChainId)}`
             : requestChainId;
 
-        this.onChainChanged(chainIdToProcess);
+        this.onChainChanged({ currentCaipChainId: chainIdToProcess });
       } else {
         this.events.emit(event.name, event.data);
       }
@@ -449,8 +398,8 @@ export class UniversalProvider implements IUniversalProvider {
       });
     });
 
-    this.on(PROVIDER_EVENTS.DEFAULT_CHAIN_CHANGED, (caip2ChainId: string) => {
-      this.onChainChanged(caip2ChainId, true);
+    this.on(PROVIDER_EVENTS.DEFAULT_CHAIN_CHANGED, (params: DefaultChainChanged) => {
+      this.onChainChanged({ ...params, internal: true });
     });
   }
 
@@ -510,16 +459,19 @@ export class UniversalProvider implements IUniversalProvider {
     return await this.getProvider(namespace).requestAccounts();
   }
 
-  private async onChainChanged(caip2Chain: string, internal = false): Promise<void> {
+  private async onChainChanged({
+    currentCaipChainId,
+    previousCaipChainId,
+    internal = false,
+  }: OnChainChanged): Promise<void> {
     if (!this.namespaces) return;
 
-    const [namespace, chainId] = this.validateChain(caip2Chain);
+    const [namespace, chainId] = this.validateChain(currentCaipChainId);
 
     if (!chainId) return;
 
     this.updateNamespaceChain(namespace, chainId);
 
-    const previousChainId = this.getProvider(namespace).getDefaultChain();
     if (!internal) {
       this.getProvider(namespace).setDefaultChain(chainId);
     } else {
@@ -527,7 +479,11 @@ export class UniversalProvider implements IUniversalProvider {
       // otherwise events are emitted twice
       // once on the chainChanged event and once triggered by `this.getProvider(namespace).setDefaultChain(chainId);`
       this.events.emit("chainChanged", chainId);
-      this.emitAccountsChangedOnChainChange({ namespace, previousChainId, newChainId: caip2Chain });
+      this.emitAccountsChangedOnChainChange({
+        namespace,
+        currentCaipChainId,
+        previousCaipChainId,
+      });
     }
 
     await this.persist("namespaces", this.namespaces);
@@ -538,22 +494,18 @@ export class UniversalProvider implements IUniversalProvider {
    */
   private emitAccountsChangedOnChainChange({
     namespace,
-    previousChainId,
-    newChainId,
-  }: {
-    namespace: string;
-    previousChainId: string;
-    newChainId: string;
-  }): void {
+    currentCaipChainId,
+    previousCaipChainId,
+  }: EmitAccountsChangedOnChainChange): void {
     try {
-      if (previousChainId === newChainId) {
+      if (previousCaipChainId === currentCaipChainId) {
         return;
       }
 
       const accounts = this.session?.namespaces[namespace]?.accounts;
       if (!accounts) return;
       const newChainIdAccounts = accounts
-        .filter((account) => account.includes(`${newChainId}:`))
+        .filter((account) => account.includes(`${currentCaipChainId}:`))
         .map(parseCaip10Account);
       if (!isValidArray(newChainIdAccounts)) return;
       this.events.emit("accountsChanged", newChainIdAccounts);

@@ -724,7 +724,7 @@ describe("Sign Client Integration", () => {
                   chains: ["solana:devnet"],
                 },
                 eip155: {
-                  methods: ["eth_sendTransaction"],
+                  methods: ["eth_sendTransaction", "wallet_sendCalls"],
                   events: [],
                   chains: ["eip155:1"],
                 },
@@ -791,7 +791,7 @@ describe("Sign Client Integration", () => {
                   accounts: ["solana:devnet:0x"],
                 },
                 eip155: {
-                  methods: ["eth_sendTransaction"],
+                  methods: ["eth_sendTransaction", "wallet_sendCalls"],
                   events: [],
                   accounts: ["eip155:1:0x"],
                 },
@@ -941,6 +941,265 @@ describe("Sign Client Integration", () => {
               resolve();
             }),
           ]);
+
+          // eip155 wallet_sendCalls example 1 { id: "0x" }
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+
+                const result = formatJsonRpcResult(id, { id: "0x" });
+                let checkedWalletPublish = false;
+
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  checkedWalletPublish = true;
+                  const tvf = publishPayload.tvf;
+
+                  expect(tvf).to.exist;
+                  expect(tvf?.chainId).to.eq(params.chainId);
+                  expect(tvf?.rpcMethods).to.eql([params.request.method]);
+                  expect(tvf?.txHashes).to.eql([result.result.id]);
+                  expect(tvf?.contractAddresses).to.eql([params.request.params[0].to]);
+
+                  if (!tvf) {
+                    return console.error("eip155 tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("eip155 tvf is missing required fields");
+                  }
+                  if (tvf.txHashes[0] !== result.result.id) {
+                    return console.error(
+                      "eip155 txHashes do not match: wallet_sendCalls",
+                      tvf.txHashes[0],
+                      result.result,
+                      id,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "wallet_sendCalls",
+                params: [
+                  {
+                    data: "0xa9059cbb00000000000000000000000013a2ff792037aa2cd77fe1f4b522921ac59a9c5200000000000000000000000000000000000000000000000000000000003d0900",
+                    from: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+                    to: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // eip155 wallet_sendCalls example 2 { id: "0x", capabilities: { caip345: { transactionHashes: ["0x1"] } } }
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+
+                const result = formatJsonRpcResult(id, {
+                  id: "0x",
+                  capabilities: { caip345: { transactionHashes: ["0x1"] } },
+                });
+                let checkedWalletPublish = false;
+
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  checkedWalletPublish = true;
+                  const tvf = publishPayload.tvf;
+
+                  expect(tvf).to.exist;
+                  expect(tvf?.chainId).to.eq(params.chainId);
+                  expect(tvf?.rpcMethods).to.eql([params.request.method]);
+                  expect(tvf?.txHashes).to.eql(["0x", "0x1"]);
+                  expect(tvf?.contractAddresses).to.eql([params.request.params[0].to]);
+
+                  if (!tvf) {
+                    return console.error("eip155 tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("eip155 tvf is missing required fields");
+                  }
+                  if (
+                    tvf.txHashes[0] !== result.result.id &&
+                    tvf.txHashes[1] !== result.result.capabilities.caip345.transactionHashes[0]
+                  ) {
+                    return console.error(
+                      "eip155 txHashes do not match: wallet_sendCalls",
+                      tvf.txHashes,
+                      result.result,
+                      id,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "wallet_sendCalls",
+                params: [
+                  {
+                    data: "0xa9059cbb00000000000000000000000013a2ff792037aa2cd77fe1f4b522921ac59a9c5200000000000000000000000000000000000000000000000000000000003d0900",
+                    from: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+                    to: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
+          // eip155 wallet_sendCalls example 3 `0x`
+          await Promise.all([
+            new Promise<void>((resolve) => {
+              clients.B.once("session_request", async (args) => {
+                const pendingRequests = clients.B.pendingRequest.getAll();
+                const { id, topic, params } = pendingRequests[0];
+                expect(params).toEqual(args.params);
+                expect(topic).toEqual(args.topic);
+                expect(id).toEqual(args.id);
+
+                const result = formatJsonRpcResult(id, "0x");
+                let checkedWalletPublish = false;
+
+                clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                  checkedWalletPublish = true;
+                  const tvf = publishPayload.tvf;
+
+                  expect(tvf).to.exist;
+                  expect(tvf?.chainId).to.eq(params.chainId);
+                  expect(tvf?.rpcMethods).to.eql([params.request.method]);
+                  expect(tvf?.txHashes).to.eql([result.result]);
+                  expect(tvf?.contractAddresses).to.eql([params.request.params[0].to]);
+
+                  if (!tvf) {
+                    return console.error("eip155 tvf is undefined");
+                  }
+                  if (!tvf.chainId || !tvf.rpcMethods || !tvf.txHashes) {
+                    return console.error("eip155 tvf is missing required fields");
+                  }
+                  if (tvf.txHashes[0] !== result.result) {
+                    return console.error(
+                      "eip155 txHashes do not match: wallet_sendCalls",
+                      tvf.txHashes[0],
+                      result.result,
+                      id,
+                    );
+                  }
+
+                  checkedWalletPublish = true;
+                });
+                await clients.B.respond({
+                  topic,
+                  response: result,
+                });
+                expect(checkedWalletPublish).to.be.true;
+                resolve();
+              });
+            }),
+            new Promise<void>(async (resolve) => {
+              const requestParams = {
+                method: "wallet_sendCalls",
+                params: [
+                  {
+                    data: "0xa9059cbb00000000000000000000000013a2ff792037aa2cd77fe1f4b522921ac59a9c5200000000000000000000000000000000000000000000000000000000003d0900",
+                    from: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+                    to: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+                  },
+                ],
+              };
+              let checkedDappPublish = false;
+
+              clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+                checkedDappPublish = true;
+                const tvf = publishPayload.tvf;
+                expect(tvf).to.exist;
+                expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+                expect(tvf?.rpcMethods).to.eql([requestParams.method]);
+                expect(tvf?.txHashes).to.be.undefined;
+                expect(tvf?.contractAddresses).to.eql([requestParams.params[0].to]);
+              });
+
+              await clients.A.request({
+                topic,
+                ...TEST_REQUEST_PARAMS,
+                request: {
+                  ...TEST_REQUEST_PARAMS.request,
+                  ...requestParams,
+                },
+              });
+              expect(checkedDappPublish).to.be.true;
+              resolve();
+            }),
+          ]);
+
           // solana solana_signAndSendTransaction example
           await Promise.all([
             new Promise<void>((resolve) => {

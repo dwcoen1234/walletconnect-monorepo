@@ -63,8 +63,12 @@ class GenericProvider implements IProvider {
     if (!this.httpProviders[chainId]) {
       this.setHttpProvider(chainId, rpcUrl);
     }
+    const previous = this.chainId;
     this.chainId = chainId;
-    this.events.emit(PROVIDER_EVENTS.DEFAULT_CHAIN_CHANGED, `${this.name}:${chainId}`);
+    this.events.emit(PROVIDER_EVENTS.DEFAULT_CHAIN_CHANGED, {
+      currentCaipChainId: `${this.name}:${chainId}`,
+      previousCaipChainId: `${this.name}:${previous}`,
+    });
   }
 
   public getDefaultChain(): string {
@@ -107,13 +111,15 @@ class GenericProvider implements IProvider {
     const http = {};
     this.namespace?.accounts?.forEach((account) => {
       const chain = parseChainId(account);
-      http[chain.reference] = this.createHttpProvider(account);
+      const customRpcUrl = this.namespace?.rpcMap?.[`${chain.namespace}:${chain.reference}`];
+      http[chain.reference] = this.createHttpProvider(account, customRpcUrl);
     });
     return http;
   }
 
   private getHttpProvider(chain: string): JsonRpcProvider {
-    const http = this.httpProviders[chain];
+    const chainReference = parseChainId(chain).reference;
+    const http = this.httpProviders[chainReference];
     if (typeof http === "undefined") {
       throw new Error(`JSON-RPC provider for ${chain} not found`);
     }

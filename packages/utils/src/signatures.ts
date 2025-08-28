@@ -258,3 +258,33 @@ export function getSignDirectHash(payload: {
 
   return Buffer.from(hashBytes).toString("hex").toUpperCase();
 }
+
+export function getWalletSendCallsHashes(
+  result: string | { id: string; capabilities: { caip345: { transactionHashes: string[] } } },
+) {
+  const hashes: string[] = [];
+  try {
+    if (typeof result === "string") {
+      hashes.push(result);
+      return hashes;
+    }
+
+    if (typeof result !== "object") {
+      return hashes;
+    }
+
+    if (result?.id) {
+      hashes.push(result.id);
+    }
+
+    const txHashes = result?.capabilities?.caip345?.transactionHashes;
+
+    if (txHashes) {
+      hashes.push(...txHashes);
+    }
+  } catch (error) {
+    console.warn("getWalletSendCallsHashes failed: ", error);
+  }
+
+  return hashes;
+}
