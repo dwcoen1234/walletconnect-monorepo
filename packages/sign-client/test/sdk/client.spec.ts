@@ -874,7 +874,6 @@ describe("Sign Client Integration", () => {
 
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                   checkedWalletPublish = true;
-                  console.log("publishPayload", publishPayload);
                   const tvf = publishPayload.params;
                   expect(tvf).to.exist;
                   expect(tvf?.chainId).to.eq(params.chainId);
