@@ -874,7 +874,8 @@ describe("Sign Client Integration", () => {
 
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                   checkedWalletPublish = true;
-                  const tvf = publishPayload.tvf;
+                  console.log("publishPayload", publishPayload);
+                  const tvf = publishPayload.params;
                   expect(tvf).to.exist;
                   expect(tvf?.chainId).to.eq(params.chainId);
                   expect(tvf?.rpcMethods).to.eql([params.request.method]);
@@ -921,7 +922,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -957,7 +958,7 @@ describe("Sign Client Integration", () => {
 
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                   checkedWalletPublish = true;
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
 
                   expect(tvf).to.exist;
                   expect(tvf?.chainId).to.eq(params.chainId);
@@ -1005,7 +1006,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1044,7 +1045,7 @@ describe("Sign Client Integration", () => {
 
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                   checkedWalletPublish = true;
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
 
                   expect(tvf).to.exist;
                   expect(tvf?.chainId).to.eq(params.chainId);
@@ -1095,7 +1096,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1131,7 +1132,7 @@ describe("Sign Client Integration", () => {
 
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                   checkedWalletPublish = true;
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
 
                   expect(tvf).to.exist;
                   expect(tvf?.chainId).to.eq(params.chainId);
@@ -1179,7 +1180,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1214,7 +1215,7 @@ describe("Sign Client Integration", () => {
                 let checkedWalletPublish = false;
 
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   console.log("tvf", tvf);
                   if (!tvf) {
                     return console.error("solana tvf is undefined");
@@ -1256,7 +1257,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1292,7 +1293,7 @@ describe("Sign Client Integration", () => {
                 let checkedWalletPublish = false;
 
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("solana tvf is undefined");
                   }
@@ -1334,7 +1335,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1380,7 +1381,7 @@ describe("Sign Client Integration", () => {
                 ];
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("solana tvf is undefined");
                   }
@@ -1422,7 +1423,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1461,7 +1462,7 @@ describe("Sign Client Integration", () => {
                 const expectedTxHashes = ["C98G1Uwh5soPMtZZmjUFwbVzWLMoAHzi5jrX2BtABe8v"];
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("sui tvf is undefined");
                   }
@@ -1501,7 +1502,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1539,7 +1540,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("sui tvf is undefined");
                   }
@@ -1585,7 +1586,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1623,7 +1624,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("hedera tvf is undefined");
                   }
@@ -1669,7 +1670,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1707,7 +1708,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("hedera tvf is undefined");
                   }
@@ -1753,7 +1754,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1800,7 +1801,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("near tvf is undefined");
                   }
@@ -1843,7 +1844,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1893,7 +1894,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("near tvf is undefined");
                   }
@@ -1939,7 +1940,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -1979,7 +1980,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("tron tvf is undefined");
                   }
@@ -2022,7 +2023,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -2064,7 +2065,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("xrpl tvf is undefined");
                   }
@@ -2107,7 +2108,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -2149,7 +2150,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("xrpl tvf is undefined");
                   }
@@ -2195,7 +2196,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -2235,7 +2236,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("algorand tvf is undefined");
                   }
@@ -2278,7 +2279,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -2318,7 +2319,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("bip122 tvf is undefined");
                   }
@@ -2361,7 +2362,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -2401,7 +2402,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("stacks tvf is undefined");
                   }
@@ -2444,7 +2445,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -2487,7 +2488,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("polkadot tvf is undefined");
                   }
@@ -2546,7 +2547,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
@@ -2603,7 +2604,7 @@ describe("Sign Client Integration", () => {
 
                 let checkedWalletPublish = false;
                 clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-                  const tvf = publishPayload.tvf;
+                  const tvf = publishPayload.params;
                   if (!tvf) {
                     return console.error("cosmos tvf is undefined");
                   }
@@ -2642,7 +2643,7 @@ describe("Sign Client Integration", () => {
 
               clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
                 checkedDappPublish = true;
-                const tvf = publishPayload.tvf;
+                const tvf = publishPayload.params;
                 expect(tvf).to.exist;
                 expect(tvf?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
                 expect(tvf?.rpcMethods).to.eql([requestParams.method]);
