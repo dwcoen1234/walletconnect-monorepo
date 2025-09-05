@@ -261,10 +261,6 @@ export class Engine extends IPOSClientEngine {
     };
     let transactionResult;
     while (!transactionResult) {
-      if (transactionResult) {
-        break;
-      }
-
       const response = await this.fetchRpcRequest(JSON.stringify(payload));
       if (response.result.status === "CONFIRMED") {
         console.log("payment_successful", response.result);

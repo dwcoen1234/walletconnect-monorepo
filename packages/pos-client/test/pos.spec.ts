@@ -41,9 +41,9 @@ describe("Sign Integration", () => {
   });
 
   it("should initialize a POS client", async () => {
-    expect(pos).to.be.exist;
-    expect(pos.engine.signClient).to.be.exist;
-    expect(pos.engine.signClient.core).to.be.exist;
+    expect(pos).to.exist;
+    expect(pos.engine.signClient).to.exist;
+    expect(pos.engine.signClient.core).to.exist;
     expect(pos.engine.signClient.core.projectId).to.be.equal(projectId);
     expect(pos.metadata.merchantName).to.be.equal(merchantName);
     expect(pos.metadata.url).to.be.equal(url);
@@ -79,8 +79,8 @@ describe("Sign Integration", () => {
     ];
     await pos.setTokens({ tokens });
 
-    expect(pos.engine.tokens).to.be.exist;
-    expect(pos.engine.tokens.length).to.be.equal(Object.keys(tokens).length);
+    expect(pos.engine.tokens).to.exist;
+    expect(pos.engine.tokens.length).to.be.equal(tokens.length);
     expect(pos.engine.tokens).to.deep.equal(tokens);
     expect(pos.engine.tokens[0]).to.deep.equal(tokens[0]);
     expect(pos.engine.tokens[1]).to.deep.equal(tokens[1]);
