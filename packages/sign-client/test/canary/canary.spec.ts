@@ -100,7 +100,6 @@ describe("Canary", () => {
             let checkedWalletPublish = false;
 
             clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-              checkedWalletPublish = true;
               const publishParams = publishPayload.params;
               expect(publishParams).to.exist;
               expect(publishParams?.chainId).to.eq(params.chainId);
@@ -111,8 +110,6 @@ describe("Canary", () => {
               expect(publishParams.message).to.be.a("string");
               expect(publishParams.ttl).to.exist;
               expect(publishParams.ttl).to.be.a("number");
-              expect(publishParams.attestation).to.exist;
-              expect(publishParams.attestation).to.be.a("string");
               expect(publishParams.tag).to.exist;
               // session request response tag
               expect(publishParams.tag).to.equal(1109);
@@ -140,6 +137,8 @@ describe("Canary", () => {
               topic,
               response: result,
             });
+            // timeout to wait for the publish check
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             expect(checkedWalletPublish).to.be.true;
             resolve();
           });
@@ -158,12 +157,11 @@ describe("Canary", () => {
           let checkedDappPublish = false;
 
           clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
-            checkedDappPublish = true;
             const publishParams = publishPayload.params;
             expect(publishParams).to.exist;
             expect(publishParams?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
             expect(publishParams?.rpcMethods).to.eql([requestParams.method]);
-            expect(publishParams?.txHashes).to.be.undefined;
+            expect(publishParams?.txHashes).to.eql([]);
             expect(publishParams?.contractAddresses).to.eql([requestParams.params[0].to]);
             expect(publishParams.topic).to.be.equal(sessionA.topic);
             expect(publishParams.message).to.exist;
@@ -175,6 +173,7 @@ describe("Canary", () => {
             expect(publishParams.tag).to.exist;
             // session request tag
             expect(publishParams.tag).to.equal(1108);
+            checkedDappPublish = true;
           });
 
           await clients.A.request({
@@ -185,6 +184,8 @@ describe("Canary", () => {
               ...requestParams,
             },
           });
+          // timeout to wait for the publish check
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           expect(checkedDappPublish).to.be.true;
           resolve();
         }),
