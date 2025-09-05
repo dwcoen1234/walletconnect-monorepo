@@ -59,6 +59,8 @@ jobs:
         run: npm run build
 
       - name: Publish canary on NPM 🚀
-        run: npm publish --access public --tag canary --workspace ${{ github.event.inputs.dir }}
+        run: |
+          cd ${{ github.event.inputs.dir }}
+          npm publish --access public --tag canary
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
