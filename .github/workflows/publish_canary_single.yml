@@ -40,11 +40,16 @@ jobs:
       - name: Validate dir input 📂
         run: |
           DIR="${{ github.event.inputs.dir }}"
-          case "$DIR" in
-            packages/*|providers/*) echo "✅ Valid dir: $DIR" ;;
-            *) echo "❌ Invalid dir: $DIR"; exit 1 ;;
-          esac
-
+          # Only allow directories like packages/foo or providers/bar (no slashes after the prefix, no .., no special chars)
+          if [[ ! "$DIR" =~ ^(packages|providers)/[a-zA-Z0-9_-]+$ ]]; then
+            echo "❌ Invalid dir: $DIR"
+            exit 1
+          fi
+          if [ ! -d "$DIR" ]; then
+            echo "❌ Directory does not exist: $DIR"
+            exit 1
+          fi
+          echo "✅ Valid dir: $DIR"
       - name: Install dependencies
         run: npm ci
 
