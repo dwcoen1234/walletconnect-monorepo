@@ -8,11 +8,14 @@ import {
 } from "../shared";
 import {
   TEST_RELAY_URL,
+  TEST_REQUEST_PARAMS,
   TEST_SIGN_CLIENT_OPTIONS_A,
   TEST_SIGN_CLIENT_OPTIONS_B,
 } from "./../shared/values";
 import { describe, it, expect, afterEach } from "vitest";
 import { SignClient } from "../../src";
+import { formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
+import { RELAYER_EVENTS } from "@walletconnect/core";
 
 const environment = process.env.ENVIRONMENT || "dev";
 const region = process.env.REGION || "unknown";
@@ -83,6 +86,110 @@ describe("Canary", () => {
 
       const successful = true;
       const pairingLatencyMs = Date.now() - start - humanInputLatencyMs;
+
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          clients.B.once("session_request", async (args) => {
+            const pendingRequests = clients.B.pendingRequest.getAll();
+            const { id, topic, params } = pendingRequests[0];
+            expect(params).toEqual(args.params);
+            expect(topic).toEqual(args.topic);
+            expect(id).toEqual(args.id);
+
+            const result = formatJsonRpcResult(id, "0x");
+            let checkedWalletPublish = false;
+
+            clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+              checkedWalletPublish = true;
+              const publishParams = publishPayload.params;
+              expect(publishParams).to.exist;
+              expect(publishParams?.chainId).to.eq(params.chainId);
+              expect(publishParams?.rpcMethods).to.eql([params.request.method]);
+              expect(publishParams?.txHashes).to.eql([result.result]);
+              expect(publishParams?.contractAddresses).to.eql([params.request.params[0].to]);
+              expect(publishParams.message).to.exist;
+              expect(publishParams.message).to.be.a("string");
+              expect(publishParams.ttl).to.exist;
+              expect(publishParams.ttl).to.be.a("number");
+              expect(publishParams.attestation).to.exist;
+              expect(publishParams.attestation).to.be.a("string");
+              expect(publishParams.tag).to.exist;
+              // session request response tag
+              expect(publishParams.tag).to.equal(1109);
+
+              if (!publishParams) {
+                return console.error("eip155 tvf is undefined in publish payload params");
+              }
+              if (!publishParams.chainId || !publishParams.rpcMethods || !publishParams.txHashes) {
+                return console.error(
+                  "eip155 tvf is missing required fields in publish payload params",
+                );
+              }
+              if (publishParams.txHashes[0] !== result.result) {
+                return console.error(
+                  "eip155 txHashes do not match: signature - eth_sendTransaction in publish payload params",
+                  publishParams.txHashes[0],
+                  result.result,
+                  id,
+                );
+              }
+
+              checkedWalletPublish = true;
+            });
+            await clients.B.respond({
+              topic,
+              response: result,
+            });
+            expect(checkedWalletPublish).to.be.true;
+            resolve();
+          });
+        }),
+        new Promise<void>(async (resolve) => {
+          const requestParams = {
+            method: "eth_sendTransaction",
+            params: [
+              {
+                data: "0xa9059cbb00000000000000000000000013a2ff792037aa2cd77fe1f4b522921ac59a9c5200000000000000000000000000000000000000000000000000000000003d0900",
+                from: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+                to: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+              },
+            ],
+          };
+          let checkedDappPublish = false;
+
+          clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+            checkedDappPublish = true;
+            const publishParams = publishPayload.params;
+            console.log("tvf", publishParams);
+            expect(publishParams).to.exist;
+            expect(publishParams?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
+            expect(publishParams?.rpcMethods).to.eql([requestParams.method]);
+            expect(publishParams?.txHashes).to.be.undefined;
+            expect(publishParams?.contractAddresses).to.eql([requestParams.params[0].to]);
+            expect(publishParams.topic).to.be.equal(sessionA.topic);
+            expect(publishParams.message).to.exist;
+            expect(publishParams.message).to.be.a("string");
+            expect(publishParams.ttl).to.exist;
+            expect(publishParams.ttl).to.be.a("number");
+            expect(publishParams.attestation).to.exist;
+            expect(publishParams.attestation).to.be.a("string");
+            expect(publishParams.tag).to.exist;
+            // session request tag
+            expect(publishParams.tag).to.equal(1108);
+          });
+
+          await clients.A.request({
+            topic: sessionA.topic,
+            ...TEST_REQUEST_PARAMS,
+            request: {
+              ...TEST_REQUEST_PARAMS.request,
+              ...requestParams,
+            },
+          });
+          expect(checkedDappPublish).to.be.true;
+          resolve();
+        }),
+      ]);
 
       // Send a ping
       const pingStart = Date.now();
