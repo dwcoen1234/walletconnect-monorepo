@@ -160,7 +160,6 @@ describe("Canary", () => {
           clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
             checkedDappPublish = true;
             const publishParams = publishPayload.params;
-            console.log("tvf", publishParams);
             expect(publishParams).to.exist;
             expect(publishParams?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
             expect(publishParams?.rpcMethods).to.eql([requestParams.method]);
