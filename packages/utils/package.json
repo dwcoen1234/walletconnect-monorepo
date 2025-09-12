@@ -53,7 +53,6 @@
   },
   "devDependencies": {
     "@stablelib/x25519": "1.0.3",
-    "@walletconnect/jsonrpc-types": "1.0.4",
-    "viem": "2.37.5"
+    "@walletconnect/jsonrpc-types": "1.0.4"
   }
 }
