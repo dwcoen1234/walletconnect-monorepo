@@ -1,7 +1,6 @@
 import { AuthTypes } from "@walletconnect/types";
 import { describe, expect, it } from "vitest";
 import {
-  buildSignedExtrinsic,
   buildSignedExtrinsicHash,
   extractSolanaTransactionId,
   getAlgorandTransactionId,
