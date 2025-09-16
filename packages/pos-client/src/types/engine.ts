@@ -1,6 +1,7 @@
 import { ISignClient, SessionTypes } from "@walletconnect/types";
 import { IPOSClient, POSClientTypes } from "./client";
 import EventEmitter from "events";
+import { UtilsTypes } from ".";
 
 export declare namespace POSClientEngineTypes {
   type EngineEvents = POSClientTypes.Event | "await_approval";
@@ -21,14 +22,40 @@ export declare namespace POSClientEngineTypes {
   type Transaction = {
     method: string;
     params: TransactionParams[];
+    id: string;
+    chainId: string;
   };
 
   type RPCTransactions = {
     id: string;
     jsonrpc: string;
     result: {
-      transactionRpc: Transaction;
-      id: string;
+      transactions: Transaction[];
+    };
+  };
+
+  type RPCPaymentIntent = {
+    asset: string;
+    recipient: string;
+    amount: string;
+    sender: string;
+  };
+
+  type RPCSupportedNetworksResult = {
+    id: string;
+    jsonrpc: string;
+    result: {
+      namespaces: UtilsTypes.SupportedNamespaces;
+    };
+  };
+
+  type RPCCheckTransactionResult = {
+    id: string;
+    jsonrpc: string;
+    result: {
+      status: "CONFIRMED" | "FAILED" | "PENDING";
+      checkIn?: number;
+      error?: string;
     };
   };
 }
@@ -92,7 +119,7 @@ export abstract class IPOSClientEngine {
   }): Promise<void>;
 
   public abstract awaitPaymentConfirmed(params: {
-    intentId: number;
+    transactionId: string;
     result: unknown;
   }): Promise<void>;
 }

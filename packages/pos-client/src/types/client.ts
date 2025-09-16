@@ -34,6 +34,10 @@ export declare namespace POSClientTypes {
     storageOptions?: {
       databaseName: string;
     };
+    loggerOptions?: {
+      posLevel?: "info" | "debug" | "warn" | "error" | "silent";
+      signLevel?: "info" | "debug" | "warn" | "error" | "silent";
+    };
   }
 
   type Metadata = {

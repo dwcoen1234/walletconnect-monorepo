@@ -32,6 +32,9 @@ describe("Sign Integration", () => {
         description,
         logoIcon,
       },
+      loggerOptions: {
+        posLevel: "debug",
+      },
     });
     wallet = await SignClient.init({
       core: new Core(TEST_CORE_OPTIONS),
@@ -207,7 +210,7 @@ describe("Sign Integration", () => {
         });
       }),
       new Promise<void>((resolve) => {
-        pos.once("payment_broadcasted", ({ result }) => {
+        pos.once("payment_broadcasted", (result) => {
           console.log("payment_broadcasted", JSON.stringify(result, null, 2));
           resolve();
         });
@@ -255,5 +258,130 @@ describe("Sign Integration", () => {
       }),
       pos.createPaymentIntent({ paymentIntents }),
     ]);
+  });
+
+  it("should accept multiple payment intents, establish a session, prepare transactions, send all requests to wallet, receive responses and await confirmations", async () => {
+    const evmChainId = "eip155:8453";
+    const solanaChainId = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
+
+    const evmToken: POSClientTypes.Token = {
+      network: { name: "Ethereum", chainId: evmChainId },
+      symbol: "USDC",
+      standard: "ERC20",
+      address: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`,
+    };
+    const solanaToken: POSClientTypes.Token = {
+      network: { name: "Solana", chainId: solanaChainId },
+      symbol: "USDC",
+      standard: "token",
+      address: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`,
+    };
+
+    pos.setTokens({ tokens: [evmToken, solanaToken] });
+
+    const paymentIntents: POSClientTypes.PaymentIntent[] = [
+      {
+        token: evmToken,
+        amount: "1",
+        recipient: `${evmChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
+      },
+      {
+        token: solanaToken,
+        amount: "1",
+        recipient: `${solanaChainId}:4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ`,
+      },
+    ];
+    let numPaymentSuccessful = 0;
+    let numPaymentRequested = 0;
+    let numPaymentBroadcasted = 0;
+    await Promise.all([
+      new Promise<void>((resolve) => {
+        pos.on("payment_successful", () => {
+          console.log("payment_successful");
+          numPaymentSuccessful++;
+          if (numPaymentSuccessful === paymentIntents.length) {
+            resolve();
+          }
+        });
+      }),
+      new Promise<void>((resolve) => {
+        pos.on("payment_requested", () => {
+          console.log("payment_requested");
+          numPaymentRequested++;
+          if (numPaymentRequested === paymentIntents.length) {
+            resolve();
+          }
+        });
+      }),
+      new Promise<void>((resolve) => {
+        pos.on("payment_broadcasted", (result) => {
+          console.log("payment_broadcasted", JSON.stringify(result, null, 2));
+          numPaymentBroadcasted++;
+          if (numPaymentBroadcasted === paymentIntents.length) {
+            resolve();
+          }
+        });
+      }),
+      new Promise<void>((resolve) => {
+        wallet.events.on("session_request", async (sessionRequest) => {
+          console.log("session_request", JSON.stringify(sessionRequest, null, 2));
+          if (sessionRequest.params.chainId === evmChainId) {
+            await wallet.respond({
+              topic: sessionRequest.topic,
+              response: formatJsonRpcResult(
+                sessionRequest.id,
+                "0xff16b7197277088039a45f9e23ccbb32077ebeec1e56e49b24b2f3731e1bd452",
+              ),
+            });
+          } else if (sessionRequest.params.chainId === solanaChainId) {
+            await wallet.respond({
+              topic: sessionRequest.topic,
+              response: formatJsonRpcResult(sessionRequest.id, {
+                signature:
+                  "2P1voPUU3txxMXpdFqyX4ggEQcthsvimmnoRNJV2tdKM9iiE2mUjMzFjpX3SJKEJaFG5QXKGABG2AebRihUVYx6z",
+              }),
+            });
+          }
+          resolve();
+        });
+      }),
+      new Promise<void>((resolve) => {
+        wallet.events.once("session_proposal", async (sessionProposal) => {
+          console.log("session_proposal", JSON.stringify(sessionProposal, null, 2));
+          await wallet.approve({
+            id: sessionProposal.id,
+            namespaces: {
+              eip155: {
+                ...sessionProposal.params.optionalNamespaces.eip155,
+                accounts: [`${evmChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`],
+              },
+              solana: {
+                ...sessionProposal.params.optionalNamespaces.solana,
+                accounts: [`${solanaChainId}:4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ`],
+              },
+            },
+          });
+          resolve();
+        });
+      }),
+      new Promise<void>((resolve) => {
+        pos.once("connected", () => {
+          console.log("connected");
+          resolve();
+        });
+      }),
+      new Promise<void>((resolve) => {
+        pos.once("qr_ready", async ({ uri }) => {
+          console.log("qr_ready", uri);
+          await wallet.pair({ uri });
+          resolve();
+        });
+      }),
+      pos.createPaymentIntent({ paymentIntents }),
+    ]);
+    expect(paymentIntents.length).to.be.greaterThan(0);
+    expect(numPaymentSuccessful).to.be.equal(paymentIntents.length);
+    expect(numPaymentRequested).to.be.equal(paymentIntents.length);
+    expect(numPaymentBroadcasted).to.be.equal(paymentIntents.length);
   });
 });
