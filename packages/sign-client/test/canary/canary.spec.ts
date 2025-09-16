@@ -98,7 +98,7 @@ describe("Canary", () => {
 
             const result = formatJsonRpcResult(id, "0x");
 
-            clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+            clients.B.core.relayer.on(RELAYER_EVENTS.publish, (publishPayload: any) => {
               // only check for the session request response tag
               if (publishPayload.params.tag !== 1109) {
                 return;
@@ -152,7 +152,7 @@ describe("Canary", () => {
             ],
           };
 
-          clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+          clients.A.core.relayer.on(RELAYER_EVENTS.publish, (publishPayload: any) => {
             // only check for the session request tag
             if (publishPayload.params.tag !== 1108) {
               return;
