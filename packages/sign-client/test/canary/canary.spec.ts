@@ -97,9 +97,12 @@ describe("Canary", () => {
             expect(id).toEqual(args.id);
 
             const result = formatJsonRpcResult(id, "0x");
-            let checkedWalletPublish = false;
 
             clients.B.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+              // only check for the session request response tag
+              if (publishPayload.params.tag !== 1109) {
+                return;
+              }
               const publishParams = publishPayload.params;
               expect(publishParams).to.exist;
               expect(publishParams?.chainId).to.eq(params.chainId);
@@ -111,8 +114,6 @@ describe("Canary", () => {
               expect(publishParams.ttl).to.exist;
               expect(publishParams.ttl).to.be.a("number");
               expect(publishParams.tag).to.exist;
-              // session request response tag
-              expect(publishParams.tag).to.equal(1109);
 
               if (!publishParams) {
                 return console.error("eip155 tvf is undefined in publish payload params");
@@ -131,16 +132,12 @@ describe("Canary", () => {
                 );
               }
 
-              checkedWalletPublish = true;
+              resolve();
             });
             await clients.B.respond({
               topic,
               response: result,
             });
-            // timeout to wait for the publish check
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            expect(checkedWalletPublish).to.be.true;
-            resolve();
           });
         }),
         new Promise<void>(async (resolve) => {
@@ -154,9 +151,12 @@ describe("Canary", () => {
               },
             ],
           };
-          let checkedDappPublish = false;
 
           clients.A.core.relayer.once(RELAYER_EVENTS.publish, (publishPayload: any) => {
+            // only check for the session request tag
+            if (publishPayload.params.tag !== 1108) {
+              return;
+            }
             const publishParams = publishPayload.params;
             expect(publishParams).to.exist;
             expect(publishParams?.chainId).to.eq(TEST_REQUEST_PARAMS.chainId);
@@ -171,9 +171,8 @@ describe("Canary", () => {
             expect(publishParams.attestation).to.exist;
             expect(publishParams.attestation).to.be.a("string");
             expect(publishParams.tag).to.exist;
-            // session request tag
-            expect(publishParams.tag).to.equal(1108);
-            checkedDappPublish = true;
+
+            resolve();
           });
 
           await clients.A.request({
@@ -184,10 +183,6 @@ describe("Canary", () => {
               ...requestParams,
             },
           });
-          // timeout to wait for the publish check
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          expect(checkedDappPublish).to.be.true;
-          resolve();
         }),
       ]);
 
