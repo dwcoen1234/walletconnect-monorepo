@@ -188,7 +188,7 @@ export class Engine extends IPOSClientEngine {
 
       namespaces[namespace] = {
         methods: namespaceDetails.methods,
-        chains: [network.chainId],
+        chains: [...(namespaces[namespace]?.chains || []), network.chainId],
         events: namespaceDetails.events,
       };
     });
@@ -282,8 +282,9 @@ export class Engine extends IPOSClientEngine {
     if (!paymentIntents) {
       throw new Error(`Payment intents not found for id: ${intentId}`);
     }
-    const transactionResults: Record<string, unknown> = {};
-    for (const transaction of transactions) {
+    for (let i = 0; i < transactions.length; i++) {
+      const transaction = transactions[i];
+      const paymentIntent = paymentIntents[i];
       try {
         this.emit("payment_requested", {});
         this.logger.debug("Emitted payment_requested event", {
@@ -310,74 +311,73 @@ export class Engine extends IPOSClientEngine {
               message: (error as Error)?.message,
               code: 4001,
             },
+            paymentIntent,
           });
           throw error;
         }
-        transactionResults[transaction.id] = result;
         this.emit("payment_broadcasted", result);
         this.logger.debug("Emitted payment_broadcasted event", {
           transactionId: transaction.id,
         });
+        this.awaitPaymentConfirmed({ transactionId: transaction.id, result });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (error) {
         this.logger.error("error", error);
       }
     }
-    try {
-      // query all transactions for their statuses at once
-      await Promise.allSettled(
-        Object.entries(transactionResults).map(([id, result]) =>
-          this.awaitPaymentConfirmed({ transactionId: id, result }),
-        ),
-      );
-    } catch (error) {
-      this.logger.error("error while awaiting payment confirmations", error);
-    }
   };
 
   awaitPaymentConfirmed: IPOSClientEngine["awaitPaymentConfirmed"] = async (params) => {
-    const { transactionId, result } = params;
-    this.logger.debug("Awaiting payment confirmed", { transactionId, result });
-    const payload = {
-      id: payloadId(),
-      jsonrpc: "2.0",
-      method: "wc_pos_checkTransaction",
-      params: {
-        id: transactionId,
-        sendResult: typeof result === "string" ? result : JSON.stringify(result),
-      },
-    };
+    try {
+      const { transactionId, result } = params;
+      this.logger.debug("Awaiting payment confirmed", { transactionId, result });
+      const payload = {
+        id: payloadId(),
+        jsonrpc: "2.0",
+        method: "wc_pos_checkTransaction",
+        params: {
+          id: transactionId,
+          sendResult: typeof result === "string" ? result : JSON.stringify(result),
+        },
+      };
 
-    let numCheckAttempts = 0;
-    let transactionResult;
-    while (!transactionResult) {
-      if (numCheckAttempts >= MAX_TRANSACTION_STATUS_CHECKS) {
-        throw new Error(`Transaction status not found for id: ${transactionId}`);
-      }
-      numCheckAttempts++;
+      let numCheckAttempts = 0;
+      let transactionResult;
+      while (!transactionResult) {
+        if (numCheckAttempts >= MAX_TRANSACTION_STATUS_CHECKS) {
+          throw new Error(`Transaction status not found for id: ${transactionId}`);
+        }
+        numCheckAttempts++;
 
-      const response = await this.fetchRpcRequest<POSClientEngineTypes.RPCCheckTransactionResult>(
-        JSON.stringify(payload),
-      );
-      this.logger.debug("Received wc_pos_checkTransaction", { transactionId, response });
-      if (response.result.status === "CONFIRMED") {
-        this.logger.debug("Transaction status confirmed", { response });
-        this.emit("payment_successful", {});
-        transactionResult = response.result;
-        break;
-      } else if (response.result.status === "FAILED") {
-        this.logger.debug("Transaction failed", { response });
-        this.emit("payment_failed", {
-          error: {
-            message: response.result.error,
-            code: 4001,
-          },
-        });
-        transactionResult = response.result;
-        break;
-      } else if (response.result.status === "PENDING") {
-        this.logger.debug("Transaction pending", { response });
-        await new Promise((resolve) => setTimeout(resolve, response.result.checkIn || 1000));
+        const response = await this.fetchRpcRequest<POSClientEngineTypes.RPCCheckTransactionResult>(
+          JSON.stringify(payload),
+        );
+        this.logger.debug("Received wc_pos_checkTransaction", { transactionId, response });
+        if (response.result.status === "CONFIRMED") {
+          this.logger.debug("Transaction status confirmed", { response });
+          this.emit("payment_successful", {
+            transaction: result,
+          });
+          transactionResult = response.result;
+          break;
+        } else if (response.result.status === "FAILED") {
+          this.logger.debug("Transaction failed", { response });
+          this.emit("payment_failed", {
+            error: {
+              message: response.result.error,
+              code: 4001,
+            },
+            transaction: result,
+          });
+          transactionResult = response.result;
+          break;
+        } else if (response.result.status === "PENDING") {
+          this.logger.debug("Transaction pending", { response });
+          await new Promise((resolve) => setTimeout(resolve, response.result.checkIn || 1000));
+        }
       }
+    } catch (error) {
+      this.logger.error("Error while awaiting payment confirmations", error);
     }
   };
 
@@ -420,6 +420,7 @@ export class Engine extends IPOSClientEngine {
           message: data.error?.message,
           code: 4001,
         },
+        transaction: "",
       });
       throw new Error(`Failed to fetch RPC request: ${data.error?.message}`);
     }

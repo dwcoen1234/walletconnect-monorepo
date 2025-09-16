@@ -20,10 +20,10 @@ export declare namespace POSClientTypes {
     connection_failed: { error: { message: string; code: number } };
     connected: any;
     payment_requested: any;
-    payment_rejected: any;
+    payment_rejected: { error?: { message?: string; code: number }; paymentIntent: PaymentIntent };
     payment_broadcasted: any;
-    payment_failed: any;
-    payment_successful: any;
+    payment_failed: { error?: { message?: string; code: number }; transaction: any };
+    payment_successful: { transaction: any };
     disconnected: any;
   }
 
