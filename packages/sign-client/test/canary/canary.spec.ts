@@ -171,7 +171,6 @@ describe("Canary", () => {
             expect(publishParams.attestation).to.exist;
             expect(publishParams.attestation).to.be.a("string");
             expect(publishParams.tag).to.exist;
-
             resolve();
           });
 
