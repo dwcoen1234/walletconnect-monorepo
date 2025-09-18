@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/WalletConnect/walletconnect-monorepo.git",
-    "directory": "packages/ethereum-provider"
+    "directory": "providers/ethereum-provider"
   },
   "license": "SEE LICENSE IN LICENSE.md",
   "main": "dist/index.cjs.js",
