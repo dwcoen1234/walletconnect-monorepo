@@ -2303,7 +2303,7 @@ export class Engine extends IEngine {
       this.isValidDisconnect({ topic, reason: payload.params });
       await Promise.all([
         new Promise((resolve) => {
-          // RPC request needs to happen before deletion as it utalises session encryption
+          // RPC request needs to happen before deletion as it utilizes session encryption
           this.client.core.relayer.once(RELAYER_EVENTS.publish, async () => {
             resolve(await this.deleteSession({ topic, id }));
           });
