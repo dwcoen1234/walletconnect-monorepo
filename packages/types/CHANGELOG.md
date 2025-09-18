@@ -1,5 +1,19 @@
 # @walletconnect/types
 
+## 2.21.9
+
+### Patch Changes
+
+- [#6857](https://github.com/WalletConnect/walletconnect-monorepo/pull/6857) [`74c47effb85faf95bbf1c9e55caf4df1e33e09ea`](https://github.com/WalletConnect/walletconnect-monorepo/commit/74c47effb85faf95bbf1c9e55caf4df1e33e09ea) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Refactored `universal-provider` to use the `generic` sub provider for any chain that doesn't require custom handling
+
+- [#6908](https://github.com/WalletConnect/walletconnect-monorepo/pull/6908) [`a17c5add47533dbb571e600ced363febe1e591b1`](https://github.com/WalletConnect/walletconnect-monorepo/commit/a17c5add47533dbb571e600ced363febe1e591b1) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Flattens TVF params instead of nesting them
+
+- [#6866](https://github.com/WalletConnect/walletconnect-monorepo/pull/6866) [`03301881b4081d3995512ff67afbae30db38f426`](https://github.com/WalletConnect/walletconnect-monorepo/commit/03301881b4081d3995512ff67afbae30db38f426) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixes redundant `accountsChanged` emit due to incorrect if statement
+
+- [#6867](https://github.com/WalletConnect/walletconnect-monorepo/pull/6867) [`af55c568ad86080629a0f1d14a2983431c77d62e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/af55c568ad86080629a0f1d14a2983431c77d62e) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Updated the `license` of the `walletconnect-monorepo` repository
+
+- [#6876](https://github.com/WalletConnect/walletconnect-monorepo/pull/6876) [`f01ca30ec0004cb52c0cc26f3b019c56a554f61f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f01ca30ec0004cb52c0cc26f3b019c56a554f61f) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Implemented `wallet_sendCalls` TVF
+
 ## 2.21.8
 
 ### Patch Changes
