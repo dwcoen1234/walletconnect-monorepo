@@ -47,7 +47,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/WalletConnect/walletconnect-monorepo.git"
+    "url": "git+https://github.com/WalletConnect/walletconnect-monorepo.git",
+    "directory": "providers/signer-connection"
   },
   "publishConfig": {
     "provenance": true
