@@ -51,5 +51,13 @@
   },
   "engines": {
     "node": ">=18.20.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WalletConnect/walletconnect-monorepo.git",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "provenance": true
   }
 }
