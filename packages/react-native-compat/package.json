@@ -56,5 +56,13 @@
     "name": "RNRNWalletConnectModuleSpec",
     "type": "modules",
     "jsSrcsDir": "."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WalletConnect/walletconnect-monorepo.git",
+    "directory": "packages/react-native-compat"
+  },
+  "publishConfig": {
+    "provenance": true
   }
 }

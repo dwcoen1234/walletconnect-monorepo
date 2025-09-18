@@ -50,5 +50,13 @@
   },
   "devDependencies": {
     "@aws-sdk/client-cloudwatch": "3.450.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WalletConnect/walletconnect-monorepo.git",
+    "directory": "packages/sign-client"
+  },
+  "publishConfig": {
+    "provenance": true
   }
 }
