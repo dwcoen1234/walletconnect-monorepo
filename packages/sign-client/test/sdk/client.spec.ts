@@ -3032,6 +3032,8 @@ describe("Sign Client Integration", () => {
         clients,
         sessionA: { topic },
       } = await initTwoPairedClients({}, {}, { logger: "error" });
+      await clients.B.session.set("0xdeadbeef", clients.B.session.get(topic));
+      clients.B.core.crypto.keychain.set("0xdeadbeef", {} as any);
       await Promise.all([
         new Promise<void>((resolve) => {
           clients.B.once("session_request", async (payload) => {
