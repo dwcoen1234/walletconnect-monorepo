@@ -700,7 +700,23 @@ export class Engine extends IEngine {
 
   public respond: IEngine["respond"] = async (params) => {
     this.isInitialized();
-    await this.isValidRespond(params);
+    const event = this.client.core.eventClient.createEvent({
+      properties: {
+        topic: params?.topic || params?.response?.id?.toString(),
+        trace: [EVENT_CLIENT_SESSION_TRACES.session_request_response_started],
+      },
+    });
+    try {
+      await this.isValidRespond(params);
+    } catch (error) {
+      event.addTrace((error as Error)?.message);
+      event.setError(EVENT_CLIENT_SESSION_ERRORS.session_request_response_validation_failure);
+
+      throw error;
+    }
+
+    event.addTrace(EVENT_CLIENT_SESSION_TRACES.session_request_response_validation_success);
+
     const { topic, response } = params;
     const { id } = response;
     const session = this.client.session.get(topic);
@@ -710,18 +726,25 @@ export class Engine extends IEngine {
     }
 
     const appLink = this.getAppLinkIfEnabled(session.peer.metadata, session.transportType);
-    if (isJsonRpcResult(response)) {
-      await this.sendResult({
-        id,
-        topic,
-        result: response.result,
-        throwOnFailedPublish: true,
-        appLink,
-      });
-    } else if (isJsonRpcError(response)) {
-      await this.sendError({ id, topic, error: response.error, appLink });
+    try {
+      event.addTrace(EVENT_CLIENT_SESSION_TRACES.session_request_response_publish_started);
+      if (isJsonRpcResult(response)) {
+        await this.sendResult({
+          id,
+          topic,
+          result: response.result,
+          throwOnFailedPublish: true,
+          appLink,
+        });
+      } else if (isJsonRpcError(response)) {
+        await this.sendError({ id, topic, error: response.error, appLink });
+      }
+      this.cleanupAfterResponse(params);
+    } catch (error) {
+      event.addTrace((error as Error)?.message);
+      event.setError(EVENT_CLIENT_SESSION_ERRORS.session_request_response_publish_failure);
+      throw error;
     }
-    this.cleanupAfterResponse(params);
   };
 
   public ping: IEngine["ping"] = async (params) => {
@@ -3006,7 +3029,7 @@ export class Engine extends IEngine {
     if (request.topic !== topic) {
       const { message } = getInternalError(
         "MISMATCHED_TOPIC",
-        `Request response topic mismatch: expected: ${request.topic} received: ${topic}`,
+        `Request response topic mismatch. reqId: ${response.id}, expected topic: ${request.topic}, received topic: ${topic}`,
       );
       throw new Error(message);
     }

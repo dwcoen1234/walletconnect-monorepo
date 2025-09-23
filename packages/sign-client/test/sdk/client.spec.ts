@@ -3048,8 +3048,21 @@ describe("Sign Client Integration", () => {
             } catch (err) {
               const message = (err as Error).message;
               expect(message).toMatch(
-                "Request response topic mismatch: expected: " + topic + " received: 0xdeadbeef",
+                "Request response topic mismatch. reqId: " +
+                  payload.id +
+                  ", expected topic: " +
+                  topic +
+                  ", received topic: 0xdeadbeef",
               );
+              // @ts-expect-error - private property
+              const errorEvents = clients.B.core.eventClient.events;
+              expect(errorEvents.size).to.eq(1);
+              const event = Array.from(errorEvents.values())[0] as any;
+              expect(event.props.event).to.eq("ERROR");
+              expect(event.props.type).to.eq(
+                EVENT_CLIENT_SESSION_ERRORS.session_request_response_validation_failure,
+              );
+              expect(event.props.properties.topic).to.eq("0xdeadbeef");
             }
             // should respond to the request on the correct topic
             await clients.B.respond({
