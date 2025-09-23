@@ -1,12 +1,12 @@
 ---
-"@walletconnect/sign-client": patch
-"@walletconnect/core": patch
-"@walletconnect/react-native-compat": patch
-"@walletconnect/types": patch
-"@walletconnect/utils": patch
-"@walletconnect/ethereum-provider": patch
-"@walletconnect/signer-connection": patch
-"@walletconnect/universal-provider": patch
+"@walletconnect/sign-client": minor
+"@walletconnect/core": minor
+"@walletconnect/react-native-compat": minor
+"@walletconnect/types": minor
+"@walletconnect/utils": minor
+"@walletconnect/ethereum-provider": minor
+"@walletconnect/signer-connection": minor
+"@walletconnect/universal-provider": minor
 ---
 
 Validates response topic when responding to a session request
