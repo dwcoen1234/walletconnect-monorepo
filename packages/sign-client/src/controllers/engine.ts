@@ -2985,6 +2985,17 @@ export class Engine extends IEngine {
       throw new Error(message);
     }
     const { topic, response } = params;
+
+    const request = this.client.pendingRequest.get(response.id);
+
+    if (request.topic !== topic) {
+      const { message } = getInternalError(
+        "MISMATCHED_TOPIC",
+        `Request response topic mismatch: expected: ${request.topic} received: ${topic}`,
+      );
+      throw new Error(message);
+    }
+
     try {
       // if the session is already disconnected, we can't respond to the request so we need to delete it
       await this.isValidSessionTopic(topic);
