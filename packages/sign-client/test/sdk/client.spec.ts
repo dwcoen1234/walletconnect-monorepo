@@ -3026,6 +3026,44 @@ describe("Sign Client Integration", () => {
       ]);
       await deleteClients(clients);
     });
+
+    it("should throw an error when responding to request on mismatched topic", async () => {
+      const {
+        clients,
+        sessionA: { topic },
+      } = await initTwoPairedClients({}, {}, { logger: "error" });
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          clients.B.once("session_request", async (payload) => {
+            const { params } = payload;
+            expect(params).toMatchObject(TEST_REQUEST_PARAMS_OPTIONAL_NAMESPACE);
+            try {
+              // should throw an error
+              await clients.B.respond({
+                topic: "0xdeadbeef",
+                response: formatJsonRpcResult(payload.id, "test response"),
+              });
+            } catch (err) {
+              const message = (err as Error).message;
+              expect(message).toMatch(
+                "Request response topic mismatch: expected: " + topic + " received: 0xdeadbeef",
+              );
+            }
+            // should respond to the request on the correct topic
+            await clients.B.respond({
+              topic,
+              response: formatJsonRpcResult(payload.id, "test response"),
+            });
+            resolve();
+          });
+        }),
+        new Promise<void>(async (resolve) => {
+          await clients.A.request({ ...TEST_REQUEST_PARAMS_OPTIONAL_NAMESPACE, topic });
+          resolve();
+        }),
+      ]);
+      await deleteClients(clients);
+    });
     it("should send request on inline indexed namespace", async () => {
       const clients = await initTwoClients();
       const {
