@@ -6,11 +6,12 @@ import { pino } from "@walletconnect/logger";
 
 import { IPOSClientEngine, POSClientEngineTypes, POSClientTypes, UtilsTypes } from "../types";
 import { isValidPaymentIntent, isValidToken } from "../utils";
-import { DEFAULT_NAMESPACES } from "../constants/chains";
 import {
   CLIENT_STORAGE_OPTIONS,
   MAX_TRANSACTION_STATUS_CHECKS,
-  POS_CLIENT_VERSION,
+  DEFAULT_NAMESPACES,
+  RPC_URL,
+  RPC_ERROR_CODES,
 } from "../constants";
 
 export class Engine extends IPOSClientEngine {
@@ -266,9 +267,13 @@ export class Engine extends IPOSClientEngine {
     this.logger.debug("On session connected", { intentId, sessionTopic: session.topic });
     this.emit("connected", {});
     this.logger.debug("Emitted connected event");
-    const transactions = await this.prepareTransactionsFromPaymentIntents({ intentId, session });
-    this.logger.debug("Transactions prepared", { transactions });
-    this.sendTransactionsToWallet({ transactions, session, intentId });
+    try {
+      const transactions = await this.prepareTransactionsFromPaymentIntents({ intentId, session });
+      this.logger.debug("Transactions prepared", { transactions });
+      this.sendTransactionsToWallet({ transactions, session, intentId });
+    } catch (error) {
+      this.logger.error(error);
+    }
   };
 
   sendTransactionsToWallet: IPOSClientEngine["sendTransactionsToWallet"] = async (params) => {
@@ -406,28 +411,33 @@ export class Engine extends IPOSClientEngine {
       body: payload,
     });
 
-    if (!result.ok) {
-      throw new Error(`Failed to fetch RPC request: ${result.statusText}`);
+    let data;
+    try {
+      data = await result.json();
+    } catch (error) {
+      this.logger.error("Error while getting json data from RPC response", error);
     }
-
-    const data = await result.json();
 
     this.logger.debug("Received RPC request response", { data });
 
-    if (data.error) {
+    if (!result.ok || data.error) {
+      const code = data.error?.code || -18900;
+      const message = RPC_ERROR_CODES?.[code]
+        ? `${RPC_ERROR_CODES?.[code]}: ${data.error?.message}`
+        : data.error?.message;
       this.emit("payment_failed", {
         error: {
-          message: data.error?.message,
-          code: 4001,
+          message,
+          code,
         },
         transaction: "",
       });
-      throw new Error(`Failed to fetch RPC request: ${data.error?.message}`);
+      throw new Error(message);
     }
     return data as T;
   };
 
   private getRpcUrl = () => {
-    return `https://rpc.walletconnect.org/v1/json-rpc?projectId=${this.client.opts.projectId}&st=node&sv=js-pos-${POS_CLIENT_VERSION}`;
+    return RPC_URL({ projectId: this.client.opts.projectId });
   };
 }

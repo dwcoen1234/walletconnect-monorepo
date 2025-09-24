@@ -7,9 +7,44 @@ import { parseUri } from "@walletconnect/utils";
 import { SignClient } from "@walletconnect/sign-client";
 import { ISignClient } from "@walletconnect/types";
 
-import { POSClient, IPOSClient, POSClientTypes } from "../src";
+import { POSClient, IPOSClient, POSClientTypes, RPC_ERROR_CODES } from "../src";
 import { TEST_METADATA } from "./shared/values";
 import { TEST_CORE_OPTIONS } from "./shared";
+
+const connectSession = async ({
+  pos,
+  wallet,
+  address,
+}: {
+  pos: IPOSClient;
+  wallet: ISignClient;
+  address: string;
+}) => {
+  await Promise.all([
+    new Promise<void>((resolve) => {
+      pos.once("qr_ready", async ({ uri }) => {
+        await wallet.pair({ uri });
+        resolve();
+      });
+    }),
+    new Promise<void>((resolve) => {
+      wallet.events.once("session_proposal", async (sessionProposal) => {
+        const optionalNamespaces = sessionProposal.params.optionalNamespaces;
+        await wallet.approve({
+          id: sessionProposal.id,
+          namespaces: Object.entries(optionalNamespaces).reduce((acc, [key, value]) => {
+            acc[key] = {
+              ...value,
+              accounts: value.chains?.map((chain) => `${chain}:${address}`),
+            };
+            return acc;
+          }, {}),
+        });
+        resolve();
+      });
+    }),
+  ]);
+};
 
 describe("Sign Integration", () => {
   let wallet: ISignClient;
@@ -383,5 +418,54 @@ describe("Sign Integration", () => {
     expect(numPaymentSuccessful).to.be.equal(paymentIntents.length);
     expect(numPaymentRequested).to.be.equal(paymentIntents.length);
     expect(numPaymentBroadcasted).to.be.equal(paymentIntents.length);
+  });
+
+  it("should set tokens", async () => {
+    const networks: Record<string, POSClientTypes.Network> = {
+      ethereum: { name: "Ethereum", chainId: "eip155:1" },
+      arbitrum: { name: "Arbitrum", chainId: "eip155:42161" },
+      avalanche: { name: "Avalanche", chainId: "eip155:43114" },
+    };
+    const tokens: POSClientTypes.Token[] = [
+      {
+        network: networks.ethereum,
+        symbol: "ETH",
+        standard: "ERC20",
+        address: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+      },
+      {
+        network: networks.arbitrum,
+        symbol: "ARB",
+        standard: "ERC20",
+        address: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+      },
+      {
+        network: networks.avalanche,
+        symbol: "AVAX",
+        standard: "ERC20",
+        address: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+      },
+    ];
+    const paymentIntents: POSClientTypes.PaymentIntent[] = [
+      {
+        token: tokens[0],
+        amount: "1",
+        recipient: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+      },
+    ];
+    await pos.setTokens({ tokens });
+
+    // await pos.createPaymentIntent({ paymentIntents });
+    await Promise.all([
+      new Promise<void>((resolve) => {
+        pos.on("payment_failed", (result) => {
+          expect(result.error?.code).to.be.equal(-18902);
+          resolve();
+        });
+      }),
+      connectSession({ pos, wallet, address: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52" }),
+      pos.createPaymentIntent({ paymentIntents }),
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   });
 });
