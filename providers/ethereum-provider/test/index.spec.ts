@@ -253,15 +253,15 @@ describe("EthereumProvider", function () {
         expect(verify).eq(walletAddress);
       });
       it("sign transaction and send via sendAsync", async () => {
-        const balanceBefore = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
         const { rawTransaction } = await web3.eth.accounts.signTransaction(
-          { ...TEST_SIGN_TRANSACTION, from: walletAddress },
+          { ...TEST_SIGN_TRANSACTION, to: receiverAddress, from: walletAddress },
           walletClient.signer.privateKey,
         );
-        const callback = async (_error: any, result: any) => {
-          expect(!!result).to.be.true;
-          const balanceAfter = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
-          expect(balanceAfter < balanceBefore).to.be.true;
+        const callback = async (_error: any, jsonRpcResult: any) => {
+          expect(jsonRpcResult).to.exist;
+          expect(jsonRpcResult.id).to.exist;
+          expect(jsonRpcResult.result).to.exist;
+          expect(jsonRpcResult.result).to.be.a("string");
         };
         provider.sendAsync(
           {

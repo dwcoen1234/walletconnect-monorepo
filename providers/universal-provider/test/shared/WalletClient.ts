@@ -41,7 +41,6 @@ export class WalletClient {
     this.chainId = opts?.chainId || 123;
     this.rpcUrl = opts?.rpcUrl || "http://localhost:8545";
     this.signer = this.getWallet(opts.privateKey);
-    console.log("signer", this.signer.address);
   }
 
   public async changeAccount(privateKey: string) {
