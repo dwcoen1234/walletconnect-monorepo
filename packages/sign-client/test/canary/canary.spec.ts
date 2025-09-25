@@ -250,7 +250,7 @@ describe("Canary", () => {
     }, 600_000);
   });
   afterEach(async (done) => {
-    const { result } = done.meta;
+    const { result } = done.task;
     const nowTimestamp = Date.now();
     const latencyMs = nowTimestamp - (result?.startTime || nowTimestamp);
     const taskState = result?.state;

@@ -16,6 +16,7 @@
   "types": "dist/types/index.d.ts",
   "react-native": "dist/index.native.js",
   "sideEffects": false,
+  "type": "module",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
@@ -57,11 +58,11 @@
     "events": "3.3.0"
   },
   "devDependencies": {
+    "hardhat": "^3.0.6",
+    "ethers": "6.15.0",
     "@rollup/plugin-alias": "^5.1.1",
-    "ethereum-test-network": "0.1.6",
-    "ethers": "5.6.9",
     "uint8arrays": "3.1.0",
-    "web3": "1.7.5"
+    "web3": "4.16.0"
   },
   "publishConfig": {
     "provenance": true

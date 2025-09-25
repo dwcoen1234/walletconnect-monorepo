@@ -9,6 +9,7 @@
     "url": "git+https://github.com/WalletConnect/walletconnect-monorepo.git",
     "directory": "providers/universal-provider"
   },
+  "type": "module",
   "license": "SEE LICENSE IN LICENSE.md",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
@@ -54,11 +55,11 @@
     "events": "3.3.0"
   },
   "devDependencies": {
-    "cosmos-wallet": "1.2.0",
-    "ethereum-test-network": "0.1.6",
-    "ethers": "5.7.0",
+    "ethers": "6.15.0",
+    "hardhat": "^3.0.6",
     "uint8arrays": "3.0.0",
-    "web3": "1.7.5"
+    "wait-on": "9.0.1",
+    "web3": "4.16.0"
   },
   "publishConfig": {
     "provenance": true
