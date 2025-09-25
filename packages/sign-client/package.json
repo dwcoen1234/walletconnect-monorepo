@@ -10,6 +10,7 @@
   "unpkg": "dist/index.umd.js",
   "types": "dist/types/index.d.ts",
   "sideEffects": false,
+  "type": "module",
   "files": [
     "dist"
   ],
@@ -49,7 +50,8 @@
     "events": "3.3.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudwatch": "3.450.0"
+    "@aws-sdk/client-cloudwatch": "3.450.0",
+    "ethers": "6.13.5"
   },
   "repository": {
     "type": "git",
