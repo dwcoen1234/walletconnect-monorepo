@@ -236,7 +236,6 @@ export class WalletClient {
               result = await this.signer.signTransaction(txParams);
               break;
             case "eth_sendRawTransaction":
-              console.log("eth_sendRawTransaction", request.params[0]);
               //  eslint-disable-next-line no-case-declarations
               const receipt = await this.signer?.provider?.sendTransaction?.(request.params[0]);
               result = receipt?.hash;
