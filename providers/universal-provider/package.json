@@ -1,13 +1,13 @@
 {
   "name": "@walletconnect/universal-provider",
   "description": "Universal Provider for WalletConnect Protocol",
-  "version": "2.21.8",
+  "version": "2.21.9",
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/walletconnect-monorepo/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/walletconnect/walletconnect-monorepo",
-    "directory": "packages/universal-provider"
+    "url": "git+https://github.com/WalletConnect/walletconnect-monorepo.git",
+    "directory": "providers/universal-provider"
   },
   "license": "SEE LICENSE IN LICENSE.md",
   "main": "dist/index.cjs.js",
@@ -47,9 +47,9 @@
     "@walletconnect/jsonrpc-utils": "1.0.8",
     "@walletconnect/keyvaluestorage": "1.1.1",
     "@walletconnect/logger": "2.1.2",
-    "@walletconnect/sign-client": "2.21.8",
-    "@walletconnect/types": "2.21.8",
-    "@walletconnect/utils": "2.21.8",
+    "@walletconnect/sign-client": "2.21.9",
+    "@walletconnect/types": "2.21.9",
+    "@walletconnect/utils": "2.21.9",
     "es-toolkit": "1.39.3",
     "events": "3.3.0"
   },
@@ -59,5 +59,8 @@
     "ethers": "5.7.0",
     "uint8arrays": "3.0.0",
     "web3": "1.7.5"
+  },
+  "publishConfig": {
+    "provenance": true
   }
 }

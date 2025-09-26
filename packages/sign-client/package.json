@@ -1,7 +1,7 @@
 {
   "name": "@walletconnect/sign-client",
   "description": "Sign Client for WalletConnect Protocol",
-  "version": "2.21.8",
+  "version": "2.21.9",
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/walletconnect-monorepo/",
   "license": "SEE LICENSE IN LICENSE.md",
@@ -38,17 +38,25 @@
     "prettier": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}'"
   },
   "dependencies": {
-    "@walletconnect/core": "2.21.8",
+    "@walletconnect/core": "2.21.9",
     "@walletconnect/events": "1.0.1",
     "@walletconnect/heartbeat": "1.2.2",
     "@walletconnect/jsonrpc-utils": "1.0.8",
     "@walletconnect/logger": "2.1.2",
     "@walletconnect/time": "1.0.2",
-    "@walletconnect/types": "2.21.8",
-    "@walletconnect/utils": "2.21.8",
+    "@walletconnect/types": "2.21.9",
+    "@walletconnect/utils": "2.21.9",
     "events": "3.3.0"
   },
   "devDependencies": {
     "@aws-sdk/client-cloudwatch": "3.450.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WalletConnect/walletconnect-monorepo.git",
+    "directory": "packages/sign-client"
+  },
+  "publishConfig": {
+    "provenance": true
   }
 }
