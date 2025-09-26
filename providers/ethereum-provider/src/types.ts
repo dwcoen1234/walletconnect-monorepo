@@ -230,3 +230,27 @@ export type QrModalOptions = Pick<
   | "termsOfServiceUrl"
   | "walletImages"
 >;
+
+// Viem compatible types
+export type Assign<T, U> = Assign_<T, U> & U;
+type Assign_<T, U> = {
+  [K in keyof T as K extends keyof U ? (U[K] extends void ? never : K) : K]: K extends keyof U
+    ? U[K]
+    : T[K];
+};
+
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
+export type ChainFormatters = {
+  block?: ChainFormatter<"block"> | undefined;
+  transaction?: ChainFormatter<"transaction"> | undefined;
+  transactionReceipt?: ChainFormatter<"transactionReceipt"> | undefined;
+  transactionRequest?: ChainFormatter<"transactionRequest"> | undefined;
+};
+
+export type ChainFormatter<type extends string = string> = {
+  format: (args: any) => any;
+  type: type;
+};
