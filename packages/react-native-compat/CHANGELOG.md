@@ -1,5 +1,11 @@
 # @walletconnect/react-native-compat
 
+## 2.21.10
+
+### Patch Changes
+
+- [#6926](https://github.com/WalletConnect/walletconnect-monorepo/pull/6926) [`df6a83d04b075fdd075317becb1c274b82cf7fba`](https://github.com/WalletConnect/walletconnect-monorepo/commit/df6a83d04b075fdd075317becb1c274b82cf7fba) Thanks [@ignaciosantise](https://github.com/ignaciosantise)! - Replaced `viem` with `ox`
+
 ## 2.21.9
 
 ### Patch Changes
