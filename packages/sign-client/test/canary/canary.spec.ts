@@ -75,9 +75,8 @@ describe("Canary", () => {
       log(
         `Clients initialized (relay '${TEST_RELAY_URL}'), client ids: A:'${await clients.A.core.crypto.getClientId()}';B:'${await clients.B.core.crypto.getClientId()}'`,
       );
-      const humanInputLatencyMs = 600;
       const { pairingA, sessionA, clientAConnectLatencyMs, settlePairingLatencyMs } =
-        await testConnectMethod(clients, { qrCodeScanLatencyMs: humanInputLatencyMs });
+        await testConnectMethod(clients);
       log(
         `Clients connected (relay '${TEST_RELAY_URL}', client ids: A:'${await clients.A.core.crypto.getClientId()}';B:'${await clients.B.core.crypto.getClientId()}' pairing topic '${
           pairingA.topic
@@ -85,7 +84,7 @@ describe("Canary", () => {
       );
 
       const successful = true;
-      const pairingLatencyMs = Date.now() - start - humanInputLatencyMs;
+      const pairingLatencyMs = Date.now() - start;
 
       await Promise.all([
         new Promise<void>((resolve) => {
@@ -200,7 +199,7 @@ describe("Canary", () => {
         }
       });
       const pingLatencyMs = Date.now() - pingStart;
-      const latencyMs = Date.now() - start - 2 * humanInputLatencyMs;
+      const latencyMs = Date.now() - start;
 
       console.log(`Clients paired after ${pairingLatencyMs}ms`);
       if (environment !== "dev") {
