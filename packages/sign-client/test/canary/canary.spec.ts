@@ -52,33 +52,29 @@ describe("Canary", () => {
         ...TEST_SIGN_CLIENT_OPTIONS_A,
         logger,
       });
-      log(
-        `Client A (${await A.core.crypto.getClientId()}) initialized in ${
-          Date.now() - aInitStart
-        }ms`,
-      );
+      const aInitLatencyMs = Date.now() - aInitStart;
+      const clientIdA = await A.core.crypto.getClientId();
+      log(`Client A (${clientIdA}) initialized in ${aInitLatencyMs}ms`);
 
       const bInitStart = Date.now();
       const B = await SignClient.init({
         ...TEST_SIGN_CLIENT_OPTIONS_B,
         logger,
       });
-      log(
-        `Client B (${await B.core.crypto.getClientId()}) initialized in ${
-          Date.now() - bInitStart
-        }ms`,
-      );
+      const bInitLatencyMs = Date.now() - bInitStart;
+      const clientIdB = await B.core.crypto.getClientId();
+      log(`Client B (${clientIdB}) initialized in ${bInitLatencyMs}ms`);
 
       const start = Date.now();
 
       const clients = { A, B };
       log(
-        `Clients initialized (relay '${TEST_RELAY_URL}'), client ids: A:'${await clients.A.core.crypto.getClientId()}';B:'${await clients.B.core.crypto.getClientId()}'`,
+        `Clients initialized (relay '${TEST_RELAY_URL}'), client ids: A:'${clientIdA}';B:'${clientIdB}'`,
       );
       const { pairingA, sessionA, clientAConnectLatencyMs, settlePairingLatencyMs } =
         await testConnectMethod(clients);
       log(
-        `Clients connected (relay '${TEST_RELAY_URL}', client ids: A:'${await clients.A.core.crypto.getClientId()}';B:'${await clients.B.core.crypto.getClientId()}' pairing topic '${
+        `Clients connected (relay '${TEST_RELAY_URL}', client ids: A:'${clientIdA}';B:'${clientIdB}' pairing topic '${
           pairingA.topic
         }', session topic '${sessionA.topic}')`,
       );
