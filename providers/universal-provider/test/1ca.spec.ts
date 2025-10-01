@@ -8,20 +8,12 @@ import {
   TEST_WALLET_CLIENT_OPTS,
 } from "./shared/constants";
 import { WalletClient } from "./shared/WalletClient";
-import { TestNetwork } from "ethereum-test-network";
 const CHAIN_ID = 1;
 describe("UniversalProvider 1CA", function () {
-  let testNetwork: TestNetwork;
   let provider: UniversalProvider;
   let walletClient: WalletClient;
   let receiverAddress: string;
   beforeAll(async () => {
-    testNetwork = await TestNetwork.init({
-      chainId: CHAIN_ID,
-      port: PORT + 1,
-      genesisAccounts: [ACCOUNTS.a, ACCOUNTS.b],
-    });
-
     receiverAddress = ACCOUNTS.b.address;
   });
 
