@@ -2,7 +2,6 @@ import { expect, describe, it, beforeAll } from "vitest";
 import UniversalProvider from "../src";
 import {
   ACCOUNTS,
-  CHAIN_ID,
   CHAIN_ID_B,
   PORT,
   TEST_PROVIDER_OPTS,

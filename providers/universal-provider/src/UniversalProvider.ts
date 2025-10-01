@@ -1,5 +1,5 @@
 import SignClient from "@walletconnect/sign-client";
-import { AuthTypes, SessionTypes } from "@walletconnect/types";
+import { SessionTypes } from "@walletconnect/types";
 import { JsonRpcResult } from "@walletconnect/jsonrpc-types";
 import { getSdkError, isValidArray, parseNamespaceKey } from "@walletconnect/utils";
 import { getDefaultLoggerOptions, Logger, pino } from "@walletconnect/logger";
