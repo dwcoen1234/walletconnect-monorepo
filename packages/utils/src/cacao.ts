@@ -2,7 +2,7 @@ import { AuthTypes } from "@walletconnect/types";
 import { getCommonValuesInArrays } from "./misc";
 import { verifySignature } from "./signatures";
 const didPrefix = "did:pkh:";
-const namespacesMap = {
+const NAMESPACE_DISPLAY_NAMES = {
   eip155: "Ethereum",
   solana: "Solana",
   bip122: "Bitcoin",
@@ -10,10 +10,8 @@ const namespacesMap = {
 
 const getNamespaceNameFromNamespace = (namespace?: string) => {
   if (!namespace) return "";
-  if (namespacesMap[namespace as keyof typeof namespacesMap]) {
-    return namespacesMap[namespace as keyof typeof namespacesMap];
-  }
-  return namespace;
+  const displayName = NAMESPACE_DISPLAY_NAMES[namespace as keyof typeof NAMESPACE_DISPLAY_NAMES];
+  return displayName || namespace;
 };
 
 export const getDidAddressSegments = (iss: string) => {
