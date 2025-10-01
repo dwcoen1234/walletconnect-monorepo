@@ -38,7 +38,6 @@ export declare namespace JsonRpcTypes {
         metadata: SignClientTypes.Metadata;
       };
       expiryTimestamp?: number;
-      authentication?: AuthTypes.AuthenticateParams[];
     };
     wc_sessionSettle: {
       relay: RelayerTypes.ProtocolOptions;
