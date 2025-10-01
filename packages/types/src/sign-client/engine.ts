@@ -67,6 +67,7 @@ export declare namespace EngineTypes {
     scopedProperties?: ProposalTypes.ScopedProperties;
     pairingTopic?: string;
     relays?: RelayerTypes.ProtocolOptions[];
+    authentication?: AuthTypes.AuthenticateRequestParams[];
   }
 
   interface PairParams {
@@ -80,6 +81,7 @@ export declare namespace EngineTypes {
     scopedProperties?: ProposalTypes.ScopedProperties;
     sessionConfig?: SessionTypes.SessionConfig;
     relayProtocol?: string;
+    proposalRequestsResponses?: AuthTypes.Cacao[];
   }
 
   interface RejectParams {

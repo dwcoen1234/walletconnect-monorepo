@@ -76,7 +76,7 @@ export declare namespace AuthTypes {
 
   interface BaseAuthRequestParams {
     domain: string;
-    aud: string;
+    aud?: string;
     nonce: string;
     version?: string;
     iat?: string;
@@ -172,6 +172,24 @@ export declare namespace AuthTypes {
     auths?: AuthTypes.AuthResponse;
     session: SessionTypes.Struct;
   };
+
+  interface AuthenticateParams {
+    domain: string;
+    chains: string[];
+    nonce: string;
+    uri: string;
+    ttl: number;
+    version: string;
+    iat: string;
+    exp?: string;
+    nbf?: string;
+    statement?: string;
+    requestId?: string;
+    resources?: string[];
+    signatureTypes?: string[];
+  }
+
+  type AuthenticateRequestParams = Omit<AuthenticateParams, "version" | "iat">;
 }
 
 export type IAuth = {

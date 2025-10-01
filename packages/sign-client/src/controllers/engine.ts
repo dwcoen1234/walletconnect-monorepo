@@ -242,6 +242,7 @@ export class Engine extends IEngine {
       sessionProperties,
       scopedProperties,
       relays,
+      authentication,
     } = connectParams;
     let topic = pairingTopic;
     let uri: string | undefined;
@@ -275,7 +276,7 @@ export class Engine extends IEngine {
 
     const expiry = ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
     const expiryTimestamp = calcExpiry(expiry);
-    const proposal = {
+    const proposal: ProposalTypes.Struct = {
       requiredNamespaces,
       optionalNamespaces,
       relays: relays ?? [{ protocol: RELAYER_DEFAULT_PROTOCOL }],
@@ -288,6 +289,14 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       id: payloadId(),
+      requests: {
+        authentication: authentication?.map((auth) => ({
+          ...auth,
+          aud: auth.uri,
+          version: "1",
+          iat: new Date().toISOString(),
+        })),
+      },
     };
     const sessionConnectTarget = engineEvent("session_connect", proposal.id);
 
@@ -376,8 +385,15 @@ export class Engine extends IEngine {
       throw error;
     }
 
-    const { id, relayProtocol, namespaces, sessionProperties, scopedProperties, sessionConfig } =
-      params;
+    const {
+      id,
+      relayProtocol,
+      namespaces,
+      sessionProperties,
+      scopedProperties,
+      sessionConfig,
+      proposalRequestsResponses,
+    } = params;
 
     const proposal = this.client.proposal.get(id);
 
@@ -415,6 +431,7 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       ...(sessionConfig && { sessionConfig }),
+      authentication: proposalRequestsResponses,
     };
     const transportType = TRANSPORT_TYPES.relay;
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribing_session_topic);
@@ -430,7 +447,7 @@ export class Engine extends IEngine {
 
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribe_session_topic_success);
 
-    const session = {
+    const session: SessionTypes.Struct = {
       ...sessionSettle,
       topic: sessionTopic,
       requiredNamespaces,
@@ -445,6 +462,7 @@ export class Engine extends IEngine {
       controller: selfPublicKey,
       transportType: TRANSPORT_TYPES.relay,
     };
+
     await this.client.session.set(sessionTopic, session);
 
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.store_session);
@@ -1974,7 +1992,7 @@ export class Engine extends IEngine {
       this.isValidConnect({ ...payload.params });
       const expiryTimestamp =
         params.expiryTimestamp || calcExpiry(ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl);
-      const proposal = {
+      const proposal: ProposalTypes.Struct = {
         id,
         pairingTopic: topic,
         expiryTimestamp,
@@ -2075,6 +2093,7 @@ export class Engine extends IEngine {
         sessionProperties,
         scopedProperties,
         sessionConfig,
+        authentication,
       } = payload.params;
       const pendingSession = [...this.pendingSessions.values()].find(
         (s) => s.sessionTopic === topic,
@@ -2108,6 +2127,7 @@ export class Engine extends IEngine {
         ...(scopedProperties && { scopedProperties }),
         ...(sessionConfig && { sessionConfig }),
         transportType: TRANSPORT_TYPES.relay,
+        authentication,
       };
 
       await this.client.session.set(session.topic, session);

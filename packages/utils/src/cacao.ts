@@ -2,6 +2,20 @@ import { AuthTypes } from "@walletconnect/types";
 import { getCommonValuesInArrays } from "./misc";
 import { verifySignature } from "./signatures";
 const didPrefix = "did:pkh:";
+const namespacesMap = {
+  eip155: "Ethereum",
+  solana: "Solana",
+  bip122: "Bitcoin",
+};
+
+const getNamespaceNameFromNamespace = (namespace?: string) => {
+  if (!namespace) return "";
+  if (namespacesMap[namespace as keyof typeof namespacesMap]) {
+    return namespacesMap[namespace as keyof typeof namespacesMap];
+  }
+  return namespace;
+};
+
 export const getDidAddressSegments = (iss: string) => {
   return iss?.split(":");
 };
@@ -10,6 +24,14 @@ export const getDidChainId = (iss: string) => {
   const segments = iss && getDidAddressSegments(iss);
   if (segments) {
     return iss.includes(didPrefix) ? segments[3] : segments[1];
+  }
+  return undefined;
+};
+
+export const getDidAddressNamespace = (iss: string) => {
+  const segments = iss && getDidAddressSegments(iss);
+  if (segments) {
+    return iss.includes(didPrefix) ? segments[2] : segments[0];
   }
   return undefined;
 };
@@ -47,7 +69,7 @@ export async function validateSignedCacao(params: { cacao: AuthTypes.Cacao; proj
 }
 
 export const formatMessage = (cacao: AuthTypes.FormatMessageParams, iss: string) => {
-  const header = `${cacao.domain} wants you to sign in with your Ethereum account:`;
+  const header = `${cacao.domain} wants you to sign in with your ${getNamespaceNameFromNamespace(getDidAddressNamespace(iss))} account:`;
   const walletAddress = getDidAddress(iss);
 
   if (!cacao.aud && !cacao.uri) {
