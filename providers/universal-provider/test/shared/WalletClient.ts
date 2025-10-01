@@ -2,8 +2,8 @@
 import SignClient from "@walletconnect/sign-client";
 import { formatJsonRpcError, formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
 import { SIGNER_EVENTS } from "@walletconnect/signer-connection";
-import { SignClientTypes, SessionTypes } from "@walletconnect/types";
-import { getSdkError, getChainsFromAccounts } from "@walletconnect/utils";
+import { SignClientTypes, SessionTypes, AuthTypes } from "@walletconnect/types";
+import { getSdkError, getChainsFromAccounts, buildAuthObject } from "@walletconnect/utils";
 import { ethers, utils } from "ethers";
 import UniversalProvider from "../../src";
 import { parseSignDocValues } from "cosmos-wallet";
@@ -168,6 +168,31 @@ export class WalletClient {
     this.registerEventListeners();
   }
 
+  private async approveAuthentication(event: SignClientTypes.EventArguments["session_proposal"]) {
+    const authenticationRequests = event.params.requests?.authentication;
+    if (!authenticationRequests) return [];
+    const auths: AuthTypes.Cacao[] = [];
+    for (const authenticationRequest of authenticationRequests) {
+      for (const chain of authenticationRequest.chains) {
+        const message = this.client?.formatAuthMessage({
+          request: authenticationRequest,
+          iss: `did:pkh:${chain}:${this.accounts[0]}`,
+        });
+        const sig = await this.signer.signMessage(message!);
+        const authObject = buildAuthObject(
+          authenticationRequest,
+          {
+            t: "eip191",
+            s: sig,
+          },
+          `did:pkh:${chain}:${this.accounts[0]}`,
+        );
+        auths.push(authObject);
+      }
+    }
+    return auths;
+  }
+
   private registerEventListeners() {
     if (typeof this.client === "undefined") {
       throw new Error("Sign Client not initialized");
@@ -199,10 +224,16 @@ export class WalletClient {
             accounts: value.chains.map((chain) => `${chain}:${this.accounts[0]}`),
           };
         });
+        const authentication = await this.approveAuthentication(proposal).catch((e) => {
+          // eslint-disable-next-line no-console
+          console.error("error when approving authentication", e);
+          throw e;
+        });
         const { acknowledged } = await this.client.approve({
           id,
           relayProtocol: relays[0].protocol,
           namespaces,
+          proposalRequestsResponses: authentication,
         });
         const session = await acknowledged();
         this.topic = session.topic;

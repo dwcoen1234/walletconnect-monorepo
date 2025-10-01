@@ -64,6 +64,7 @@ export interface ConnectParams {
   scopedProperties?: SessionTypes.ScopedProperties;
   pairingTopic?: string;
   skipPairing?: boolean;
+  authentication?: AuthTypes.AuthenticateRequestParams[];
 }
 
 export type AuthenticateParams = AuthTypes.SessionAuthenticateParams;
