@@ -66,13 +66,13 @@ describe("UniversalProvider", function () {
       });
       it("should change default chainId", async () => {
         const chainId = await web3.eth.getChainId();
-        expect(chainId).to.eql(ethers.toBigInt(CHAIN_ID));
+        expect(chainId).to.eql(BigInt(CHAIN_ID));
 
         provider.setDefaultChain(`eip155:${CHAIN_ID_B}`);
 
         const chainIdB = await web3.eth.getChainId();
-        expect(chainIdB).to.not.eql(ethers.toBigInt(CHAIN_ID));
-        expect(chainIdB).to.eql(ethers.toBigInt(CHAIN_ID_B));
+        expect(chainIdB).to.not.eql(BigInt(CHAIN_ID));
+        expect(chainIdB).to.eql(BigInt(CHAIN_ID_B));
 
         provider.setDefaultChain(`eip155:${CHAIN_ID}`);
       });
@@ -85,7 +85,7 @@ describe("UniversalProvider", function () {
 
         const activeChain = await web3.eth.getChainId();
         expect(activeChain).to.not.eql(chainToSwitchParsed);
-        expect(activeChain).to.eql(ethers.toBigInt(CHAIN_ID));
+        expect(activeChain).to.eql(BigInt(CHAIN_ID));
 
         // when we send the wallet_switchEthereumChain request
         // the wallet should receive & update the session with the new chain
@@ -106,7 +106,7 @@ describe("UniversalProvider", function () {
         ]);
 
         const activeChainAfterSwitch = await web3.eth.getChainId();
-        expect(activeChainAfterSwitch).to.eql(ethers.toBigInt(chainToSwitchParsed));
+        expect(activeChainAfterSwitch).to.eql(BigInt(chainToSwitchParsed));
 
         // revert back to the original chain
         await provider.request({
@@ -361,7 +361,7 @@ describe("UniversalProvider", function () {
       });
       it("matches chainId", async () => {
         const chainId = await web3.eth.getChainId();
-        expect(chainId).to.eql(ethers.toBigInt(CHAIN_ID));
+        expect(chainId).to.eql(BigInt(CHAIN_ID));
       });
       it("ERC20 contract", async () => {
         const erc20Factory = new web3.eth.Contract(JSON.parse(JSON.stringify(ERC20Artifact.abi)));
@@ -371,17 +371,17 @@ describe("UniversalProvider", function () {
         const balanceToMint = ethers.parseEther("2");
         const mintTx = erc20.methods.mint(walletAddress, toBeHex(balanceToMint));
         await mintTx.send({ from: walletAddress });
-        const balance = await erc20.methods.balanceOf(walletAddress).call();
-        expect(ethers.getBigInt(balance).toString()).to.eql(balanceToMint.toString());
+        const balance = (await erc20.methods.balanceOf(walletAddress).call()) as string;
+        expect(BigInt(balance).toString()).to.eql(balanceToMint.toString());
         const transferTx = erc20.methods.transfer(receiverAddress, toBeHex(ethers.parseEther("1")));
         const tokenTransferGas = await transferTx.estimateGas({ from: walletAddress });
         // This value may change with compiler/EVM updates. Allow a small tolerance to avoid brittle tests.
         expect(Number(tokenTransferGas)).to.be.within(52000, 53000);
         await transferTx.send({ from: walletAddress });
         const tokenBalanceA = await erc20.methods.balanceOf(walletAddress).call();
-        expect(tokenBalanceA).to.eql(ethers.toBigInt(ethers.parseEther("1").toString()));
+        expect(tokenBalanceA).to.eql(BigInt(ethers.parseEther("1").toString()));
         const tokenBalanceB = await erc20.methods.balanceOf(receiverAddress).call();
-        expect(tokenBalanceB).to.eql(ethers.toBigInt(ethers.parseEther("1")));
+        expect(tokenBalanceB).to.eql(BigInt(ethers.parseEther("1")));
       });
       it("estimate gas", async () => {
         const ethTransferGas = await web3.eth.estimateGas(TEST_ETH_TRANSFER);
@@ -389,9 +389,9 @@ describe("UniversalProvider", function () {
         expect(Number(ethTransferGas)).to.be.within(21000, 22000);
       });
       it("send transaction", async () => {
-        const balanceBefore = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
+        const balanceBefore = BigInt(await web3.eth.getBalance(walletAddress));
         await web3.eth.sendTransaction(TEST_ETH_TRANSFER);
-        const balanceAfter = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
+        const balanceAfter = BigInt(await web3.eth.getBalance(walletAddress));
         expect(
           balanceAfter < balanceBefore,
           "balanceAfter " +
@@ -401,7 +401,7 @@ describe("UniversalProvider", function () {
         ).to.be.true;
       });
       it("sign transaction", async () => {
-        const balanceBefore = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
+        const balanceBefore = BigInt(await web3.eth.getBalance(walletAddress));
         const { rawTransaction } = await web3.eth.accounts.signTransaction(
           { ...TEST_SIGN_TRANSACTION, from: walletAddress },
           walletClient.signer.privateKey,
@@ -411,7 +411,7 @@ describe("UniversalProvider", function () {
           params: [rawTransaction],
         });
         expect(!!broadcastTx).to.be.true;
-        const balanceAfter = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
+        const balanceAfter = BigInt(await web3.eth.getBalance(walletAddress));
         expect(balanceAfter < balanceBefore).to.be.true;
       });
       it("sign message", async () => {
@@ -425,7 +425,7 @@ describe("UniversalProvider", function () {
         expect(verify).eq(walletAddress);
       });
       it("sign transaction and send via sendAsync", async () => {
-        const balanceBefore = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
+        const balanceBefore = BigInt(await web3.eth.getBalance(walletAddress));
         const { rawTransaction } = await web3.eth.accounts.signTransaction(
           { ...TEST_SIGN_TRANSACTION, from: walletAddress },
           walletClient.signer.privateKey,
@@ -433,7 +433,7 @@ describe("UniversalProvider", function () {
         await new Promise<void>((resolve) => {
           const callback = async (_error: any, result: any) => {
             expect(!!result).to.be.true;
-            const balanceAfter = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
+            const balanceAfter = BigInt(await web3.eth.getBalance(walletAddress));
             expect(balanceAfter < balanceBefore).to.be.true;
             resolve();
           };
@@ -462,7 +462,7 @@ describe("UniversalProvider", function () {
       });
       it("matches chainId", async () => {
         const network = await web3Provider.getNetwork();
-        expect(network.chainId).to.equal(ethers.toBigInt(CHAIN_ID));
+        expect(network.chainId).to.equal(BigInt(CHAIN_ID));
       });
       it("ERC20 contract", async () => {
         const signer = await web3Provider.getSigner();

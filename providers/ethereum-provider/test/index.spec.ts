@@ -190,7 +190,7 @@ describe("EthereumProvider", function () {
       });
       it("matches chainId", async () => {
         const chainId = await web3.eth.getChainId();
-        expect(chainId).to.eql(ethers.toBigInt(CHAIN_ID));
+        expect(chainId).to.eql(BigInt(CHAIN_ID));
       });
       it("ERC20 contract", async () => {
         const erc20Factory = new web3.eth.Contract(JSON.parse(JSON.stringify(ERC20Artifact.abi)));
@@ -201,17 +201,17 @@ describe("EthereumProvider", function () {
         const balanceToMint = ethers.parseEther("2");
         const mintTx = erc20.methods.mint(walletAddress, toBeHex(balanceToMint));
         await mintTx.send({ from: walletAddress });
-        const balance = await erc20.methods.balanceOf(walletAddress).call();
-        expect(ethers.getBigInt(balance).toString()).to.eql(balanceToMint.toString());
+        const balance = (await erc20.methods.balanceOf(walletAddress).call()) as string;
+        expect(BigInt(balance).toString()).to.eql(balanceToMint.toString());
         const transferTx = erc20.methods.transfer(receiverAddress, toBeHex(ethers.parseEther("1")));
         const tokenTransferGas = await transferTx.estimateGas({ from: walletAddress });
         // This value may change with compiler/EVM updates. Allow a small tolerance to avoid brittle tests.
         expect(Number(tokenTransferGas)).to.be.within(52000, 53000);
         await transferTx.send({ from: walletAddress });
         const tokenBalanceA = await erc20.methods.balanceOf(walletAddress).call();
-        expect(tokenBalanceA).to.eql(ethers.toBigInt(ethers.parseEther("1").toString()));
+        expect(tokenBalanceA).to.eql(BigInt(ethers.parseEther("1").toString()));
         const tokenBalanceB = await erc20.methods.balanceOf(receiverAddress).call();
-        expect(tokenBalanceB).to.eql(ethers.toBigInt(ethers.parseEther("1")));
+        expect(tokenBalanceB).to.eql(BigInt(ethers.parseEther("1")));
       });
       it("estimate gas", async () => {
         const ethTransferGas = await web3.eth.estimateGas(TEST_ETH_TRANSFER);
@@ -219,9 +219,9 @@ describe("EthereumProvider", function () {
         expect(Number(ethTransferGas)).to.be.within(21000, 22000);
       });
       it("send transaction", async () => {
-        const balanceBefore = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
+        const balanceBefore = BigInt(await web3.eth.getBalance(walletAddress));
         await web3.eth.sendTransaction({ ...TEST_ETH_TRANSFER, from: walletAddress });
-        const balanceAfter = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
+        const balanceAfter = BigInt(await web3.eth.getBalance(walletAddress));
         expect(
           balanceAfter < balanceBefore,
           "balanceAfter " +
@@ -231,7 +231,7 @@ describe("EthereumProvider", function () {
         ).to.be.true;
       });
       it("sign transaction", async () => {
-        const balanceBefore = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
+        const balanceBefore = BigInt(await web3.eth.getBalance(walletAddress));
         const { rawTransaction } = await web3.eth.accounts.signTransaction(
           { ...TEST_SIGN_TRANSACTION, from: walletAddress },
           walletClient.signer.privateKey,
@@ -241,7 +241,7 @@ describe("EthereumProvider", function () {
           params: [rawTransaction],
         });
         expect(!!broadcastTx).to.be.true;
-        const balanceAfter = ethers.getBigInt(await web3.eth.getBalance(walletAddress));
+        const balanceAfter = BigInt(await web3.eth.getBalance(walletAddress));
         expect(balanceAfter < balanceBefore).to.be.true;
       });
       it("sign message", async () => {
@@ -286,7 +286,7 @@ describe("EthereumProvider", function () {
       });
       it("matches chainId", async () => {
         const network = await web3Provider.getNetwork();
-        expect(network.chainId).to.equal(ethers.toBigInt(CHAIN_ID));
+        expect(network.chainId).to.equal(BigInt(CHAIN_ID));
       });
       it("ERC20 contract", async () => {
         const signer = await web3Provider.getSigner();
