@@ -2812,7 +2812,6 @@ export class Engine extends IEngine {
       sessionProperties,
       scopedProperties,
       relays,
-      walletPay,
     } = params;
     if (!isUndefined(pairingTopic)) await this.isValidPairingTopic(pairingTopic);
 
@@ -2862,14 +2861,6 @@ export class Engine extends IEngine {
         );
       }
     }
-
-    if (!isUndefined(walletPay)) {
-      this.validateWalletPay(walletPay, "connect()");
-    }
-  };
-
-  private validateWalletPay = (walletPay: EngineTypes.WalletPayParams, type: string) => {
-    // TODO: implement
   };
 
   private validateNamespaces = (
