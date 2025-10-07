@@ -76,15 +76,14 @@ export class UniversalProvider implements IUniversalProvider {
     if (!this.session) {
       throw new Error("Please call connect() before request()");
     }
-
-    return await this.getProvider(namespace).request({
+    return (await this.getProvider(namespace).request({
       request: {
         ...args,
       },
       chainId: `${namespace}:${chainId}`,
       topic: this.session.topic,
       expiry,
-    });
+    })) as T;
   }
 
   public sendAsync(
