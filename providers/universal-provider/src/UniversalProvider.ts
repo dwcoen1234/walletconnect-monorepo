@@ -190,6 +190,7 @@ export class UniversalProvider implements IUniversalProvider {
       sessionProperties: this.sessionProperties,
       scopedProperties: this.scopedProperties,
       authentication: this.connectParams?.authentication,
+      walletPay: this.connectParams?.walletPay,
     });
 
     if (uri) {
