@@ -3,6 +3,7 @@ import { IStore } from "../core/store";
 import { SignClientTypes } from "./client";
 import { ProposalTypes } from "./proposal";
 import { AuthTypes } from "./auth";
+import { EngineTypes } from ".";
 
 export declare namespace SessionTypes {
   type Expiry = number;
@@ -47,6 +48,7 @@ export declare namespace SessionTypes {
       metadata: SignClientTypes.Metadata;
     };
     authentication?: AuthTypes.Cacao[];
+    walletPayResult?: EngineTypes.WalletPayResult[];
     transportType?: RelayerTypes.TransportType;
   }
 }

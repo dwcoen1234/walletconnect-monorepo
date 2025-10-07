@@ -3,7 +3,7 @@ import { SignClientTypes } from "./client";
 import { RelayerTypes } from "../core/relayer";
 import { SessionTypes } from "./session";
 import { ProposalTypes } from "./proposal";
-import { AuthTypes } from ".";
+import { AuthTypes, EngineTypes } from ".";
 
 export declare namespace JsonRpcTypes {
   // -- core ------------------------------------------------------- //
@@ -51,6 +51,7 @@ export declare namespace JsonRpcTypes {
         metadata: SignClientTypes.Metadata;
       };
       authentication?: AuthTypes.Cacao[];
+      walletPayResult?: EngineTypes.WalletPayResult[];
     };
     wc_sessionUpdate: {
       namespaces: SessionTypes.Namespaces;

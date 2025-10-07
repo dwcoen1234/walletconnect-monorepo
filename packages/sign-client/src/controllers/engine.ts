@@ -243,6 +243,7 @@ export class Engine extends IEngine {
       scopedProperties,
       relays,
       authentication,
+      walletPay,
     } = connectParams;
     let topic = pairingTopic;
     let uri: string | undefined;
@@ -296,6 +297,7 @@ export class Engine extends IEngine {
           version: "1",
           iat: new Date().toISOString(),
         })),
+        walletPay,
       },
     };
     const sessionConnectTarget = engineEvent("session_connect", proposal.id);
@@ -423,6 +425,10 @@ export class Engine extends IEngine {
       selfPublicKey,
       peerPublicKey,
     );
+
+    const { authentication, walletPayResult } =
+      this.prepareProposalRequestsResponses(proposalRequestsResponses);
+
     const sessionSettle = {
       relay: { protocol: relayProtocol ?? "irn" },
       namespaces,
@@ -431,7 +437,8 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       ...(sessionConfig && { sessionConfig }),
-      authentication: proposalRequestsResponses,
+      authentication,
+      walletPayResult,
     };
     const transportType = TRANSPORT_TYPES.relay;
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribing_session_topic);
@@ -2117,6 +2124,7 @@ export class Engine extends IEngine {
         scopedProperties,
         sessionConfig,
         authentication,
+        walletPayResult,
       } = payload.params;
       const pendingSession = [...this.pendingSessions.values()].find(
         (s) => s.sessionTopic === topic,
@@ -2151,6 +2159,7 @@ export class Engine extends IEngine {
         ...(sessionConfig && { sessionConfig }),
         transportType: TRANSPORT_TYPES.relay,
         authentication,
+        walletPayResult,
       };
 
       await this.client.session.set(session.topic, session);
@@ -2803,6 +2812,7 @@ export class Engine extends IEngine {
       sessionProperties,
       scopedProperties,
       relays,
+      walletPay,
     } = params;
     if (!isUndefined(pairingTopic)) await this.isValidPairingTopic(pairingTopic);
 
@@ -2852,6 +2862,14 @@ export class Engine extends IEngine {
         );
       }
     }
+
+    if (!isUndefined(walletPay)) {
+      this.validateWalletPay(walletPay, "connect()");
+    }
+  };
+
+  private validateWalletPay = (walletPay: EngineTypes.WalletPayParams, type: string) => {
+    // TODO: implement
   };
 
   private validateNamespaces = (
@@ -3402,5 +3420,25 @@ export class Engine extends IEngine {
       this.client.logger.warn("Error extracting tx hashes from result", e);
     }
     return [];
+  };
+
+  private prepareProposalRequestsResponses = (
+    proposalRequestsResponses: EngineTypes.ApproveParams["proposalRequestsResponses"] = [],
+  ) => {
+    const authentication: AuthTypes.Cacao[] = [];
+    const walletPayResult: EngineTypes.WalletPayResult[] = [];
+
+    proposalRequestsResponses.forEach((response) => {
+      try {
+        if (typeof response === "object" && "h" in response) {
+          authentication.push(response);
+        } else if (typeof response === "object" && "txid" in response) {
+          walletPayResult.push(response);
+        }
+      } catch (e) {
+        this.client.logger.warn("Error preparing proposal requests responses", e);
+      }
+    });
+    return { authentication, walletPayResult };
   };
 }

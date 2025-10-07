@@ -2,6 +2,7 @@ import { SignClientTypes } from "./client";
 import { RelayerTypes } from "../core/relayer";
 import { IStore } from "../core/store";
 import { AuthTypes } from "./auth";
+import { EngineTypes } from ".";
 
 export declare namespace ProposalTypes {
   interface BaseRequiredNamespace {
@@ -39,6 +40,7 @@ export declare namespace ProposalTypes {
     encryptedId?: string;
     requests?: {
       authentication?: AuthTypes.AuthenticateParams[];
+      walletPay?: EngineTypes.WalletPayParams;
     };
   }
 }

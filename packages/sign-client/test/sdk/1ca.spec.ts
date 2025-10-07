@@ -2,16 +2,9 @@
 import { expect, describe, it, beforeAll } from "vitest";
 import { ENGINE_RPC_OPTS, SignClient } from "../../src";
 import { TEST_APP_METADATA_B, TEST_SIGN_CLIENT_OPTIONS, deleteClients, throttle } from "../shared";
-import {
-  buildApprovedNamespaces,
-  buildAuthObject,
-  getSdkError,
-  populateAuthPayload,
-} from "@walletconnect/utils";
+import { buildAuthObject } from "@walletconnect/utils";
 import { AuthTypes, ISignClient, ProposalTypes, SessionTypes } from "@walletconnect/types";
-import { Wallet as CryptoWallet } from "@ethersproject/wallet";
-import { formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
-import { RELAYER_EVENTS } from "@walletconnect/core";
+import { ethers } from "ethers";
 
 const buildAuthObjects = ({
   wallet,
@@ -48,10 +41,10 @@ const buildAuthObjects = ({
 };
 
 describe("Authenticated Sessions", () => {
-  let cryptoWallet: CryptoWallet;
+  let cryptoWallet: ethers.HDNodeWallet;
 
   beforeAll(() => {
-    cryptoWallet = CryptoWallet.createRandom();
+    cryptoWallet = ethers.Wallet.createRandom();
   });
 
   it("should authenticate EVM via connect(). Case 1", async () => {
