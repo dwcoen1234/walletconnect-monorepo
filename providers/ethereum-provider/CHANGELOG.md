@@ -1,5 +1,17 @@
 # @walletconnect/ethereum-provider
 
+## 2.22.2
+
+### Patch Changes
+
+- [#6976](https://github.com/WalletConnect/walletconnect-monorepo/pull/6976) [`9d00e00`](https://github.com/WalletConnect/walletconnect-monorepo/commit/9d00e0014d4facf2defb25dd56136ca7906c0de5) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixed a bug in `universal-provider` where `logger` wasn't imported correctly due to esm/cjs mismatch in some environments
+
+- Updated dependencies [[`9d00e00`](https://github.com/WalletConnect/walletconnect-monorepo/commit/9d00e0014d4facf2defb25dd56136ca7906c0de5)]:
+  - @walletconnect/universal-provider@2.22.2
+  - @walletconnect/sign-client@2.22.2
+  - @walletconnect/types@2.22.2
+  - @walletconnect/utils@2.22.2
+
 ## 2.22.1
 
 ### Patch Changes
