@@ -331,7 +331,9 @@ describe("Sign Integration", () => {
     let numPaymentBroadcasted = 0;
     await Promise.all([
       new Promise<void>((resolve) => {
-        pos.on("payment_successful", () => {
+        pos.on("payment_successful", ({ transaction, result }) => {
+          expect(transaction).to.exist;
+          expect(result).to.exist;
           console.log("payment_successful");
           numPaymentSuccessful++;
           if (numPaymentSuccessful === paymentIntents.length) {
@@ -340,7 +342,9 @@ describe("Sign Integration", () => {
         });
       }),
       new Promise<void>((resolve) => {
-        pos.on("payment_requested", () => {
+        pos.on("payment_requested", ({ paymentIntent, transaction }) => {
+          expect(paymentIntent).to.exist;
+          expect(transaction).to.exist;
           console.log("payment_requested");
           numPaymentRequested++;
           if (numPaymentRequested === paymentIntents.length) {
@@ -349,7 +353,10 @@ describe("Sign Integration", () => {
         });
       }),
       new Promise<void>((resolve) => {
-        pos.on("payment_broadcasted", (result) => {
+        pos.on("payment_broadcasted", ({ paymentIntent, transaction, result }) => {
+          expect(paymentIntent).to.exist;
+          expect(transaction).to.exist;
+          expect(result).to.exist;
           console.log("payment_broadcasted", JSON.stringify(result, null, 2));
           numPaymentBroadcasted++;
           if (numPaymentBroadcasted === paymentIntents.length) {
@@ -400,7 +407,12 @@ describe("Sign Integration", () => {
         });
       }),
       new Promise<void>((resolve) => {
-        pos.once("connected", () => {
+        pos.once("connected", ({ session }) => {
+          expect(session).to.exist;
+          const walletSession = wallet.session.get(session.topic);
+          expect(walletSession).to.exist;
+          expect(walletSession.topic).to.be.equal(session.topic);
+          expect(walletSession.pairingTopic).to.be.equal(session.pairingTopic);
           console.log("connected");
           resolve();
         });

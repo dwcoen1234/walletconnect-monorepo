@@ -265,7 +265,7 @@ export class Engine extends IPOSClientEngine {
   onSessionConnected: IPOSClientEngine["onSessionConnected"] = async (params) => {
     const { intentId, session } = params;
     this.logger.debug("On session connected", { intentId, sessionTopic: session.topic });
-    this.emit("connected", {});
+    this.emit("connected", { session });
     this.logger.debug("Emitted connected event");
     try {
       const transactions = await this.prepareTransactionsFromPaymentIntents({ intentId, session });
@@ -291,7 +291,7 @@ export class Engine extends IPOSClientEngine {
       const transaction = transactions[i];
       const paymentIntent = paymentIntents[i];
       try {
-        this.emit("payment_requested", {});
+        this.emit("payment_requested", { paymentIntent, transaction });
         this.logger.debug("Emitted payment_requested event", {
           transactionId: transaction.id,
         });
@@ -320,11 +320,11 @@ export class Engine extends IPOSClientEngine {
           });
           throw error;
         }
-        this.emit("payment_broadcasted", result);
+        this.emit("payment_broadcasted", { paymentIntent, transaction, result });
         this.logger.debug("Emitted payment_broadcasted event", {
           transactionId: transaction.id,
         });
-        this.awaitPaymentConfirmed({ transactionId: transaction.id, result });
+        this.awaitPaymentConfirmed({ transaction, result });
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (error) {
         this.logger.error("error", error);
@@ -334,14 +334,14 @@ export class Engine extends IPOSClientEngine {
 
   awaitPaymentConfirmed: IPOSClientEngine["awaitPaymentConfirmed"] = async (params) => {
     try {
-      const { transactionId, result } = params;
-      this.logger.debug("Awaiting payment confirmed", { transactionId, result });
+      const { transaction, result } = params;
+      this.logger.debug("Awaiting payment confirmed", { transactionId: transaction.id, result });
       const payload = {
         id: payloadId(),
         jsonrpc: "2.0",
         method: "wc_pos_checkTransaction",
         params: {
-          id: transactionId,
+          id: transaction.id,
           sendResult: typeof result === "string" ? result : JSON.stringify(result),
         },
       };
@@ -350,18 +350,22 @@ export class Engine extends IPOSClientEngine {
       let transactionResult;
       while (!transactionResult) {
         if (numCheckAttempts >= MAX_TRANSACTION_STATUS_CHECKS) {
-          throw new Error(`Transaction status not found for id: ${transactionId}`);
+          throw new Error(`Transaction status not found for id: ${transaction.id}`);
         }
         numCheckAttempts++;
 
         const response = await this.fetchRpcRequest<POSClientEngineTypes.RPCCheckTransactionResult>(
           JSON.stringify(payload),
         );
-        this.logger.debug("Received wc_pos_checkTransaction", { transactionId, response });
+        this.logger.debug("Received wc_pos_checkTransaction", {
+          transactionId: transaction.id,
+          response,
+        });
         if (response.result.status === "CONFIRMED") {
           this.logger.debug("Transaction status confirmed", { response });
           this.emit("payment_successful", {
-            transaction: result,
+            transaction,
+            result,
           });
           transactionResult = response.result;
           break;

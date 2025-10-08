@@ -119,7 +119,7 @@ export abstract class IPOSClientEngine {
   }): Promise<void>;
 
   public abstract awaitPaymentConfirmed(params: {
-    transactionId: string;
+    transaction: POSClientEngineTypes.Transaction;
     result: unknown;
   }): Promise<void>;
 }

@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
-import { IPOSClientEngine } from "./engine";
+import { IPOSClientEngine, POSClientEngineTypes } from "./engine";
+import { SessionTypes } from "@walletconnect/types";
 
 export declare namespace POSClientTypes {
   type Event =
@@ -18,12 +19,19 @@ export declare namespace POSClientTypes {
     qr_ready: { uri: string };
     connection_rejected: any;
     connection_failed: { error: { message: string; code: number } };
-    connected: any;
-    payment_requested: any;
+    connected: { session: SessionTypes.Struct };
+    payment_requested: {
+      paymentIntent: PaymentIntent;
+      transaction: POSClientEngineTypes.Transaction;
+    };
     payment_rejected: { error?: { message?: string; code: number }; paymentIntent: PaymentIntent };
-    payment_broadcasted: any;
+    payment_broadcasted: {
+      paymentIntent: PaymentIntent;
+      transaction: POSClientEngineTypes.Transaction;
+      result: any;
+    };
     payment_failed: { error?: { message?: string; code: number }; transaction: any };
-    payment_successful: { transaction: any };
+    payment_successful: { transaction: POSClientEngineTypes.Transaction; result: any };
     disconnected: any;
   }
 
