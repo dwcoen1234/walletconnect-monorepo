@@ -2,7 +2,7 @@ import { SignClient } from "@walletconnect/sign-client";
 import { SessionTypes } from "@walletconnect/types";
 import { JsonRpcResult } from "@walletconnect/jsonrpc-types";
 import { createLogger, getSdkError, isValidArray, parseNamespaceKey } from "@walletconnect/utils";
-import { getDefaultLoggerOptions, Logger, generateClientLogger } from "@walletconnect/logger";
+import { Logger } from "@walletconnect/logger";
 
 import {
   convertChainIdToNumber,
