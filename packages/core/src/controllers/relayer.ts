@@ -11,13 +11,6 @@ import {
   RequestArguments,
 } from "@walletconnect/jsonrpc-utils";
 import WsConnection from "@walletconnect/jsonrpc-ws-connection";
-import {
-  generateChildLogger,
-  getDefaultLoggerOptions,
-  getLoggerContext,
-  generateClientLogger,
-  Logger,
-} from "@walletconnect/logger";
 import { RelayJsonRpc } from "@walletconnect/relay-api";
 import {
   FIVE_MINUTES,
@@ -48,6 +41,7 @@ import {
   isNode,
   calcExpiry,
   isAppVisible,
+  createLogger,
 } from "@walletconnect/utils";
 
 import { HEARTBEAT_EVENTS } from "@walletconnect/heartbeat";
@@ -68,6 +62,7 @@ import {
 import { MessageTracker } from "./messages";
 import { Publisher } from "./publisher";
 import { Subscriber } from "./subscriber";
+import { getLoggerContext, Logger } from "@walletconnect/logger";
 
 export class Relayer extends IRelayer {
   public protocol = "wc";
@@ -105,12 +100,10 @@ export class Relayer extends IRelayer {
   constructor(opts: RelayerOptions) {
     super(opts);
     this.core = opts.core;
-    this.logger =
-      typeof opts.logger !== "undefined" && typeof opts.logger !== "string"
-        ? generateChildLogger(opts.logger, this.name)
-        : generateClientLogger({
-            opts: getDefaultLoggerOptions({ level: opts.logger || RELAYER_DEFAULT_LOGGER }),
-          }).logger;
+    this.logger = createLogger({
+      logger: opts.logger ?? RELAYER_DEFAULT_LOGGER,
+      name: this.name,
+    });
     this.messages = new MessageTracker(this.logger, opts.core);
     this.subscriber = new Subscriber(this, this.logger);
     this.publisher = new Publisher(this, this.logger);

@@ -50,7 +50,7 @@ export const TEST_WALLET_METADATA = {
 };
 
 export const TEST_PROVIDER_OPTS = {
-  logger: "error",
+  logger: "info",
   relayUrl: TEST_RELAY_URL,
   metadata: TEST_APP_METADATA,
   projectId: process.env.TEST_PROJECT_ID,

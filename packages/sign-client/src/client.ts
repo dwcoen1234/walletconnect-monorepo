@@ -1,12 +1,6 @@
 import { Core } from "@walletconnect/core";
-import {
-  generateChildLogger,
-  getDefaultLoggerOptions,
-  getLoggerContext,
-  generateClientLogger,
-} from "@walletconnect/logger";
 import { SignClientTypes, ISignClient, ISignClientEvents, EngineTypes } from "@walletconnect/types";
-import { populateAppMetadata } from "@walletconnect/utils";
+import { populateAppMetadata, createLogger } from "@walletconnect/utils";
 import { EventEmitter } from "events";
 import { SIGN_CLIENT_DEFAULT, SIGN_CLIENT_PROTOCOL, SIGN_CLIENT_VERSION } from "./constants";
 import { AuthStore, Engine, PendingRequest, Proposal, Session } from "./controllers";
@@ -44,12 +38,9 @@ export class SignClient extends ISignClient {
     const logger =
       typeof opts?.logger !== "undefined" && typeof opts?.logger !== "string"
         ? opts.logger
-        : generateClientLogger({
-            opts: getDefaultLoggerOptions({ level: opts?.logger || SIGN_CLIENT_DEFAULT.logger }),
-          }).logger;
-
+        : createLogger({ level: opts?.logger || SIGN_CLIENT_DEFAULT.logger, name: this.name });
+    this.logger = logger;
     this.core = opts?.core || new Core(opts);
-    this.logger = generateChildLogger(logger, this.name);
     this.session = new Session(this.core, this.logger);
     this.proposal = new Proposal(this.core, this.logger);
     this.pendingRequest = new PendingRequest(this.core, this.logger);

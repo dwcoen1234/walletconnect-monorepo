@@ -1,7 +1,7 @@
-import SignClient from "@walletconnect/sign-client";
+import { SignClient } from "@walletconnect/sign-client";
 import { SessionTypes } from "@walletconnect/types";
 import { JsonRpcResult } from "@walletconnect/jsonrpc-types";
-import { getSdkError, isValidArray, parseNamespaceKey } from "@walletconnect/utils";
+import { createLogger, getSdkError, isValidArray, parseNamespaceKey } from "@walletconnect/utils";
 import { getDefaultLoggerOptions, Logger, generateClientLogger } from "@walletconnect/logger";
 
 import {
@@ -32,12 +32,19 @@ import {
   EmitAccountsChangedOnChainChange,
 } from "./types";
 
-import { RELAY_URL, LOGGER, STORAGE, PROVIDER_EVENTS, GENERIC_SUBPROVIDER_NAME } from "./constants";
+import {
+  RELAY_URL,
+  LOGGER,
+  STORAGE,
+  PROVIDER_EVENTS,
+  GENERIC_SUBPROVIDER_NAME,
+  CONTEXT,
+} from "./constants";
 import EventEmitter from "events";
 import { formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
 
 export class UniversalProvider implements IUniversalProvider {
-  public client!: SignClient;
+  public client!: InstanceType<typeof SignClient>;
   public namespaces?: NamespaceConfig;
   public optionalNamespaces?: NamespaceConfig;
   public sessionProperties?: SessionTypes.SessionProperties;
@@ -59,12 +66,10 @@ export class UniversalProvider implements IUniversalProvider {
 
   constructor(opts: UniversalProviderOpts) {
     this.providerOpts = opts;
-    this.logger =
-      typeof opts?.logger !== "undefined" && typeof opts?.logger !== "string"
-        ? opts.logger
-        : generateClientLogger({
-            opts: getDefaultLoggerOptions({ level: opts?.logger || LOGGER }),
-          }).logger;
+    this.logger = createLogger({
+      logger: opts.logger ?? LOGGER,
+      name: this.providerOpts.name ?? CONTEXT,
+    });
     this.disableProviderPing = opts?.disableProviderPing || false;
   }
 
