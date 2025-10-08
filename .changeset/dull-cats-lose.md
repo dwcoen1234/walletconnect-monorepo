@@ -9,4 +9,4 @@
 "@walletconnect/signer-connection": patch
 ---
 
-Fixed `SyntaxError: Named export 'pino' not found` bug in `universal-provider`
+Updated `@walletconnect/logger` to `2.1.3`
