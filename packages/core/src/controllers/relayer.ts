@@ -15,7 +15,7 @@ import {
   generateChildLogger,
   getDefaultLoggerOptions,
   getLoggerContext,
-  pino,
+  generateClientLogger,
   Logger,
 } from "@walletconnect/logger";
 import { RelayJsonRpc } from "@walletconnect/relay-api";
@@ -108,7 +108,9 @@ export class Relayer extends IRelayer {
     this.logger =
       typeof opts.logger !== "undefined" && typeof opts.logger !== "string"
         ? generateChildLogger(opts.logger, this.name)
-        : pino(getDefaultLoggerOptions({ level: opts.logger || RELAYER_DEFAULT_LOGGER }));
+        : generateClientLogger({
+            opts: getDefaultLoggerOptions({ level: opts.logger || RELAYER_DEFAULT_LOGGER }),
+          }).logger;
     this.messages = new MessageTracker(this.logger, opts.core);
     this.subscriber = new Subscriber(this, this.logger);
     this.publisher = new Publisher(this, this.logger);

@@ -3,7 +3,7 @@ import {
   generateChildLogger,
   getDefaultLoggerOptions,
   getLoggerContext,
-  pino,
+  generateClientLogger,
 } from "@walletconnect/logger";
 import { SignClientTypes, ISignClient, ISignClientEvents, EngineTypes } from "@walletconnect/types";
 import { populateAppMetadata } from "@walletconnect/utils";
@@ -44,7 +44,9 @@ export class SignClient extends ISignClient {
     const logger =
       typeof opts?.logger !== "undefined" && typeof opts?.logger !== "string"
         ? opts.logger
-        : pino(getDefaultLoggerOptions({ level: opts?.logger || SIGN_CLIENT_DEFAULT.logger }));
+        : generateClientLogger({
+            opts: getDefaultLoggerOptions({ level: opts?.logger || SIGN_CLIENT_DEFAULT.logger }),
+          }).logger;
 
     this.core = opts?.core || new Core(opts);
     this.logger = generateChildLogger(logger, this.name);
