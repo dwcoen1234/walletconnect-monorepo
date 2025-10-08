@@ -11,3 +11,4 @@ export * from "./network";
 export * from "./memoryStore";
 export * from "./signatures";
 export * from "./polkadot";
+export * from "./logger";
