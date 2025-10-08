@@ -211,6 +211,7 @@ export type WalletConnectModalConfig = ConfigCtrlState &
     walletImages?: Record<string, string>;
     enableAuthMode?: boolean;
     enableExplorer?: boolean;
+    enableMobileFullScreen?: boolean;
     explorerRecommendedWalletIds?: string[] | "NONE";
     explorerExcludedWalletIds?: string[] | "ALL";
     termsOfServiceUrl?: string;
@@ -223,6 +224,7 @@ export type QrModalOptions = Pick<
   | "themeVariables"
   | "desktopWallets"
   | "enableExplorer"
+  | "enableMobileFullScreen"
   | "explorerRecommendedWalletIds"
   | "explorerExcludedWalletIds"
   | "mobileWallets"
