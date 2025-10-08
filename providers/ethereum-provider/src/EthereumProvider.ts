@@ -620,6 +620,7 @@ export class EthereumProvider implements IEthereumProvider {
           ...options,
           universalProvider: this.signer as any,
           manualWCControl: true,
+          enableMobileFullScreen: this.rpc.qrModalOptions?.enableMobileFullScreen === true,
         });
       } catch (e) {
         console.warn(e);
