@@ -1,5 +1,21 @@
 # @walletconnect/ethereum-provider
 
+## 2.22.0
+
+### Minor Changes
+
+- [#6941](https://github.com/WalletConnect/walletconnect-monorepo/pull/6941) [`aa2399e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/aa2399ead2e6b91da25adb79cb44472dadccd791) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Validates response topic when responding to a session request
+
+### Patch Changes
+
+- [#6973](https://github.com/WalletConnect/walletconnect-monorepo/pull/6973) [`bc03edf`](https://github.com/WalletConnect/walletconnect-monorepo/commit/bc03edf498d3f413e29b69a9ace6fe6225919762) Thanks [@svenvoskamp](https://github.com/svenvoskamp)! - Upgrade "@reown/appkit" to 1.8.9
+
+- Updated dependencies [[`bc03edf`](https://github.com/WalletConnect/walletconnect-monorepo/commit/bc03edf498d3f413e29b69a9ace6fe6225919762), [`aa2399e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/aa2399ead2e6b91da25adb79cb44472dadccd791)]:
+  - @walletconnect/sign-client@2.22.0
+  - @walletconnect/types@2.22.0
+  - @walletconnect/utils@2.22.0
+  - @walletconnect/universal-provider@2.22.0
+
 ## 2.21.10
 
 ### Patch Changes
