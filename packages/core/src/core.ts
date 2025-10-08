@@ -114,7 +114,7 @@ export class Core extends ICore {
     if (this.logChunkController?.downloadLogsBlobInBrowser) {
       // @ts-ignore
       window.downloadLogsBlobInBrowser = async () => {
-        // Have to null check twice becquse there is no guarantee
+        // Have to null check twice because there is no guarantee
         // this.logChunkController.downloadLogsBlobInBrowser is always truthy
         if (this.logChunkController?.downloadLogsBlobInBrowser) {
           this.logChunkController?.downloadLogsBlobInBrowser({

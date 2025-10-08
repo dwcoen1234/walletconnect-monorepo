@@ -33,7 +33,7 @@ export class Crypto implements ICrypto {
   public readonly randomSessionIdentifier = generateRandomBytes32();
 
   private initialized = false;
-
+  private clientId: string | undefined;
   constructor(
     public core: ICore,
     public logger: Logger,
@@ -62,9 +62,13 @@ export class Crypto implements ICrypto {
 
   public getClientId: ICrypto["getClientId"] = async () => {
     this.isInitialized();
+    if (this.clientId) {
+      return this.clientId;
+    }
     const seed = await this.getClientSeed();
     const keyPair = relayAuth.generateKeyPair(seed);
     const clientId = relayAuth.encodeIss(keyPair.publicKey);
+    this.clientId = clientId;
     return clientId;
   };
 

@@ -4,7 +4,7 @@ Open protocol for connecting Wallets to Dapps - https://walletconnect.com
 
 ## Setup
 
-1. Ensure [nodejs and npm](https://nodejs.org/en/)
+1. Ensure [nodejs](https://nodejs.org) and [npm](https://www.npmjs.com)
 2. Clone the repository
 3. Install all package dependencies, by running `npm install` from the root folder
 

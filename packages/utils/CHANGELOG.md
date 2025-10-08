@@ -1,5 +1,44 @@
 # @walletconnect/utils
 
+## 2.22.0
+
+### Minor Changes
+
+- [#6941](https://github.com/WalletConnect/walletconnect-monorepo/pull/6941) [`aa2399e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/aa2399ead2e6b91da25adb79cb44472dadccd791) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Validates response topic when responding to a session request
+
+### Patch Changes
+
+- [#6973](https://github.com/WalletConnect/walletconnect-monorepo/pull/6973) [`bc03edf`](https://github.com/WalletConnect/walletconnect-monorepo/commit/bc03edf498d3f413e29b69a9ace6fe6225919762) Thanks [@svenvoskamp](https://github.com/svenvoskamp)! - Upgrade "@reown/appkit" to 1.8.9
+
+- Updated dependencies [[`bc03edf`](https://github.com/WalletConnect/walletconnect-monorepo/commit/bc03edf498d3f413e29b69a9ace6fe6225919762), [`aa2399e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/aa2399ead2e6b91da25adb79cb44472dadccd791)]:
+  - @walletconnect/types@2.22.0
+
+## 2.21.10
+
+### Patch Changes
+
+- [#6926](https://github.com/WalletConnect/walletconnect-monorepo/pull/6926) [`df6a83d04b075fdd075317becb1c274b82cf7fba`](https://github.com/WalletConnect/walletconnect-monorepo/commit/df6a83d04b075fdd075317becb1c274b82cf7fba) Thanks [@ignaciosantise](https://github.com/ignaciosantise)! - Replaced `viem` with `ox`
+
+- Updated dependencies [[`df6a83d04b075fdd075317becb1c274b82cf7fba`](https://github.com/WalletConnect/walletconnect-monorepo/commit/df6a83d04b075fdd075317becb1c274b82cf7fba)]:
+  - @walletconnect/types@2.21.10
+
+## 2.21.9
+
+### Patch Changes
+
+- [#6857](https://github.com/WalletConnect/walletconnect-monorepo/pull/6857) [`74c47effb85faf95bbf1c9e55caf4df1e33e09ea`](https://github.com/WalletConnect/walletconnect-monorepo/commit/74c47effb85faf95bbf1c9e55caf4df1e33e09ea) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Refactored `universal-provider` to use the `generic` sub provider for any chain that doesn't require custom handling
+
+- [#6908](https://github.com/WalletConnect/walletconnect-monorepo/pull/6908) [`a17c5add47533dbb571e600ced363febe1e591b1`](https://github.com/WalletConnect/walletconnect-monorepo/commit/a17c5add47533dbb571e600ced363febe1e591b1) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Flattens TVF params instead of nesting them
+
+- [#6866](https://github.com/WalletConnect/walletconnect-monorepo/pull/6866) [`03301881b4081d3995512ff67afbae30db38f426`](https://github.com/WalletConnect/walletconnect-monorepo/commit/03301881b4081d3995512ff67afbae30db38f426) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixes redundant `accountsChanged` emit due to incorrect if statement
+
+- [#6867](https://github.com/WalletConnect/walletconnect-monorepo/pull/6867) [`af55c568ad86080629a0f1d14a2983431c77d62e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/af55c568ad86080629a0f1d14a2983431c77d62e) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Updated the `license` of the `walletconnect-monorepo` repository
+
+- [#6876](https://github.com/WalletConnect/walletconnect-monorepo/pull/6876) [`f01ca30ec0004cb52c0cc26f3b019c56a554f61f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f01ca30ec0004cb52c0cc26f3b019c56a554f61f) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Implemented `wallet_sendCalls` TVF
+
+- Updated dependencies [[`74c47effb85faf95bbf1c9e55caf4df1e33e09ea`](https://github.com/WalletConnect/walletconnect-monorepo/commit/74c47effb85faf95bbf1c9e55caf4df1e33e09ea), [`a17c5add47533dbb571e600ced363febe1e591b1`](https://github.com/WalletConnect/walletconnect-monorepo/commit/a17c5add47533dbb571e600ced363febe1e591b1), [`03301881b4081d3995512ff67afbae30db38f426`](https://github.com/WalletConnect/walletconnect-monorepo/commit/03301881b4081d3995512ff67afbae30db38f426), [`af55c568ad86080629a0f1d14a2983431c77d62e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/af55c568ad86080629a0f1d14a2983431c77d62e), [`f01ca30ec0004cb52c0cc26f3b019c56a554f61f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f01ca30ec0004cb52c0cc26f3b019c56a554f61f)]:
+  - @walletconnect/types@2.21.9
+
 ## 2.21.8
 
 ### Patch Changes

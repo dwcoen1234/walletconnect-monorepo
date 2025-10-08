@@ -1,12 +1,12 @@
 {
   "name": "@walletconnect/types",
   "description": "Typings for WalletConnect Protocol",
-  "version": "2.21.8",
+  "version": "2.22.0",
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/walletconnect-monorepo/",
   "license": "SEE LICENSE IN LICENSE.md",
-  "main": "dist/index.cjs.js",
-  "module": "dist/index.es.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
   "unpkg": "dist/index.umd.js",
   "types": "dist/types/index.d.ts",
   "sideEffects": false,
@@ -33,5 +33,13 @@
     "@walletconnect/keyvaluestorage": "1.1.1",
     "@walletconnect/logger": "2.1.2",
     "events": "3.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WalletConnect/walletconnect-monorepo.git",
+    "directory": "packages/types"
+  },
+  "publishConfig": {
+    "provenance": true
   }
 }
