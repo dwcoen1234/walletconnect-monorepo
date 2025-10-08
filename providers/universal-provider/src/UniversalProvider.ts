@@ -2,7 +2,7 @@ import SignClient from "@walletconnect/sign-client";
 import { SessionTypes } from "@walletconnect/types";
 import { JsonRpcResult } from "@walletconnect/jsonrpc-types";
 import { getSdkError, isValidArray, parseNamespaceKey } from "@walletconnect/utils";
-import { getDefaultLoggerOptions, Logger, pino } from "@walletconnect/logger";
+import { getDefaultLoggerOptions, Logger, generateClientLogger } from "@walletconnect/logger";
 import {
   convertChainIdToNumber,
   getAccountsFromSession,
@@ -61,7 +61,9 @@ export class UniversalProvider implements IUniversalProvider {
     this.logger =
       typeof opts?.logger !== "undefined" && typeof opts?.logger !== "string"
         ? opts.logger
-        : pino(getDefaultLoggerOptions({ level: opts?.logger || LOGGER }));
+        : generateClientLogger({
+            opts: getDefaultLoggerOptions({ level: opts?.logger || LOGGER }),
+          }).logger;
     this.disableProviderPing = opts?.disableProviderPing || false;
   }
 
