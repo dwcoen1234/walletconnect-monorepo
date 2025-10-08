@@ -1,5 +1,11 @@
 # @walletconnect/react-native-compat
 
+## 2.22.1
+
+### Patch Changes
+
+- [#6974](https://github.com/WalletConnect/walletconnect-monorepo/pull/6974) [`a1abfdc`](https://github.com/WalletConnect/walletconnect-monorepo/commit/a1abfdc9f71f77ec114fc8c3ba68649d74167faf) Thanks [@svenvoskamp](https://github.com/svenvoskamp)! - Add enableMobileFullScreen to EthereumProviderOptions and feed to AppKit
+
 ## 2.22.0
 
 ### Minor Changes
