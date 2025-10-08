@@ -9,4 +9,4 @@
 "@walletconnect/signer-connection": patch
 ---
 
-Updated `@walletconnect/logger` to `2.1.3`
+Fixed a bug in `universal-provider` where `logger` wasn't imported correctly due to esm/cjs mismatch in some environments
