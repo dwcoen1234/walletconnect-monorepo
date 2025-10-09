@@ -104,7 +104,7 @@ export class Verify extends IVerify {
         document.body.appendChild(iframe);
         window.addEventListener("message", listener, { signal: this.abortController.signal });
       });
-      this.logger.debug("jwt attestation", attestationJwt);
+      this.logger.debug(attestationJwt, "jwt attestation");
       return attestationJwt as string;
     } catch (e) {
       this.logger.warn(e);
@@ -184,7 +184,7 @@ export class Verify extends IVerify {
   };
 
   private persistPublicKey = async (publicKey: Jwk) => {
-    this.logger.debug(`persisting public key to local storage`, publicKey);
+    this.logger.debug(publicKey, `persisting public key to local storage`);
     await this.store.setItem(this.storeKey, publicKey);
     this.publicKey = publicKey;
   };

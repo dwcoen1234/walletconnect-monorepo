@@ -244,7 +244,7 @@ export class UniversalProvider implements IUniversalProvider {
 
       this.logger.info(`Inactive pairings cleared: ${inactivePairings.length}`);
     } catch (error) {
-      this.logger.warn("Failed to cleanup pending pairings", error);
+      this.logger.warn(error, "Failed to cleanup pending pairings");
     }
   }
 
@@ -287,7 +287,7 @@ export class UniversalProvider implements IUniversalProvider {
       try {
         this.session = this.client.session.get(this.providerOpts.session.topic);
       } catch (error) {
-        this.logger.error("Failed to get session", error);
+        this.logger.error(error, "Failed to get session");
         throw new Error(
           `The provided session: ${this.providerOpts?.session?.topic} doesn't exist in the Sign client`,
         );
@@ -517,7 +517,7 @@ export class UniversalProvider implements IUniversalProvider {
       if (!isValidArray(newChainIdAccounts)) return;
       this.events.emit("accountsChanged", newChainIdAccounts);
     } catch (error) {
-      this.logger.warn("Failed to emit accountsChanged on chain change", error);
+      this.logger.warn(error, "Failed to emit accountsChanged on chain change");
     }
   }
 
@@ -586,7 +586,7 @@ export class UniversalProvider implements IUniversalProvider {
         }
       }
     } catch (error) {
-      this.logger.warn("Failed to cleanup storage", error);
+      this.logger.warn(error, "Failed to cleanup storage");
     }
   }
 }
