@@ -211,7 +211,7 @@ export class Engine extends IEngine {
         }
       }
     } catch (error) {
-      this.client.logger.warn("processPendingMessageEvents failed", error);
+      this.client.logger.warn(error, "processPendingMessageEvents failed");
     }
   }
 
@@ -3289,7 +3289,7 @@ export class Engine extends IEngine {
         ? [params.request.params?.[0]?.to]
         : [];
     } catch (e) {
-      this.client.logger.warn("Error getting TVF params", e);
+      this.client.logger.warn(e, "Error getting TVF params");
     }
     return tvf;
   };
@@ -3379,7 +3379,7 @@ export class Engine extends IEngine {
         return [hashes];
       }
     } catch (e) {
-      this.client.logger.warn("Error extracting tx hashes from result", e);
+      this.client.logger.warn(e, "Error extracting tx hashes from result");
     }
     return [];
   };
