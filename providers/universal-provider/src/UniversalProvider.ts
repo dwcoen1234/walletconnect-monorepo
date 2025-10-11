@@ -12,9 +12,9 @@ import {
   parseCaip10Account,
   populateNamespacesChains,
   setGlobal,
-} from "./utils";
-import Eip155Provider from "./providers/eip155";
-import GenericProvider from "./providers/generic";
+} from "./utils/index.js";
+import Eip155Provider from "./providers/eip155.js";
+import GenericProvider from "./providers/generic.js";
 
 import {
   IUniversalProvider,
@@ -30,7 +30,7 @@ import {
   DefaultChainChanged,
   OnChainChanged,
   EmitAccountsChangedOnChainChange,
-} from "./types";
+} from "./types/index.js";
 
 import {
   RELAY_URL,
@@ -39,7 +39,7 @@ import {
   PROVIDER_EVENTS,
   GENERIC_SUBPROVIDER_NAME,
   CONTEXT,
-} from "./constants";
+} from "./constants/index.js";
 import EventEmitter from "events";
 import { formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
 
