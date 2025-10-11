@@ -21,7 +21,7 @@ import {
   TRANSPORT_TYPES,
   WALLETCONNECT_CLIENT_ID,
   WALLETCONNECT_LINK_MODE_APPS,
-} from "./constants";
+} from "./constants/index.js";
 import {
   Crypto,
   EchoClient,
@@ -31,7 +31,7 @@ import {
   Pairing,
   Relayer,
   Verify,
-} from "./controllers";
+} from "./controllers/index.js";
 
 export class Core extends ICore {
   public readonly protocol = CORE_PROTOCOL;

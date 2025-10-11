@@ -45,6 +45,7 @@ import {
 } from "@walletconnect/utils";
 
 import { HEARTBEAT_EVENTS } from "@walletconnect/heartbeat";
+import { getLoggerContext, Logger } from "@walletconnect/logger";
 
 import {
   RELAYER_SDK_VERSION,
@@ -58,11 +59,10 @@ import {
   RELAYER_RECONNECT_TIMEOUT,
   TRANSPORT_TYPES,
   MESSAGE_DIRECTION,
-} from "../constants";
-import { MessageTracker } from "./messages";
-import { Publisher } from "./publisher";
-import { Subscriber } from "./subscriber";
-import { getLoggerContext, Logger } from "@walletconnect/logger";
+} from "../constants/index.js";
+import { MessageTracker } from "./messages.js";
+import { Publisher } from "./publisher.js";
+import { Subscriber } from "./subscriber.js";
 
 export class Relayer extends IRelayer {
   public protocol = "wc";

@@ -1,10 +1,14 @@
+import { EventEmitter } from "events";
 import { Core } from "@walletconnect/core";
 import { SignClientTypes, ISignClient, ISignClientEvents, EngineTypes } from "@walletconnect/types";
 import { populateAppMetadata, createLogger } from "@walletconnect/utils";
-import { EventEmitter } from "events";
-import { SIGN_CLIENT_DEFAULT, SIGN_CLIENT_PROTOCOL, SIGN_CLIENT_VERSION } from "./constants";
-import { AuthStore, Engine, PendingRequest, Proposal, Session } from "./controllers";
 import { getLoggerContext } from "@walletconnect/logger";
+import {
+  SIGN_CLIENT_DEFAULT,
+  SIGN_CLIENT_PROTOCOL,
+  SIGN_CLIENT_VERSION,
+} from "./constants/index.js";
+import { AuthStore, Engine, PendingRequest, Proposal, Session } from "./controllers/index.js";
 
 export class SignClient extends ISignClient {
   public readonly protocol = SIGN_CLIENT_PROTOCOL;
