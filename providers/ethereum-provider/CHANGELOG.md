@@ -1,5 +1,19 @@
 # @walletconnect/ethereum-provider
 
+## 2.22.3
+
+### Patch Changes
+
+- [#6988](https://github.com/WalletConnect/walletconnect-monorepo/pull/6988) [`b8b7b2e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/b8b7b2e8307e83b770e4037ad7c85995595a4d29) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Sets file extensions on all imports/exports
+
+- [#6982](https://github.com/WalletConnect/walletconnect-monorepo/pull/6982) [`a4f5f76`](https://github.com/WalletConnect/walletconnect-monorepo/commit/a4f5f76e44d3b3d3504793c8570f3d014afacd85) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Updated `@walletconnect/logger` to `3.0.0`
+
+- Updated dependencies [[`b8b7b2e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/b8b7b2e8307e83b770e4037ad7c85995595a4d29), [`a4f5f76`](https://github.com/WalletConnect/walletconnect-monorepo/commit/a4f5f76e44d3b3d3504793c8570f3d014afacd85)]:
+  - @walletconnect/universal-provider@2.22.3
+  - @walletconnect/sign-client@2.22.3
+  - @walletconnect/types@2.22.3
+  - @walletconnect/utils@2.22.3
+
 ## 2.22.2
 
 ### Patch Changes
