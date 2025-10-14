@@ -1,5 +1,11 @@
 # @walletconnect/types
 
+## 2.22.4
+
+### Patch Changes
+
+- [#6996](https://github.com/WalletConnect/walletconnect-monorepo/pull/6996) [`9c879ea`](https://github.com/WalletConnect/walletconnect-monorepo/commit/9c879ea935ed2f99c5a01ff3476c7d697677672b) Thanks [@ignaciosantise](https://github.com/ignaciosantise)! - fix: solved react-native-compat file imports
+
 ## 2.22.3
 
 ### Patch Changes
