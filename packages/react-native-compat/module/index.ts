@@ -9,7 +9,7 @@ const LINKING_ERROR =
 const isTurboModuleEnabled = global.__turboModuleProxy != null;
 
 const RNWalletConnectModule = isTurboModuleEnabled
-  ? require("../module/NativeRNWalletConnectModule.js").default
+  ? require("../module/NativeRNWalletConnectModule.ts").default
   : NativeModules.RNWalletConnectModule;
 
 function getExpoModule(): any | undefined {
