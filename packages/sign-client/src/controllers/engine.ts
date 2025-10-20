@@ -3435,7 +3435,7 @@ export class Engine extends IEngine {
           walletPayResult.push(response);
         }
       } catch (e) {
-        this.client.logger.warn("Error preparing proposal requests responses", e);
+        this.client.logger.warn(e, "Error preparing proposal requests responses");
       }
     });
     return { authentication, walletPayResult };
