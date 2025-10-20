@@ -1,8 +1,8 @@
-import { SignClientTypes } from "./client";
-import { RelayerTypes } from "../core/relayer";
-import { IStore } from "../core/store";
-import { AuthTypes } from "./auth";
-import { EngineTypes } from ".";
+import { AuthTypes } from "./auth.js";
+import { EngineTypes } from "./engine.js";
+import { SignClientTypes } from "./client.js";
+import { RelayerTypes } from "../core/relayer.js";
+import { IStore } from "../core/store.js";
 
 export declare namespace ProposalTypes {
   interface BaseRequiredNamespace {

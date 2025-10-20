@@ -119,7 +119,7 @@ import {
   ENGINE_QUEUE_STATES,
   AUTH_PUBLIC_KEY_NAME,
   TVF_METHODS,
-} from "../constants";
+} from "../constants/index.js";
 
 export class Engine extends IEngine {
   public name = ENGINE_CONTEXT;
@@ -211,7 +211,7 @@ export class Engine extends IEngine {
         }
       }
     } catch (error) {
-      this.client.logger.warn("processPendingMessageEvents failed", error);
+      this.client.logger.warn(error, "processPendingMessageEvents failed");
     }
   }
 
@@ -2821,7 +2821,11 @@ export class Engine extends IEngine {
     }
 
     // validate required namespaces only if they are defined
-    if (!isUndefined(requiredNamespaces) && isValidObject(requiredNamespaces) !== 0) {
+    if (
+      requiredNamespaces &&
+      !isUndefined(requiredNamespaces) &&
+      isValidObject(requiredNamespaces) !== 0
+    ) {
       const warning =
         "requiredNamespaces are deprecated and are automatically assigned to optionalNamespaces";
       // if logger level is one of the following, the logger.warn will not be shown, so we need to use console.warn
@@ -2834,16 +2838,20 @@ export class Engine extends IEngine {
     }
 
     // validate optional namespaces only if they are defined
-    if (!isUndefined(optionalNamespaces) && isValidObject(optionalNamespaces) !== 0) {
+    if (
+      optionalNamespaces &&
+      !isUndefined(optionalNamespaces) &&
+      isValidObject(optionalNamespaces) !== 0
+    ) {
       this.validateNamespaces(optionalNamespaces, "optionalNamespaces");
     }
 
     // validate session properties only if they are defined
-    if (!isUndefined(sessionProperties)) {
+    if (sessionProperties && !isUndefined(sessionProperties)) {
       this.validateSessionProps(sessionProperties, "sessionProperties");
     }
 
-    if (!isUndefined(scopedProperties)) {
+    if (scopedProperties && !isUndefined(scopedProperties)) {
       this.validateSessionProps(scopedProperties, "scopedProperties");
 
       const requestedNamespaces = Object.keys(requiredNamespaces || {}).concat(
@@ -2897,11 +2905,11 @@ export class Engine extends IEngine {
       throw new Error(message);
     }
 
-    if (!isUndefined(sessionProperties)) {
+    if (sessionProperties && !isUndefined(sessionProperties)) {
       this.validateSessionProps(sessionProperties, "sessionProperties");
     }
 
-    if (!isUndefined(scopedProperties)) {
+    if (scopedProperties && !isUndefined(scopedProperties)) {
       this.validateSessionProps(scopedProperties, "scopedProperties");
 
       const approvedNamespaces = new Set(Object.keys(namespaces));
@@ -3318,7 +3326,7 @@ export class Engine extends IEngine {
         ? [params.request.params?.[0]?.to]
         : [];
     } catch (e) {
-      this.client.logger.warn("Error getting TVF params", e);
+      this.client.logger.warn(e, "Error getting TVF params");
     }
     return tvf;
   };
@@ -3408,7 +3416,7 @@ export class Engine extends IEngine {
         return [hashes];
       }
     } catch (e) {
-      this.client.logger.warn("Error extracting tx hashes from result", e);
+      this.client.logger.warn(e, "Error extracting tx hashes from result");
     }
     return [];
   };

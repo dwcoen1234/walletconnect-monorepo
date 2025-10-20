@@ -12,9 +12,9 @@ import {
   parseCaip10Account,
   populateNamespacesChains,
   setGlobal,
-} from "./utils";
-import Eip155Provider from "./providers/eip155";
-import GenericProvider from "./providers/generic";
+} from "./utils/index.js";
+import Eip155Provider from "./providers/eip155.js";
+import GenericProvider from "./providers/generic.js";
 
 import {
   IUniversalProvider,
@@ -30,7 +30,7 @@ import {
   DefaultChainChanged,
   OnChainChanged,
   EmitAccountsChangedOnChainChange,
-} from "./types";
+} from "./types/index.js";
 
 import {
   RELAY_URL,
@@ -39,7 +39,7 @@ import {
   PROVIDER_EVENTS,
   GENERIC_SUBPROVIDER_NAME,
   CONTEXT,
-} from "./constants";
+} from "./constants/index.js";
 import EventEmitter from "events";
 import { formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
 
@@ -248,7 +248,7 @@ export class UniversalProvider implements IUniversalProvider {
 
       this.logger.info(`Inactive pairings cleared: ${inactivePairings.length}`);
     } catch (error) {
-      this.logger.warn("Failed to cleanup pending pairings", error);
+      this.logger.warn(error, "Failed to cleanup pending pairings");
     }
   }
 
@@ -291,7 +291,7 @@ export class UniversalProvider implements IUniversalProvider {
       try {
         this.session = this.client.session.get(this.providerOpts.session.topic);
       } catch (error) {
-        this.logger.error("Failed to get session", error);
+        this.logger.error(error, "Failed to get session");
         throw new Error(
           `The provided session: ${this.providerOpts?.session?.topic} doesn't exist in the Sign client`,
         );
@@ -521,7 +521,7 @@ export class UniversalProvider implements IUniversalProvider {
       if (!isValidArray(newChainIdAccounts)) return;
       this.events.emit("accountsChanged", newChainIdAccounts);
     } catch (error) {
-      this.logger.warn("Failed to emit accountsChanged on chain change", error);
+      this.logger.warn(error, "Failed to emit accountsChanged on chain change");
     }
   }
 
@@ -591,7 +591,7 @@ export class UniversalProvider implements IUniversalProvider {
         }
       }
     } catch (error) {
-      this.logger.warn("Failed to cleanup storage", error);
+      this.logger.warn(error, "Failed to cleanup storage");
     }
   }
 }

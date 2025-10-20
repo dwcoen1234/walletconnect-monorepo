@@ -1,7 +1,7 @@
 {
   "name": "@walletconnect/sign-client",
   "description": "Sign Client for WalletConnect Protocol",
-  "version": "2.22.1",
+  "version": "2.22.4",
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/walletconnect-monorepo/",
   "license": "SEE LICENSE IN LICENSE.md",
@@ -43,17 +43,18 @@
     "canary": "npm run test:pre; npm run test:canary",
     "loadtest": "npm run test:pre; npm run test:concurrency",
     "lint": "eslint -c '../../.eslintrc' --fix './src/**/*.ts'",
-    "prettier": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}'"
+    "prettier": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}'",
+    "prettier:write": "prettier --write '{src,test}/**/*.{js,ts,jsx,tsx}'"
   },
   "dependencies": {
-    "@walletconnect/core": "2.22.1",
+    "@walletconnect/core": "2.22.4",
     "@walletconnect/events": "1.0.1",
     "@walletconnect/heartbeat": "1.2.2",
     "@walletconnect/jsonrpc-utils": "1.0.8",
-    "@walletconnect/logger": "2.1.2",
+    "@walletconnect/logger": "3.0.0",
     "@walletconnect/time": "1.0.2",
-    "@walletconnect/types": "2.22.1",
-    "@walletconnect/utils": "2.22.1",
+    "@walletconnect/types": "2.22.4",
+    "@walletconnect/utils": "2.22.4",
     "events": "3.3.0"
   },
   "devDependencies": {
