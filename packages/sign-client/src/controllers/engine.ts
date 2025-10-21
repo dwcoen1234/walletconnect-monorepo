@@ -3433,9 +3433,13 @@ export class Engine extends IEngine {
 
     proposalRequestsResponses.forEach((response) => {
       try {
-        if (typeof response === "object" && "h" in response) {
+        if (typeof response === "object" && (response as AuthTypes.Cacao)?.h && "h" in response) {
           authentication.push(response);
-        } else if (typeof response === "object" && "txid" in response) {
+        } else if (
+          typeof response === "object" &&
+          (response as EngineTypes.WalletPayResult)?.txid &&
+          "txid" in response
+        ) {
           walletPayResult.push(response);
         }
       } catch (e) {
