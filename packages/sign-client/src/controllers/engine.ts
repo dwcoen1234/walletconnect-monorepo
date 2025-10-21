@@ -274,8 +274,9 @@ export class Engine extends IEngine {
     }
 
     const publicKey = await this.client.core.crypto.generateKeyPair();
-
-    const expiry = ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
+    const expiryFromAuthentication = authentication?.[0]?.ttl;
+    const expiry =
+      expiryFromAuthentication || ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
     const expiryTimestamp = calcExpiry(expiry);
     const proposal: ProposalTypes.Struct = {
       requiredNamespaces,
@@ -290,16 +291,19 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       id: payloadId(),
-      requests: {
-        authentication: authentication?.map((auth) => ({
-          ...auth,
-          aud: auth.uri,
-          version: "1",
-          iat: new Date().toISOString(),
-        })),
-        walletPay,
-      },
+      ...((authentication || walletPay) && {
+        requests: {
+          authentication: authentication?.map((auth) => ({
+            ...auth,
+            aud: auth.uri,
+            version: "1",
+            iat: new Date().toISOString(),
+          })),
+          walletPay,
+        },
+      }),
     };
+
     const sessionConnectTarget = engineEvent("session_connect", proposal.id);
 
     const {
