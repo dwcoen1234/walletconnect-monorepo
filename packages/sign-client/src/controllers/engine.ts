@@ -245,6 +245,12 @@ export class Engine extends IEngine {
       authentication,
       walletPay,
     } = connectParams;
+
+    const expiryFromAuthentication = authentication?.[0]?.ttl;
+    const expiry =
+      expiryFromAuthentication || ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
+    this.isValidRequestExpiry(expiry);
+
     let topic = pairingTopic;
     let uri: string | undefined;
     let active = false;
@@ -274,9 +280,7 @@ export class Engine extends IEngine {
     }
 
     const publicKey = await this.client.core.crypto.generateKeyPair();
-    const expiryFromAuthentication = authentication?.[0]?.ttl;
-    const expiry =
-      expiryFromAuthentication || ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
+
     const expiryTimestamp = calcExpiry(expiry);
     const proposal: ProposalTypes.Struct = {
       requiredNamespaces,
@@ -3034,6 +3038,10 @@ export class Engine extends IEngine {
       );
       throw new Error(message);
     }
+    this.isValidRequestExpiry(expiry);
+  };
+
+  private isValidRequestExpiry(expiry?: number) {
     if (expiry && !isValidRequestExpiry(expiry, SESSION_REQUEST_EXPIRY_BOUNDARIES)) {
       const { message } = getInternalError(
         "MISSING_OR_INVALID",
@@ -3041,7 +3049,7 @@ export class Engine extends IEngine {
       );
       throw new Error(message);
     }
-  };
+  }
 
   private isValidRespond: EnginePrivate["isValidRespond"] = async (params) => {
     if (!isValidParams(params)) {
