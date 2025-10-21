@@ -13,7 +13,7 @@ describe("Authenticated Sessions", () => {
     cryptoWallet = ethers.Wallet.createRandom();
   });
 
-  it.only("should receive wallet pay request and respond with wallet pay result. Case 1", async () => {
+  it("should receive wallet pay request and respond with wallet pay result. Case 1", async () => {
     const dapp = await SignClient.init({ ...TEST_SIGN_CLIENT_OPTIONS, name: "dapp" });
     expect(dapp).to.be.exist;
     expect(dapp.metadata.redirect).to.exist;
