@@ -91,12 +91,12 @@ export declare namespace EngineTypes {
     scopedProperties?: ProposalTypes.ScopedProperties;
     pairingTopic?: string;
     relays?: RelayerTypes.ProtocolOptions[];
-    /** 
-     * @experimental - This feature could change in the next releases. Use with caution. 
+    /**
+     * @experimental - This feature could change in the next releases. Use with caution.
      */
     authentication?: AuthTypes.AuthenticateRequestParams[];
-    /** 
-     * @experimental - This feature could change in the next releases. Use with caution. 
+    /**
+     * @experimental - This feature could change in the next releases. Use with caution.
      */
     walletPay?: WalletPayParams;
   }
