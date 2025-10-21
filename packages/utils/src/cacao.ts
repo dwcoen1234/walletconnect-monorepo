@@ -67,7 +67,11 @@ export async function validateSignedCacao(params: { cacao: AuthTypes.Cacao; proj
 }
 
 export const formatMessage = (cacao: AuthTypes.FormatMessageParams, iss: string) => {
-  const header = `${cacao.domain} wants you to sign in with your ${getNamespaceNameFromNamespace(getDidAddressNamespace(iss))} account:`;
+  const didNamespace = getDidAddressNamespace(iss);
+  if (!didNamespace) {
+    throw new Error("Invalid issuer: " + iss);
+  }
+  const header = `${cacao.domain} wants you to sign in with your ${getNamespaceNameFromNamespace(didNamespace)} account:`;
   const walletAddress = getDidAddress(iss);
 
   if (!cacao.aud && !cacao.uri) {
