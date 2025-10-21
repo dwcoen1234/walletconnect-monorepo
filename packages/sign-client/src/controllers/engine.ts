@@ -249,7 +249,7 @@ export class Engine extends IEngine {
     const expiryFromAuthentication = authentication?.[0]?.ttl;
     const expiry =
       expiryFromAuthentication || ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
-    this.isValidRequestExpiry(expiry);
+    this.validateRequestExpiry(expiry);
 
     let topic = pairingTopic;
     let uri: string | undefined;
@@ -3038,10 +3038,10 @@ export class Engine extends IEngine {
       );
       throw new Error(message);
     }
-    this.isValidRequestExpiry(expiry);
+    this.validateRequestExpiry(expiry);
   };
 
-  private isValidRequestExpiry(expiry?: number) {
+  private validateRequestExpiry(expiry?: number) {
     if (expiry && !isValidRequestExpiry(expiry, SESSION_REQUEST_EXPIRY_BOUNDARIES)) {
       const { message } = getInternalError(
         "MISSING_OR_INVALID",
