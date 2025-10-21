@@ -4,7 +4,7 @@ import { formatJsonRpcError, formatJsonRpcResult } from "@walletconnect/jsonrpc-
 import { SignClientTypes, SessionTypes, AuthTypes } from "@walletconnect/types";
 import { getSdkError, getChainsFromAccounts, buildAuthObject } from "@walletconnect/utils";
 import { ethers, toBeArray } from "ethers";
-import UniversalProvider from "../../src";
+import UniversalProvider from "../../src/index.js";
 
 export interface WalletClientOpts {
   privateKey: string;
@@ -88,7 +88,7 @@ export class WalletClient {
     }
     if (this.rpcUrl !== rpcUrl) {
       this.rpcUrl = rpcUrl;
-      this.signer = this.signer.connect(new ethers.providers.JsonRpcProvider(this.rpcUrl));
+      this.signer = this.signer.connect(new ethers.JsonRpcProvider(this.rpcUrl));
     }
   }
 
@@ -112,7 +112,7 @@ export class WalletClient {
         ? new ethers.Wallet(privateKey)
         : ethers.Wallet.createRandom();
 
-    return wallet.connect(new ethers.providers.JsonRpcProvider(this.rpcUrl)) as ethers.Wallet;
+    return wallet.connect(new ethers.JsonRpcProvider(this.rpcUrl)) as ethers.Wallet;
   }
 
   private parseTxParams = (payload: any) => {
@@ -211,7 +211,7 @@ export class WalletClient {
             chains: value.chains,
             methods: value.methods,
             events: value.events,
-            accounts: value.chains.map((chain) => `${chain}:${this.accounts[0]}`),
+            accounts: value.chains?.map((chain) => `${chain}:${this.accounts[0]}`) || [],
           };
         });
         const authentication = await this.approveAuthentication(proposal).catch((e) => {
