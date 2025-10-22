@@ -57,6 +57,7 @@ export class UniversalProvider implements IUniversalProvider {
   public uri: string | undefined;
 
   private disableProviderPing = false;
+  private connectParams?: ConnectParams;
 
   static async init(opts: UniversalProviderOpts) {
     const provider = new UniversalProvider(opts);
@@ -136,6 +137,7 @@ export class UniversalProvider implements IUniversalProvider {
     if (!this.client) {
       throw new Error("Sign Client not initialized");
     }
+    this.connectParams = opts;
     this.setNamespaces(opts);
     // omit `await` to avoid delaying the pairing flow
     this.cleanupPendingPairings();
@@ -195,6 +197,8 @@ export class UniversalProvider implements IUniversalProvider {
       optionalNamespaces: this.optionalNamespaces,
       sessionProperties: this.sessionProperties,
       scopedProperties: this.scopedProperties,
+      authentication: this.connectParams?.authentication,
+      walletPay: this.connectParams?.walletPay,
     });
 
     if (uri) {
@@ -546,6 +550,7 @@ export class UniversalProvider implements IUniversalProvider {
   }
 
   private async cleanup() {
+    this.connectParams = undefined;
     this.namespaces = undefined;
     this.optionalNamespaces = undefined;
     this.sessionProperties = undefined;

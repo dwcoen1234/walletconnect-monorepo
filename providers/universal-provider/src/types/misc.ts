@@ -1,5 +1,11 @@
 import SignClient from "@walletconnect/sign-client";
-import { SignClientTypes, ProposalTypes, AuthTypes, SessionTypes } from "@walletconnect/types";
+import {
+  SignClientTypes,
+  ProposalTypes,
+  AuthTypes,
+  SessionTypes,
+  EngineTypes,
+} from "@walletconnect/types";
 import { JsonRpcProvider } from "@walletconnect/jsonrpc-provider";
 import { KeyValueStorageOptions, IKeyValueStorage } from "@walletconnect/keyvaluestorage";
 import { IEvents } from "@walletconnect/events";
@@ -64,6 +70,8 @@ export interface ConnectParams {
   scopedProperties?: SessionTypes.ScopedProperties;
   pairingTopic?: string;
   skipPairing?: boolean;
+  authentication?: AuthTypes.AuthenticateRequestParams[];
+  walletPay?: EngineTypes.WalletPayParams;
 }
 
 export type AuthenticateParams = AuthTypes.SessionAuthenticateParams;

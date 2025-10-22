@@ -3,7 +3,7 @@ import { IStore } from "../core/store.js";
 import { SignClientTypes } from "./client.js";
 import { ProposalTypes } from "./proposal.js";
 import { AuthTypes } from "./auth.js";
-
+import { EngineTypes } from "./engine.js";
 export declare namespace SessionTypes {
   type Expiry = number;
 
@@ -47,6 +47,7 @@ export declare namespace SessionTypes {
       metadata: SignClientTypes.Metadata;
     };
     authentication?: AuthTypes.Cacao[];
+    walletPayResult?: EngineTypes.WalletPayResult[];
     transportType?: RelayerTypes.TransportType;
   }
 }

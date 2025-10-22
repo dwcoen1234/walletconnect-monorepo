@@ -242,7 +242,15 @@ export class Engine extends IEngine {
       sessionProperties,
       scopedProperties,
       relays,
+      authentication,
+      walletPay,
     } = connectParams;
+
+    const expiryFromAuthentication = authentication?.[0]?.ttl;
+    const expiry =
+      expiryFromAuthentication || ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
+    this.validateRequestExpiry(expiry);
+
     let topic = pairingTopic;
     let uri: string | undefined;
     let active = false;
@@ -273,9 +281,8 @@ export class Engine extends IEngine {
 
     const publicKey = await this.client.core.crypto.generateKeyPair();
 
-    const expiry = ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
     const expiryTimestamp = calcExpiry(expiry);
-    const proposal = {
+    const proposal: ProposalTypes.Struct = {
       requiredNamespaces,
       optionalNamespaces,
       relays: relays ?? [{ protocol: RELAYER_DEFAULT_PROTOCOL }],
@@ -288,7 +295,19 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       id: payloadId(),
+      ...((authentication || walletPay) && {
+        requests: {
+          authentication: authentication?.map((auth) => ({
+            ...auth,
+            aud: auth.uri,
+            version: "1",
+            iat: new Date().toISOString(),
+          })),
+          walletPay,
+        },
+      }),
     };
+
     const sessionConnectTarget = engineEvent("session_connect", proposal.id);
 
     const {
@@ -376,8 +395,15 @@ export class Engine extends IEngine {
       throw error;
     }
 
-    const { id, relayProtocol, namespaces, sessionProperties, scopedProperties, sessionConfig } =
-      params;
+    const {
+      id,
+      relayProtocol,
+      namespaces,
+      sessionProperties,
+      scopedProperties,
+      sessionConfig,
+      proposalRequestsResponses,
+    } = params;
 
     const proposal = this.client.proposal.get(id);
 
@@ -407,6 +433,10 @@ export class Engine extends IEngine {
       selfPublicKey,
       peerPublicKey,
     );
+
+    const { authentication, walletPayResult } =
+      this.prepareProposalRequestsResponses(proposalRequestsResponses);
+
     const sessionSettle = {
       relay: { protocol: relayProtocol ?? "irn" },
       namespaces,
@@ -415,6 +445,8 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       ...(sessionConfig && { sessionConfig }),
+      authentication,
+      walletPayResult,
     };
     const transportType = TRANSPORT_TYPES.relay;
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribing_session_topic);
@@ -430,7 +462,7 @@ export class Engine extends IEngine {
 
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribe_session_topic_success);
 
-    const session = {
+    const session: SessionTypes.Struct = {
       ...sessionSettle,
       topic: sessionTopic,
       requiredNamespaces,
@@ -445,6 +477,7 @@ export class Engine extends IEngine {
       controller: selfPublicKey,
       transportType: TRANSPORT_TYPES.relay,
     };
+
     await this.client.session.set(sessionTopic, session);
 
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.store_session);
@@ -1997,7 +2030,7 @@ export class Engine extends IEngine {
       this.isValidConnect({ ...payload.params });
       const expiryTimestamp =
         params.expiryTimestamp || calcExpiry(ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl);
-      const proposal = {
+      const proposal: ProposalTypes.Struct = {
         id,
         pairingTopic: topic,
         expiryTimestamp,
@@ -2098,6 +2131,8 @@ export class Engine extends IEngine {
         sessionProperties,
         scopedProperties,
         sessionConfig,
+        authentication,
+        walletPayResult,
       } = payload.params;
       const pendingSession = [...this.pendingSessions.values()].find(
         (s) => s.sessionTopic === topic,
@@ -2131,6 +2166,8 @@ export class Engine extends IEngine {
         ...(scopedProperties && { scopedProperties }),
         ...(sessionConfig && { sessionConfig }),
         transportType: TRANSPORT_TYPES.relay,
+        authentication,
+        walletPayResult,
       };
 
       await this.client.session.set(session.topic, session);
@@ -3001,6 +3038,10 @@ export class Engine extends IEngine {
       );
       throw new Error(message);
     }
+    this.validateRequestExpiry(expiry);
+  };
+
+  private validateRequestExpiry(expiry?: number) {
     if (expiry && !isValidRequestExpiry(expiry, SESSION_REQUEST_EXPIRY_BOUNDARIES)) {
       const { message } = getInternalError(
         "MISSING_OR_INVALID",
@@ -3008,7 +3049,7 @@ export class Engine extends IEngine {
       );
       throw new Error(message);
     }
-  };
+  }
 
   private isValidRespond: EnginePrivate["isValidRespond"] = async (params) => {
     if (!isValidParams(params)) {
@@ -3390,5 +3431,29 @@ export class Engine extends IEngine {
       this.client.logger.warn(e, "Error extracting tx hashes from result");
     }
     return [];
+  };
+
+  private prepareProposalRequestsResponses = (
+    proposalRequestsResponses: EngineTypes.ApproveParams["proposalRequestsResponses"] = [],
+  ) => {
+    const authentication: AuthTypes.Cacao[] = [];
+    const walletPayResult: EngineTypes.WalletPayResult[] = [];
+
+    proposalRequestsResponses.forEach((response) => {
+      try {
+        if (typeof response === "object" && (response as AuthTypes.Cacao)?.h && "h" in response) {
+          authentication.push(response);
+        } else if (
+          typeof response === "object" &&
+          (response as EngineTypes.WalletPayResult)?.txid &&
+          "txid" in response
+        ) {
+          walletPayResult.push(response);
+        }
+      } catch (e) {
+        this.client.logger.warn(e, "Error preparing proposal requests responses");
+      }
+    });
+    return { authentication, walletPayResult };
   };
 }

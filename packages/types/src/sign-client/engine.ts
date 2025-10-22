@@ -57,6 +57,30 @@ export declare namespace EngineTypes {
     encryptedId?: string;
   }
 
+  type Hex = `0x${string}`;
+
+  interface PaymentOption {
+    asset: string;
+    amount: Hex;
+    recipient: string;
+  }
+
+  interface WalletPayParams {
+    version: string;
+    orderId?: string;
+    acceptedPayments: PaymentOption[];
+    expiry: number;
+  }
+
+  interface WalletPayResult {
+    version: string;
+    orderId?: string;
+    txid: string;
+    recipient: string;
+    asset: string;
+    amount: Hex;
+  }
+
   interface ConnectParams {
     /**
      * @deprecated Use `optionalNamespaces` instead.
@@ -67,6 +91,14 @@ export declare namespace EngineTypes {
     scopedProperties?: ProposalTypes.ScopedProperties;
     pairingTopic?: string;
     relays?: RelayerTypes.ProtocolOptions[];
+    /**
+     * @experimental - This feature could change in the next releases. Use with caution.
+     */
+    authentication?: AuthTypes.AuthenticateRequestParams[];
+    /**
+     * @experimental - This feature could change in the next releases. Use with caution.
+     */
+    walletPay?: WalletPayParams;
   }
 
   interface PairParams {
@@ -80,6 +112,7 @@ export declare namespace EngineTypes {
     scopedProperties?: ProposalTypes.ScopedProperties;
     sessionConfig?: SessionTypes.SessionConfig;
     relayProtocol?: string;
+    proposalRequestsResponses?: (AuthTypes.Cacao | WalletPayResult)[];
   }
 
   interface RejectParams {
