@@ -6,6 +6,7 @@ export const CLIENT_STORAGE_PREFIX = `${PROTOCOL}@${PROTOCOL_VERSION}:${CLIENT_C
 
 export const CLIENT_STORAGE_OPTIONS = {
   database: ":memory:",
+  customStoragePrefix: "@walletconnect/pos-client",
 };
 
 export const POS_CLIENT_VERSION = "1.0.0";

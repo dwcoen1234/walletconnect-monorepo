@@ -48,6 +48,7 @@ export class Engine extends IPOSClientEngine {
       storageOptions: {
         database: this.client.opts.storageOptions?.databaseName || CLIENT_STORAGE_OPTIONS.database,
       },
+      customStoragePrefix: CLIENT_STORAGE_OPTIONS.customStoragePrefix,
       logger: this.client.opts.loggerOptions?.signLevel,
     });
 
