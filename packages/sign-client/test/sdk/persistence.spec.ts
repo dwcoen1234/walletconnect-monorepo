@@ -20,7 +20,7 @@ import { RelayerTypes } from "@walletconnect/types";
 const generateClientDbName = (prefix: string) =>
   `./test/tmp/${prefix}_${generateRandomBytes32()}.db`;
 
-describe("Sign Client Persistence", () => {
+describe.concurrent("Sign Client Persistence", () => {
   describe("ping", () => {
     describe("pairing", () => {
       describe("after restart", () => {

@@ -336,6 +336,8 @@ export class Engine extends IEngine {
       }
     });
 
+    await this.setProposal(proposal.id, proposal);
+
     await this.sendProposeSession({
       proposal,
       publishOpts: {
@@ -346,9 +348,11 @@ export class Engine extends IEngine {
           correlationId: proposal.id,
         },
       },
+    }).catch((error) => {
+      this.deleteProposal(proposal.id);
+      throw error;
     });
 
-    await this.setProposal(proposal.id, proposal);
     return { uri, approval };
   };
 
@@ -1466,15 +1470,16 @@ export class Engine extends IEngine {
     this.client.core.storage
       .removeItem(WALLETCONNECT_DEEPLINK_CHOICE)
       .catch((e) => this.client.logger.warn(e));
-    this.getPendingSessionRequests().forEach((r) => {
-      if (r.topic === topic) {
-        this.deletePendingSessionRequest(r.id, getSdkError("USER_DISCONNECTED"));
-      }
-    });
     // reset the queue state back to idle if a request for the deleted session is still in the queue
     if (topic === this.sessionRequestQueue.queue[0]?.topic) {
       this.sessionRequestQueue.state = ENGINE_QUEUE_STATES.idle;
     }
+    for (const r of this.getPendingSessionRequests()) {
+      if (r.topic === topic) {
+        await this.deletePendingSessionRequest(r.id, getSdkError("USER_DISCONNECTED"));
+      }
+    }
+
     if (emitEvent) this.client.events.emit("session_delete", { id, topic });
   };
 
@@ -2178,9 +2183,6 @@ export class Engine extends IEngine {
         metadata: session.peer.metadata,
       });
 
-      this.client.events.emit("session_connect", { session });
-      this.events.emit(engineEvent("session_connect", pendingSession.proposalId), { session });
-
       this.pendingSessions.delete(pendingSession.proposalId);
       this.deleteProposal(pendingSession.proposalId, false);
       this.cleanupDuplicatePairings(session);
@@ -2188,8 +2190,12 @@ export class Engine extends IEngine {
       await this.sendResult<"wc_sessionSettle">({
         id: payload.id,
         topic,
+        throwOnFailedPublish: true,
         result: true,
       });
+
+      this.client.events.emit("session_connect", { session });
+      this.events.emit(engineEvent("session_connect", pendingSession.proposalId), { session });
     } catch (err: any) {
       await this.sendError({
         id,
@@ -2360,21 +2366,9 @@ export class Engine extends IEngine {
   ) => {
     const { id } = payload;
     try {
-      this.isValidDisconnect({ topic, reason: payload.params });
-      await Promise.all([
-        new Promise((resolve) => {
-          // RPC request needs to happen before deletion as it utilizes session encryption
-          this.client.core.relayer.once(RELAYER_EVENTS.publish, async () => {
-            resolve(await this.deleteSession({ topic, id }));
-          });
-        }),
-        this.sendResult<"wc_sessionDelete">({
-          id,
-          topic,
-          result: true,
-        }),
-        this.cleanupPendingSentRequestsForTopic({ topic, error: getSdkError("USER_DISCONNECTED") }),
-      ]).catch((err) => this.client.logger.error(err));
+      await this.isValidDisconnect({ topic, reason: payload.params });
+      this.cleanupPendingSentRequestsForTopic({ topic, error: getSdkError("USER_DISCONNECTED") });
+      await this.deleteSession({ topic, id });
     } catch (err: any) {
       this.client.logger.error(err);
     }
@@ -2586,12 +2580,6 @@ export class Engine extends IEngine {
         (r) => r.topic === topic && r.request.method === "wc_sessionRequest",
       );
       forSession.forEach((r) => {
-        const id = r.request.id;
-        const target = engineEvent("session_request", id);
-        const listeners = this.events.listenerCount(target);
-        if (listeners === 0) {
-          throw new Error(`emitting ${target} without any listeners`);
-        }
         // notify .request() handler of the rejection
         this.events.emit(engineEvent("session_request", r.request.id), {
           error,
