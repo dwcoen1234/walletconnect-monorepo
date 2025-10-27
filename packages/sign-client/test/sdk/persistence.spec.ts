@@ -66,7 +66,7 @@ describe.concurrent("Sign Client Persistence", () => {
               }
             }),
           ]);
-
+          await throttle(2000);
           await deleteClients(clients);
           // restart
           clients = await initTwoClients(
@@ -98,6 +98,7 @@ describe.concurrent("Sign Client Persistence", () => {
           await clients.A.ping({ topic });
           await clients.B.ping({ topic });
 
+          await throttle(2000);
           await deleteClients(clients);
         });
       });
