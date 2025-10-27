@@ -1474,11 +1474,12 @@ export class Engine extends IEngine {
     if (topic === this.sessionRequestQueue.queue[0]?.topic) {
       this.sessionRequestQueue.state = ENGINE_QUEUE_STATES.idle;
     }
-    for (const r of this.getPendingSessionRequests()) {
-      if (r.topic === topic) {
-        await this.deletePendingSessionRequest(r.id, getSdkError("USER_DISCONNECTED"));
-      }
-    }
+
+    await Promise.all(
+      this.getPendingSessionRequests()
+        .filter((r) => r.topic === topic)
+        .map((r) => this.deletePendingSessionRequest(r.id, getSdkError("USER_DISCONNECTED"))),
+    );
 
     if (emitEvent) this.client.events.emit("session_delete", { id, topic });
   };
