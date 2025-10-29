@@ -180,6 +180,7 @@ export declare namespace AuthTypes {
     nonce: string;
     aud: string;
     version: string;
+    type: string;
     iat: string;
     exp?: string;
     nbf?: string;
@@ -196,6 +197,10 @@ export declare namespace AuthTypes {
     nonce: string;
     uri: string;
     ttl: number;
+    /**
+     * cacao header type, if not provided, it will be "caip122"
+     */
+    type?: string;
     exp?: string;
     nbf?: string;
     statement?: string;
