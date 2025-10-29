@@ -173,12 +173,12 @@ export declare namespace AuthTypes {
     session: SessionTypes.Struct;
   };
 
+  // protocol method params
   interface AuthenticateParams {
     domain: string;
     chains: string[];
     nonce: string;
-    uri: string;
-    ttl: number;
+    aud: string;
     version: string;
     iat: string;
     exp?: string;
@@ -186,10 +186,23 @@ export declare namespace AuthTypes {
     statement?: string;
     requestId?: string;
     resources?: string[];
-    signatureTypes?: string[];
+    signatureTypes?: Record<string, string[]>;
   }
 
-  type AuthenticateRequestParams = Omit<AuthenticateParams, "version" | "iat">;
+  // client api method params
+  type AuthenticateRequestParams = {
+    domain: string;
+    chains: string[];
+    nonce: string;
+    uri: string;
+    ttl: number;
+    exp?: string;
+    nbf?: string;
+    statement?: string;
+    requestId?: string;
+    resources?: string[];
+    signatureTypes?: Record<string, string[]>;
+  };
 }
 
 export type IAuth = {

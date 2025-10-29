@@ -105,6 +105,8 @@ export declare namespace EngineTypes {
     uri: string;
   }
 
+  type ProposalRequestsResponses = (AuthTypes.Cacao | WalletPayResult)[];
+
   interface ApproveParams {
     id: number;
     namespaces: SessionTypes.Namespaces;
@@ -112,7 +114,7 @@ export declare namespace EngineTypes {
     scopedProperties?: ProposalTypes.ScopedProperties;
     sessionConfig?: SessionTypes.SessionConfig;
     relayProtocol?: string;
-    proposalRequestsResponses?: (AuthTypes.Cacao | WalletPayResult)[];
+    proposalRequestsResponses?: ProposalRequestsResponses;
   }
 
   interface RejectParams {

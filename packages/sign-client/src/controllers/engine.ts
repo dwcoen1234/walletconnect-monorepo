@@ -297,12 +297,35 @@ export class Engine extends IEngine {
       id: payloadId(),
       ...((authentication || walletPay) && {
         requests: {
-          authentication: authentication?.map((auth) => ({
-            ...auth,
-            aud: auth.uri,
-            version: "1",
-            iat: new Date().toISOString(),
-          })),
+          authentication: authentication?.map((auth) => {
+            const {
+              domain,
+              chains,
+              nonce,
+              uri,
+              exp,
+              nbf,
+              statement,
+              requestId,
+              resources,
+              signatureTypes,
+            } = auth;
+            const protocolParams: AuthTypes.AuthenticateParams = {
+              domain,
+              chains,
+              nonce,
+              aud: uri,
+              version: "1",
+              iat: new Date().toISOString(),
+              exp,
+              nbf,
+              statement,
+              requestId,
+              resources,
+              signatureTypes,
+            };
+            return protocolParams;
+          }),
           walletPay,
         },
       }),
@@ -438,9 +461,6 @@ export class Engine extends IEngine {
       peerPublicKey,
     );
 
-    const { authentication, walletPayResult } =
-      this.prepareProposalRequestsResponses(proposalRequestsResponses);
-
     const sessionSettle = {
       relay: { protocol: relayProtocol ?? "irn" },
       namespaces,
@@ -449,8 +469,7 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       ...(sessionConfig && { sessionConfig }),
-      authentication,
-      walletPayResult,
+      proposalRequestsResponses,
     };
     const transportType = TRANSPORT_TYPES.relay;
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribing_session_topic);
@@ -466,6 +485,9 @@ export class Engine extends IEngine {
 
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribe_session_topic_success);
 
+    const { authentication, walletPayResult } =
+      this.prepareProposalRequestsResponses(proposalRequestsResponses);
+
     const session: SessionTypes.Struct = {
       ...sessionSettle,
       topic: sessionTopic,
@@ -480,6 +502,8 @@ export class Engine extends IEngine {
       },
       controller: selfPublicKey,
       transportType: TRANSPORT_TYPES.relay,
+      authentication,
+      walletPayResult,
     };
 
     await this.client.session.set(sessionTopic, session);
@@ -2137,8 +2161,7 @@ export class Engine extends IEngine {
         sessionProperties,
         scopedProperties,
         sessionConfig,
-        authentication,
-        walletPayResult,
+        proposalRequestsResponses,
       } = payload.params;
       const pendingSession = [...this.pendingSessions.values()].find(
         (s) => s.sessionTopic === topic,
@@ -2149,6 +2172,9 @@ export class Engine extends IEngine {
       }
 
       const proposal = this.client.proposal.get(pendingSession.proposalId);
+
+      const { authentication, walletPayResult } =
+        this.prepareProposalRequestsResponses(proposalRequestsResponses);
 
       const session: SessionTypes.Struct = {
         topic,
