@@ -105,7 +105,10 @@ export declare namespace EngineTypes {
     uri: string;
   }
 
-  type ProposalRequestsResponses = (AuthTypes.Cacao | WalletPayResult)[];
+  type ProposalRequestsResponses = {
+    authentication?: AuthTypes.Cacao[];
+    walletPay?: WalletPayResult[];
+  };
 
   interface ApproveParams {
     id: number;

@@ -145,7 +145,9 @@ describe("Authenticated Sessions", () => {
                 events: [],
               },
             },
-            proposalRequestsResponses: auths,
+            proposalRequestsResponses: {
+              authentication: auths,
+            },
           });
           resolve();
         });
@@ -296,7 +298,9 @@ describe("Authenticated Sessions", () => {
                 events: [],
               },
             },
-            proposalRequestsResponses: auths,
+            proposalRequestsResponses: {
+              authentication: auths,
+            },
           });
           resolve();
         });
