@@ -20,7 +20,7 @@ import { RelayerTypes } from "@walletconnect/types";
 const generateClientDbName = (prefix: string) =>
   `./test/tmp/${prefix}_${generateRandomBytes32()}.db`;
 
-describe("Sign Client Persistence", () => {
+describe.concurrent("Sign Client Persistence", () => {
   describe("ping", () => {
     describe("pairing", () => {
       describe("after restart", () => {
@@ -66,7 +66,7 @@ describe("Sign Client Persistence", () => {
               }
             }),
           ]);
-
+          await throttle(2000);
           await deleteClients(clients);
           // restart
           clients = await initTwoClients(
@@ -98,6 +98,7 @@ describe("Sign Client Persistence", () => {
           await clients.A.ping({ topic });
           await clients.B.ping({ topic });
 
+          await throttle(2000);
           await deleteClients(clients);
         });
       });

@@ -119,7 +119,7 @@ import {
   ENGINE_QUEUE_STATES,
   AUTH_PUBLIC_KEY_NAME,
   TVF_METHODS,
-} from "../constants";
+} from "../constants/index.js";
 
 export class Engine extends IEngine {
   public name = ENGINE_CONTEXT;
@@ -211,7 +211,7 @@ export class Engine extends IEngine {
         }
       }
     } catch (error) {
-      this.client.logger.warn("processPendingMessageEvents failed", error);
+      this.client.logger.warn(error, "processPendingMessageEvents failed");
     }
   }
 
@@ -242,7 +242,15 @@ export class Engine extends IEngine {
       sessionProperties,
       scopedProperties,
       relays,
+      authentication,
+      walletPay,
     } = connectParams;
+
+    const expiryFromAuthentication = authentication?.[0]?.ttl;
+    const expiry =
+      expiryFromAuthentication || ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
+    this.validateRequestExpiry(expiry);
+
     let topic = pairingTopic;
     let uri: string | undefined;
     let active = false;
@@ -273,9 +281,8 @@ export class Engine extends IEngine {
 
     const publicKey = await this.client.core.crypto.generateKeyPair();
 
-    const expiry = ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl || FIVE_MINUTES;
     const expiryTimestamp = calcExpiry(expiry);
-    const proposal = {
+    const proposal: ProposalTypes.Struct = {
       requiredNamespaces,
       optionalNamespaces,
       relays: relays ?? [{ protocol: RELAYER_DEFAULT_PROTOCOL }],
@@ -288,7 +295,19 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       id: payloadId(),
+      ...((authentication || walletPay) && {
+        requests: {
+          authentication: authentication?.map((auth) => ({
+            ...auth,
+            aud: auth.uri,
+            version: "1",
+            iat: new Date().toISOString(),
+          })),
+          walletPay,
+        },
+      }),
     };
+
     const sessionConnectTarget = engineEvent("session_connect", proposal.id);
 
     const {
@@ -317,6 +336,8 @@ export class Engine extends IEngine {
       }
     });
 
+    await this.setProposal(proposal.id, proposal);
+
     await this.sendProposeSession({
       proposal,
       publishOpts: {
@@ -327,9 +348,11 @@ export class Engine extends IEngine {
           correlationId: proposal.id,
         },
       },
+    }).catch((error) => {
+      this.deleteProposal(proposal.id);
+      throw error;
     });
 
-    await this.setProposal(proposal.id, proposal);
     return { uri, approval };
   };
 
@@ -376,8 +399,15 @@ export class Engine extends IEngine {
       throw error;
     }
 
-    const { id, relayProtocol, namespaces, sessionProperties, scopedProperties, sessionConfig } =
-      params;
+    const {
+      id,
+      relayProtocol,
+      namespaces,
+      sessionProperties,
+      scopedProperties,
+      sessionConfig,
+      proposalRequestsResponses,
+    } = params;
 
     const proposal = this.client.proposal.get(id);
 
@@ -407,6 +437,10 @@ export class Engine extends IEngine {
       selfPublicKey,
       peerPublicKey,
     );
+
+    const { authentication, walletPayResult } =
+      this.prepareProposalRequestsResponses(proposalRequestsResponses);
+
     const sessionSettle = {
       relay: { protocol: relayProtocol ?? "irn" },
       namespaces,
@@ -415,6 +449,8 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       ...(sessionConfig && { sessionConfig }),
+      authentication,
+      walletPayResult,
     };
     const transportType = TRANSPORT_TYPES.relay;
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribing_session_topic);
@@ -430,7 +466,7 @@ export class Engine extends IEngine {
 
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribe_session_topic_success);
 
-    const session = {
+    const session: SessionTypes.Struct = {
       ...sessionSettle,
       topic: sessionTopic,
       requiredNamespaces,
@@ -445,6 +481,7 @@ export class Engine extends IEngine {
       controller: selfPublicKey,
       transportType: TRANSPORT_TYPES.relay,
     };
+
     await this.client.session.set(sessionTopic, session);
 
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.store_session);
@@ -536,7 +573,14 @@ export class Engine extends IEngine {
     }
     const { topic, namespaces } = params;
 
-    const { done: acknowledged, resolve, reject } = createDelayedPromise<void>();
+    const {
+      done: acknowledged,
+      resolve,
+      reject,
+    } = createDelayedPromise<void>(
+      FIVE_MINUTES,
+      "Session update request expired without receiving any acknowledgement",
+    );
     const clientRpcId = payloadId();
     const relayRpcId = getBigIntRpcId().toString() as any;
 
@@ -578,7 +622,14 @@ export class Engine extends IEngine {
 
     const { topic } = params;
     const clientRpcId = payloadId();
-    const { done: acknowledged, resolve, reject } = createDelayedPromise<void>();
+    const {
+      done: acknowledged,
+      resolve,
+      reject,
+    } = createDelayedPromise<void>(
+      FIVE_MINUTES,
+      "Session extend request expired without receiving any acknowledgement",
+    );
     this.events.once(engineEvent("session_extend", clientRpcId), ({ error }: any) => {
       if (error) reject(error);
       else resolve();
@@ -760,7 +811,10 @@ export class Engine extends IEngine {
     if (this.client.session.keys.includes(topic)) {
       const clientRpcId = payloadId();
       const relayRpcId = getBigIntRpcId().toString() as any;
-      const { done, resolve, reject } = createDelayedPromise<void>();
+      const { done, resolve, reject } = createDelayedPromise<void>(
+        FIVE_MINUTES,
+        "Ping request expired without receiving any acknowledgement",
+      );
       this.events.once(engineEvent("session_ping", clientRpcId), ({ error }: any) => {
         if (error) reject(error);
         else resolve();
@@ -1433,15 +1487,17 @@ export class Engine extends IEngine {
     this.client.core.storage
       .removeItem(WALLETCONNECT_DEEPLINK_CHOICE)
       .catch((e) => this.client.logger.warn(e));
-    this.getPendingSessionRequests().forEach((r) => {
-      if (r.topic === topic) {
-        this.deletePendingSessionRequest(r.id, getSdkError("USER_DISCONNECTED"));
-      }
-    });
     // reset the queue state back to idle if a request for the deleted session is still in the queue
     if (topic === this.sessionRequestQueue.queue[0]?.topic) {
       this.sessionRequestQueue.state = ENGINE_QUEUE_STATES.idle;
     }
+
+    await Promise.all(
+      this.getPendingSessionRequests()
+        .filter((r) => r.topic === topic)
+        .map((r) => this.deletePendingSessionRequest(r.id, getSdkError("USER_DISCONNECTED"))),
+    );
+
     if (emitEvent) this.client.events.emit("session_delete", { id, topic });
   };
 
@@ -1997,7 +2053,7 @@ export class Engine extends IEngine {
       this.isValidConnect({ ...payload.params });
       const expiryTimestamp =
         params.expiryTimestamp || calcExpiry(ENGINE_RPC_OPTS.wc_sessionPropose.req.ttl);
-      const proposal = {
+      const proposal: ProposalTypes.Struct = {
         id,
         pairingTopic: topic,
         expiryTimestamp,
@@ -2098,6 +2154,8 @@ export class Engine extends IEngine {
         sessionProperties,
         scopedProperties,
         sessionConfig,
+        authentication,
+        walletPayResult,
       } = payload.params;
       const pendingSession = [...this.pendingSessions.values()].find(
         (s) => s.sessionTopic === topic,
@@ -2131,6 +2189,8 @@ export class Engine extends IEngine {
         ...(scopedProperties && { scopedProperties }),
         ...(sessionConfig && { sessionConfig }),
         transportType: TRANSPORT_TYPES.relay,
+        authentication,
+        walletPayResult,
       };
 
       await this.client.session.set(session.topic, session);
@@ -2141,9 +2201,6 @@ export class Engine extends IEngine {
         metadata: session.peer.metadata,
       });
 
-      this.client.events.emit("session_connect", { session });
-      this.events.emit(engineEvent("session_connect", pendingSession.proposalId), { session });
-
       this.pendingSessions.delete(pendingSession.proposalId);
       this.deleteProposal(pendingSession.proposalId, false);
       this.cleanupDuplicatePairings(session);
@@ -2151,8 +2208,12 @@ export class Engine extends IEngine {
       await this.sendResult<"wc_sessionSettle">({
         id: payload.id,
         topic,
+        throwOnFailedPublish: true,
         result: true,
       });
+
+      this.client.events.emit("session_connect", { session });
+      this.events.emit(engineEvent("session_connect", pendingSession.proposalId), { session });
     } catch (err: any) {
       await this.sendError({
         id,
@@ -2323,21 +2384,9 @@ export class Engine extends IEngine {
   ) => {
     const { id } = payload;
     try {
-      this.isValidDisconnect({ topic, reason: payload.params });
-      await Promise.all([
-        new Promise((resolve) => {
-          // RPC request needs to happen before deletion as it utilizes session encryption
-          this.client.core.relayer.once(RELAYER_EVENTS.publish, async () => {
-            resolve(await this.deleteSession({ topic, id }));
-          });
-        }),
-        this.sendResult<"wc_sessionDelete">({
-          id,
-          topic,
-          result: true,
-        }),
-        this.cleanupPendingSentRequestsForTopic({ topic, error: getSdkError("USER_DISCONNECTED") }),
-      ]).catch((err) => this.client.logger.error(err));
+      await this.isValidDisconnect({ topic, reason: payload.params });
+      this.cleanupPendingSentRequestsForTopic({ topic, error: getSdkError("USER_DISCONNECTED") });
+      await this.deleteSession({ topic, id });
     } catch (err: any) {
       this.client.logger.error(err);
     }
@@ -2549,12 +2598,6 @@ export class Engine extends IEngine {
         (r) => r.topic === topic && r.request.method === "wc_sessionRequest",
       );
       forSession.forEach((r) => {
-        const id = r.request.id;
-        const target = engineEvent("session_request", id);
-        const listeners = this.events.listenerCount(target);
-        if (listeners === 0) {
-          throw new Error(`emitting ${target} without any listeners`);
-        }
         // notify .request() handler of the rejection
         this.events.emit(engineEvent("session_request", r.request.id), {
           error,
@@ -2792,7 +2835,11 @@ export class Engine extends IEngine {
     }
 
     // validate required namespaces only if they are defined
-    if (!isUndefined(requiredNamespaces) && isValidObject(requiredNamespaces) !== 0) {
+    if (
+      requiredNamespaces &&
+      !isUndefined(requiredNamespaces) &&
+      isValidObject(requiredNamespaces) !== 0
+    ) {
       const warning =
         "requiredNamespaces are deprecated and are automatically assigned to optionalNamespaces";
       // if logger level is one of the following, the logger.warn will not be shown, so we need to use console.warn
@@ -2805,16 +2852,20 @@ export class Engine extends IEngine {
     }
 
     // validate optional namespaces only if they are defined
-    if (!isUndefined(optionalNamespaces) && isValidObject(optionalNamespaces) !== 0) {
+    if (
+      optionalNamespaces &&
+      !isUndefined(optionalNamespaces) &&
+      isValidObject(optionalNamespaces) !== 0
+    ) {
       this.validateNamespaces(optionalNamespaces, "optionalNamespaces");
     }
 
     // validate session properties only if they are defined
-    if (!isUndefined(sessionProperties)) {
+    if (sessionProperties && !isUndefined(sessionProperties)) {
       this.validateSessionProps(sessionProperties, "sessionProperties");
     }
 
-    if (!isUndefined(scopedProperties)) {
+    if (scopedProperties && !isUndefined(scopedProperties)) {
       this.validateSessionProps(scopedProperties, "scopedProperties");
 
       const requestedNamespaces = Object.keys(requiredNamespaces || {}).concat(
@@ -2868,11 +2919,11 @@ export class Engine extends IEngine {
       throw new Error(message);
     }
 
-    if (!isUndefined(sessionProperties)) {
+    if (sessionProperties && !isUndefined(sessionProperties)) {
       this.validateSessionProps(sessionProperties, "sessionProperties");
     }
 
-    if (!isUndefined(scopedProperties)) {
+    if (scopedProperties && !isUndefined(scopedProperties)) {
       this.validateSessionProps(scopedProperties, "scopedProperties");
 
       const approvedNamespaces = new Set(Object.keys(namespaces));
@@ -2993,6 +3044,10 @@ export class Engine extends IEngine {
       );
       throw new Error(message);
     }
+    this.validateRequestExpiry(expiry);
+  };
+
+  private validateRequestExpiry(expiry?: number) {
     if (expiry && !isValidRequestExpiry(expiry, SESSION_REQUEST_EXPIRY_BOUNDARIES)) {
       const { message } = getInternalError(
         "MISSING_OR_INVALID",
@@ -3000,7 +3055,7 @@ export class Engine extends IEngine {
       );
       throw new Error(message);
     }
-  };
+  }
 
   private isValidRespond: EnginePrivate["isValidRespond"] = async (params) => {
     if (!isValidParams(params)) {
@@ -3289,7 +3344,7 @@ export class Engine extends IEngine {
         ? [params.request.params?.[0]?.to]
         : [];
     } catch (e) {
-      this.client.logger.warn("Error getting TVF params", e);
+      this.client.logger.warn(e, "Error getting TVF params");
     }
     return tvf;
   };
@@ -3379,8 +3434,32 @@ export class Engine extends IEngine {
         return [hashes];
       }
     } catch (e) {
-      this.client.logger.warn("Error extracting tx hashes from result", e);
+      this.client.logger.warn(e, "Error extracting tx hashes from result");
     }
     return [];
+  };
+
+  private prepareProposalRequestsResponses = (
+    proposalRequestsResponses: EngineTypes.ApproveParams["proposalRequestsResponses"] = [],
+  ) => {
+    const authentication: AuthTypes.Cacao[] = [];
+    const walletPayResult: EngineTypes.WalletPayResult[] = [];
+
+    proposalRequestsResponses.forEach((response) => {
+      try {
+        if (typeof response === "object" && (response as AuthTypes.Cacao)?.h && "h" in response) {
+          authentication.push(response);
+        } else if (
+          typeof response === "object" &&
+          (response as EngineTypes.WalletPayResult)?.txid &&
+          "txid" in response
+        ) {
+          walletPayResult.push(response);
+        }
+      } catch (e) {
+        this.client.logger.warn(e, "Error preparing proposal requests responses");
+      }
+    });
+    return { authentication, walletPayResult };
   };
 }

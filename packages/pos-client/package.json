@@ -39,15 +39,15 @@
     "prettier": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}'"
   },
   "dependencies": {
-    "@walletconnect/core": "2.21.8",
+    "@walletconnect/core": "2.22.4",
     "@walletconnect/jsonrpc-provider": "1.0.14",
     "@walletconnect/jsonrpc-utils": "1.0.8",
-    "@walletconnect/logger": "2.1.2",
-    "@walletconnect/sign-client": "2.21.8",
-    "@walletconnect/types": "2.21.8",
-    "@walletconnect/utils": "2.21.8"
+    "@walletconnect/logger": "3.0.0",
+    "@walletconnect/sign-client": "2.22.4",
+    "@walletconnect/types": "2.22.4",
+    "@walletconnect/utils": "2.22.4"
   },
   "devDependencies": {
-    "vitest": "0.22.1"
+    "vitest": "4.0.4"
   }
 }
