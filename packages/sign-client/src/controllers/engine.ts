@@ -597,7 +597,14 @@ export class Engine extends IEngine {
     }
     const { topic, namespaces } = params;
 
-    const { done: acknowledged, resolve, reject } = createDelayedPromise<void>();
+    const {
+      done: acknowledged,
+      resolve,
+      reject,
+    } = createDelayedPromise<void>(
+      FIVE_MINUTES,
+      "Session update request expired without receiving any acknowledgement",
+    );
     const clientRpcId = payloadId();
     const relayRpcId = getBigIntRpcId().toString() as any;
 
@@ -639,7 +646,14 @@ export class Engine extends IEngine {
 
     const { topic } = params;
     const clientRpcId = payloadId();
-    const { done: acknowledged, resolve, reject } = createDelayedPromise<void>();
+    const {
+      done: acknowledged,
+      resolve,
+      reject,
+    } = createDelayedPromise<void>(
+      FIVE_MINUTES,
+      "Session extend request expired without receiving any acknowledgement",
+    );
     this.events.once(engineEvent("session_extend", clientRpcId), ({ error }: any) => {
       if (error) reject(error);
       else resolve();
@@ -821,7 +835,10 @@ export class Engine extends IEngine {
     if (this.client.session.keys.includes(topic)) {
       const clientRpcId = payloadId();
       const relayRpcId = getBigIntRpcId().toString() as any;
-      const { done, resolve, reject } = createDelayedPromise<void>();
+      const { done, resolve, reject } = createDelayedPromise<void>(
+        FIVE_MINUTES,
+        "Ping request expired without receiving any acknowledgement",
+      );
       this.events.once(engineEvent("session_ping", clientRpcId), ({ error }: any) => {
         if (error) reject(error);
         else resolve();
