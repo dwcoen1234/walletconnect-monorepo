@@ -119,6 +119,10 @@ describe("Authenticated Sessions", () => {
           expect(pendingProposal.requests?.authentication?.[0].iat).to.deep.eq(
             payload.params.requests?.authentication?.[0].iat,
           );
+          expect(pendingProposal.requests?.authentication?.[0].type).to.deep.eq(
+            payload.params.requests?.authentication?.[0].type,
+          );
+          expect(pendingProposal.requests?.authentication?.[0].type).to.deep.eq("caip122");
 
           expect(pendingProposal.requests?.authentication?.[0].chains).to.deep.eq(requestedChains);
           expect(pendingProposal.requests?.authentication?.[0].domain).to.deep.eq("localhost");
