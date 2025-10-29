@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { IPOSClientEngine, POSClientEngineTypes } from "./engine";
+import { IPOSClientEngine, POSClientEngineTypes } from "./engine.js";
 import { SessionTypes } from "@walletconnect/types";
 
 export declare namespace POSClientTypes {

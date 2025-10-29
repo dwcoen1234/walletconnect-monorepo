@@ -1,5 +1,5 @@
 import { isValidChainId, parseChainId } from "@walletconnect/utils";
-import { UtilsTypes } from "../types";
+import { UtilsTypes } from "../types/index.js";
 
 export const isValidToken = (params: UtilsTypes.isValidTokenParams) => {
   const { supportedNamespaces, token } = params;

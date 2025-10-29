@@ -1,7 +1,7 @@
 import EventEmitter from "events";
-import { CLIENT_CONTEXT } from "./constants";
-import { Engine } from "./controllers";
-import { IPOSClient, POSClientTypes } from "./types";
+import { CLIENT_CONTEXT } from "./constants/index.js";
+import { Engine } from "./controllers/index.js";
+import { IPOSClient, POSClientTypes } from "./types/index.js";
 
 export class POSClient extends IPOSClient {
   public name: IPOSClient["name"];

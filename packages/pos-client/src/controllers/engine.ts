@@ -2,17 +2,22 @@ import { SignClient } from "@walletconnect/sign-client";
 import { ISignClient, ProposalTypes } from "@walletconnect/types";
 import { payloadId } from "@walletconnect/jsonrpc-utils";
 import { parseChainId } from "@walletconnect/utils";
-import { pino } from "@walletconnect/logger";
+import { Logger, pino } from "@walletconnect/logger";
 
-import { IPOSClientEngine, POSClientEngineTypes, POSClientTypes, UtilsTypes } from "../types";
-import { isValidPaymentIntent, isValidToken } from "../utils";
+import {
+  IPOSClientEngine,
+  POSClientEngineTypes,
+  POSClientTypes,
+  UtilsTypes,
+} from "../types/index.js";
+import { isValidPaymentIntent, isValidToken } from "../utils/index.js";
 import {
   CLIENT_STORAGE_OPTIONS,
   MAX_TRANSACTION_STATUS_CHECKS,
   DEFAULT_NAMESPACES,
   RPC_URL,
   RPC_ERROR_CODES,
-} from "../constants";
+} from "../constants/index.js";
 
 export class Engine extends IPOSClientEngine {
   public signClient: ISignClient;
@@ -26,7 +31,7 @@ export class Engine extends IPOSClientEngine {
     new Map();
 
   private supportedNamespaces: UtilsTypes.SupportedNamespaces = DEFAULT_NAMESPACES;
-  private logger: pino.Logger;
+  private logger: Logger;
 
   constructor(client: IPOSClientEngine["client"]) {
     super(client);
@@ -63,18 +68,21 @@ export class Engine extends IPOSClientEngine {
             params: {},
           }),
         );
-      this.logger.debug("Received supported namespaces/networks", {
-        supportedNamespaces: supportedNamespaces.result.namespaces,
-      });
+      this.logger.debug(
+        {
+          supportedNamespaces: supportedNamespaces.result.namespaces,
+        },
+        "Received supported namespaces/networks",
+      );
       this.supportedNamespaces = supportedNamespaces.result.namespaces;
     } catch (error) {
-      this.logger.error("Failed to fetch supported namespaces/networks", error);
+      this.logger.error(error, "Failed to fetch supported namespaces/networks");
     }
   };
 
   public setTokens: IPOSClientEngine["setTokens"] = async (params) => {
     const { tokens } = params;
-    this.logger.debug("Setting tokens", { tokens });
+    this.logger.debug({ tokens }, "Setting tokens");
     tokens.forEach((token) => {
       if (!isValidToken({ token, supportedNamespaces: this.supportedNamespaces })) {
         throw new Error(`Invalid token: ${JSON.stringify(token)}`);
@@ -85,12 +93,12 @@ export class Engine extends IPOSClientEngine {
       resolve();
     });
 
-    this.logger.debug("Tokens set", { tokens });
+    this.logger.debug({ tokens }, "Tokens set");
   };
 
   public createPaymentIntent: IPOSClientEngine["createPaymentIntent"] = async (params) => {
     const { paymentIntents } = params;
-    this.logger.debug("Creating payment intent", { paymentIntents });
+    this.logger.debug({ paymentIntents }, "Creating payment intent");
 
     if (paymentIntents.length === 0) {
       throw new Error("No payment intents provided");
@@ -101,12 +109,12 @@ export class Engine extends IPOSClientEngine {
         throw new Error(`Invalid payment intent: ${JSON.stringify(paymentIntent)}`);
       }
     });
-    this.logger.debug("Payment intent validation success", { paymentIntents });
+    this.logger.debug({ paymentIntents }, "Payment intent validation success");
     const namespaces = this.composeNamespaces(paymentIntents);
     const { uri, approval } = await this.signClient.connect({
       optionalNamespaces: namespaces,
     });
-    this.logger.debug("Connected to the WalletConnect network", { uri });
+    this.logger.debug({ uri }, "Connected to the WalletConnect network");
     if (!uri) {
       this.client.events.emit("connection_failed", {
         error: {
@@ -118,15 +126,15 @@ export class Engine extends IPOSClientEngine {
     }
     const intentId = payloadId();
     this.paymentIntentsMap.set(intentId, paymentIntents);
-    this.logger.debug("Payment intents map set", { intentId, paymentIntents });
+    this.logger.debug({ intentId, paymentIntents }, "Payment intents map set");
     this.emit("await_approval", { approval, intentId });
-    this.logger.debug("Emitted await_approval event", { intentId });
+    this.logger.debug({ intentId }, "Emitted await_approval event");
     this.emit("qr_ready", { uri });
-    this.logger.debug("Emitted qr_ready event", { uri });
+    this.logger.debug({ uri }, "Emitted qr_ready event");
   };
 
   public restart: IPOSClientEngine["restart"] = async (params) => {
-    this.logger.debug("Restarting", { params });
+    this.logger.debug({ params }, "Restarting");
     if (params?.reinit) {
       this.tokens = [];
       this.paymentIntentsMap.clear();
@@ -139,35 +147,36 @@ export class Engine extends IPOSClientEngine {
     // restart the payment intent flow from the beginning
     const paymentIntents = Array.from(this.paymentIntentsMap.values()).flat();
     await this.createPaymentIntent({ paymentIntents });
-    this.logger.debug("Restarted: Created payment intent flow from the beginning", {
-      paymentIntents,
-    });
+    this.logger.debug(
+      { paymentIntents },
+      "Restarted: Created payment intent flow from the beginning",
+    );
   };
 
   // ---------- Event Handlers ----------------------------------------------- //
 
   public emit: IPOSClientEngine["emit"] = (event, args) => {
-    this.logger.debug("Emit", { event, args });
+    this.logger.debug({ event, args }, "Emit");
     return this.client.events.emit(event, args);
   };
 
   public on: IPOSClientEngine["on"] = (event, listener) => {
-    this.logger.debug("On", { event, listener });
+    this.logger.debug({ event, listener }, "On");
     return this.client.events.on(event, listener);
   };
 
   public once: IPOSClientEngine["once"] = (event, listener) => {
-    this.logger.debug("Once", { event, listener });
+    this.logger.debug({ event, listener }, "Once");
     return this.client.events.once(event, listener);
   };
 
   public off: IPOSClientEngine["off"] = (event, listener) => {
-    this.logger.debug("Off", { event, listener });
+    this.logger.debug({ event, listener }, "Off");
     return this.client.events.off(event, listener);
   };
 
   public removeListener: IPOSClientEngine["removeListener"] = (event, listener) => {
-    this.logger.debug("Remove listener", { event, listener });
+    this.logger.debug({ event, listener }, "Remove listener");
     return this.client.events.removeListener(event, listener);
   };
 
@@ -176,7 +185,7 @@ export class Engine extends IPOSClientEngine {
   private composeNamespaces(
     paymentIntents: POSClientTypes.PaymentIntent[],
   ): ProposalTypes.OptionalNamespaces {
-    this.logger.debug("Composing namespaces", { paymentIntents });
+    this.logger.debug({ paymentIntents }, "Composing namespaces");
     const namespaces: ProposalTypes.OptionalNamespaces = {};
     paymentIntents.forEach((paymentIntent) => {
       const {
@@ -194,16 +203,19 @@ export class Engine extends IPOSClientEngine {
         events: namespaceDetails.events,
       };
     });
-    this.logger.debug("Composed namespaces", { namespaces });
+    this.logger.debug({ namespaces }, "Composed namespaces");
     return namespaces;
   }
 
   prepareTransactionsFromPaymentIntents: IPOSClientEngine["prepareTransactionsFromPaymentIntents"] =
     async (params) => {
-      this.logger.debug("Preparing transactions from payment intents", {
-        intentId: params.intentId,
-        sessionTopic: params.session.topic,
-      });
+      this.logger.debug(
+        {
+          intentId: params.intentId,
+          sessionTopic: params.session.topic,
+        },
+        "Preparing transactions from payment intents",
+      );
       const { intentId, session } = params;
       const paymentIntents = this.paymentIntentsMap.get(intentId);
       if (!paymentIntents) {
@@ -234,11 +246,14 @@ export class Engine extends IPOSClientEngine {
         });
       }
 
-      this.logger.debug("Prepared transactions from payment intents", {
-        intentId: params.intentId,
-        sessionTopic: params.session.topic,
-        transactions: intents,
-      });
+      this.logger.debug(
+        {
+          intentId: params.intentId,
+          sessionTopic: params.session.topic,
+          transactions: intents,
+        },
+        "Prepared transactions from payment intents",
+      );
 
       const payload = {
         id: payloadId(),
@@ -249,41 +264,47 @@ export class Engine extends IPOSClientEngine {
         },
       };
 
-      this.logger.debug("Fetching wc_pos_buildTransactions", { payload });
+      this.logger.debug({ payload }, "Fetching wc_pos_buildTransactions");
       const response = await this.fetchRpcRequest<POSClientEngineTypes.RPCTransactions>(
         JSON.stringify(payload),
       );
-      this.logger.debug("Received wc_pos_buildTransactions", { response });
+      this.logger.debug({ response }, "Received wc_pos_buildTransactions");
       const transactions = response.result.transactions;
       this.paymentIntentToTransactionsMap.set(intentId, transactions);
-      this.logger.debug("Payment intent to transactions map set", {
-        intentId: params.intentId,
-        transactions,
-      });
+      this.logger.debug(
+        {
+          intentId: params.intentId,
+          transactions,
+        },
+        "Payment intent to transactions map set",
+      );
       return transactions;
     };
 
   onSessionConnected: IPOSClientEngine["onSessionConnected"] = async (params) => {
     const { intentId, session } = params;
-    this.logger.debug("On session connected", { intentId, sessionTopic: session.topic });
+    this.logger.debug({ intentId, sessionTopic: session.topic }, "On session connected");
     this.emit("connected", { session });
     this.logger.debug("Emitted connected event");
     try {
       const transactions = await this.prepareTransactionsFromPaymentIntents({ intentId, session });
-      this.logger.debug("Transactions prepared", { transactions });
+      this.logger.debug({ transactions }, "Transactions prepared");
       this.sendTransactionsToWallet({ transactions, session, intentId });
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(error, "Error while preparing transactions");
     }
   };
 
   sendTransactionsToWallet: IPOSClientEngine["sendTransactionsToWallet"] = async (params) => {
     const { transactions, session, intentId } = params;
-    this.logger.debug("Sending transactions to wallet", {
-      transactions,
-      sessionTopic: session.topic,
-      intentId,
-    });
+    this.logger.debug(
+      {
+        transactions,
+        sessionTopic: session.topic,
+        intentId,
+      },
+      "Sending transactions to wallet",
+    );
     const paymentIntents = this.paymentIntentsMap.get(intentId);
     if (!paymentIntents) {
       throw new Error(`Payment intents not found for id: ${intentId}`);
@@ -293,9 +314,13 @@ export class Engine extends IPOSClientEngine {
       const paymentIntent = paymentIntents[i];
       try {
         this.emit("payment_requested", { paymentIntent, transaction });
-        this.logger.debug("Emitted payment_requested event", {
-          transactionId: transaction.id,
-        });
+        this.logger.debug(
+          {
+            transactionId: transaction.id,
+          },
+          "Emitted payment_requested event",
+        );
+
         let result;
         try {
           result = await this.signClient.request({
@@ -306,12 +331,15 @@ export class Engine extends IPOSClientEngine {
             },
             chainId: transaction.chainId,
           });
-          this.logger.debug("Wallet responded to payment request", {
-            transactionId: transaction.id,
-            result,
-          });
+          this.logger.debug(
+            {
+              transactionId: transaction.id,
+              result,
+            },
+            "Wallet responded to payment request",
+          );
         } catch (error) {
-          this.logger.error("error", error);
+          this.logger.error(error, "Error while sending payment request");
           this.emit("payment_rejected", {
             error: {
               message: (error as Error)?.message,
@@ -322,13 +350,16 @@ export class Engine extends IPOSClientEngine {
           throw error;
         }
         this.emit("payment_broadcasted", { paymentIntent, transaction, result });
-        this.logger.debug("Emitted payment_broadcasted event", {
-          transactionId: transaction.id,
-        });
-        this.awaitPaymentConfirmed({ transaction, result });
+        this.logger.debug(
+          {
+            transactionId: transaction.id,
+          },
+          "Emitted payment_broadcasted event",
+        );
+        await this.awaitPaymentConfirmed({ transaction, result });
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (error) {
-        this.logger.error("error", error);
+        this.logger.error(error, "Error while awaiting payment confirmed");
       }
     }
   };
@@ -336,7 +367,7 @@ export class Engine extends IPOSClientEngine {
   awaitPaymentConfirmed: IPOSClientEngine["awaitPaymentConfirmed"] = async (params) => {
     try {
       const { transaction, result } = params;
-      this.logger.debug("Awaiting payment confirmed", { transactionId: transaction.id, result });
+      this.logger.debug({ transactionId: transaction.id, result }, "Awaiting payment confirmed");
       const payload = {
         id: payloadId(),
         jsonrpc: "2.0",
@@ -358,12 +389,15 @@ export class Engine extends IPOSClientEngine {
         const response = await this.fetchRpcRequest<POSClientEngineTypes.RPCCheckTransactionResult>(
           JSON.stringify(payload),
         );
-        this.logger.debug("Received wc_pos_checkTransaction", {
-          transactionId: transaction.id,
-          response,
-        });
+        this.logger.debug(
+          {
+            transactionId: transaction.id,
+            response,
+          },
+          "Received wc_pos_checkTransaction",
+        );
         if (response.result.status === "CONFIRMED") {
-          this.logger.debug("Transaction status confirmed", { response });
+          this.logger.debug({ response }, "Transaction status confirmed");
           this.emit("payment_successful", {
             transaction,
             result,
@@ -371,7 +405,7 @@ export class Engine extends IPOSClientEngine {
           transactionResult = response.result;
           break;
         } else if (response.result.status === "FAILED") {
-          this.logger.debug("Transaction failed", { response });
+          this.logger.debug({ response }, "Transaction failed");
           this.emit("payment_failed", {
             error: {
               message: response.result.error,
@@ -382,23 +416,23 @@ export class Engine extends IPOSClientEngine {
           transactionResult = response.result;
           break;
         } else if (response.result.status === "PENDING") {
-          this.logger.debug("Transaction pending", { response });
+          this.logger.debug({ response }, "Transaction pending");
           await new Promise((resolve) => setTimeout(resolve, response.result.checkIn || 1000));
         }
       }
     } catch (error) {
-      this.logger.error("Error while awaiting payment confirmations", error);
+      this.logger.error(error, "Error while awaiting payment confirmations");
     }
   };
 
   private setupEventHandlers = () => {
     this.on("await_approval", async ({ approval, intentId }) => {
       try {
-        this.logger.debug("On await_approval", { intentId });
+        this.logger.debug({ intentId }, "On await_approval");
         const session = await approval();
         this.onSessionConnected({ intentId, session });
       } catch (error) {
-        this.logger.error("Error while awaiting approval", error);
+        this.logger.error(error, "Error while awaiting approval");
         this.emit("connection_rejected", {
           error: {
             message: (error as Error)?.message,
@@ -410,7 +444,7 @@ export class Engine extends IPOSClientEngine {
   };
 
   private fetchRpcRequest = async <T>(payload: string): Promise<T> => {
-    this.logger.debug("Fetching RPC request", { url: this.getRpcUrl(), payload });
+    this.logger.debug({ url: this.getRpcUrl(), payload }, "Fetching RPC request");
     const result = await fetch(this.getRpcUrl(), {
       method: "POST",
       body: payload,
@@ -420,10 +454,10 @@ export class Engine extends IPOSClientEngine {
     try {
       data = await result.json();
     } catch (error) {
-      this.logger.error("Error while getting json data from RPC response", error);
+      this.logger.error(error, "Error while getting json data from RPC response");
     }
 
-    this.logger.debug("Received RPC request response", { data });
+    this.logger.debug({ data }, "Received RPC request response");
 
     if (!result.ok || data.error) {
       const code = data.error?.code || -18900;

@@ -1,7 +1,7 @@
-import { ISignClient, SessionTypes } from "@walletconnect/types";
-import { IPOSClient, POSClientTypes } from "./client";
 import EventEmitter from "events";
-import { UtilsTypes } from ".";
+import { ISignClient, SessionTypes } from "@walletconnect/types";
+import { IPOSClient, POSClientTypes } from "./client.js";
+import { UtilsTypes } from "./index.js";
 
 export declare namespace POSClientEngineTypes {
   type EngineEvents = POSClientTypes.Event | "await_approval";

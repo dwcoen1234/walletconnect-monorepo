@@ -7,9 +7,9 @@ import { parseUri } from "@walletconnect/utils";
 import { SignClient } from "@walletconnect/sign-client";
 import { ISignClient } from "@walletconnect/types";
 
-import { POSClient, IPOSClient, POSClientTypes, RPC_ERROR_CODES } from "../src";
-import { TEST_METADATA } from "./shared/values";
-import { TEST_CORE_OPTIONS } from "./shared";
+import { POSClient, IPOSClient, POSClientTypes, RPC_ERROR_CODES } from "../src/index.js";
+import { TEST_METADATA } from "./shared/values.js";
+import { TEST_CORE_OPTIONS } from "./shared/index.js";
 
 const connectSession = async ({
   pos,

@@ -1,4 +1,4 @@
-import { POSClientTypes } from "./";
+import { POSClientTypes } from "./index.js";
 
 /** Helpers types for internal usage only */
 export declare namespace UtilsTypes {
