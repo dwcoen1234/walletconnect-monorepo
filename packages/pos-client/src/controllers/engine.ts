@@ -383,7 +383,7 @@ export class Engine extends IPOSClientEngine {
         this.logger.error(error, "Error while awaiting payment confirmed");
       }
     }
-    this.cleanup();
+    await this.cleanup();
   };
 
   awaitPaymentConfirmed: IPOSClientEngine["awaitPaymentConfirmed"] = async (params) => {
