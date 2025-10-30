@@ -5,8 +5,8 @@ import { ContractFactory, ethers, toBeHex } from "ethers";
 import { SESSION_REQUEST_EXPIRY_BOUNDARIES, SignClient } from "@walletconnect/sign-client";
 import { parseChainId } from "@walletconnect/utils";
 
-import { WalletClient } from "./shared";
-import EthereumProvider, { OPTIONAL_EVENTS, OPTIONAL_METHODS } from "../src";
+import { WalletClient } from "./shared/index.js";
+import EthereumProvider, { OPTIONAL_EVENTS, OPTIONAL_METHODS } from "../src/index.js";
 import ERC20Artifact from "./shared/TestToken.json";
 import {
   CHAIN_ID,
@@ -19,8 +19,8 @@ import {
   TEST_ETHEREUM_METHODS_OPTIONAL,
   TEST_WALLET_METADATA,
   TEST_APP_METADATA_A,
-} from "./shared/constants";
-import { EthereumProviderOptions } from "../src/EthereumProvider";
+} from "./shared/constants.js";
+import { EthereumProviderOptions } from "../src/EthereumProvider.js";
 
 describe("EthereumProvider", function () {
   let provider: EthereumProvider;
@@ -155,7 +155,7 @@ describe("EthereumProvider", function () {
     ]);
   });
 
-  describe("validation", () => {
+  describe.concurrent("validation", () => {
     it("should reject when lower than min expiry is used", async () => {
       const expiryToTest = SESSION_REQUEST_EXPIRY_BOUNDARIES.min - 1;
       await expect(
@@ -343,7 +343,7 @@ describe("EthereumProvider", function () {
       });
     });
   });
-  describe("persistence", () => {
+  describe.concurrent("persistence", () => {
     const db = "./test/tmp/test.db";
     const initOptions: EthereumProviderOptions = {
       projectId: process.env.TEST_PROJECT_ID || "",
@@ -453,7 +453,7 @@ describe("EthereumProvider", function () {
       await persistedProvider.signer.client.core.relayer.transportClose();
     });
   });
-  describe("required & optional chains", () => {
+  describe.concurrent("required & optional chains", () => {
     it("should connect without any required chains", async () => {
       const initOptions: EthereumProviderOptions = {
         projectId: process.env.TEST_PROJECT_ID || "",
@@ -635,7 +635,7 @@ describe("EthereumProvider", function () {
       await walletClient.core.relayer.transportClose();
     });
   });
-  describe("events", () => {
+  describe.concurrent("events", () => {
     it("should emit accountsChanged when a chain is changed and there are new accounts on the new chain", async () => {
       const walletAddresses = [
         "0x0000000000000000000000000000000000000000",

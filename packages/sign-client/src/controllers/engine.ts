@@ -297,12 +297,37 @@ export class Engine extends IEngine {
       id: payloadId(),
       ...((authentication || walletPay) && {
         requests: {
-          authentication: authentication?.map((auth) => ({
-            ...auth,
-            aud: auth.uri,
-            version: "1",
-            iat: new Date().toISOString(),
-          })),
+          authentication: authentication?.map((auth) => {
+            const {
+              domain,
+              chains,
+              nonce,
+              uri,
+              exp,
+              nbf,
+              type,
+              statement,
+              requestId,
+              resources,
+              signatureTypes,
+            } = auth;
+            const protocolParams: AuthTypes.AuthenticateParams = {
+              domain,
+              chains,
+              nonce,
+              type: type ?? "caip122",
+              aud: uri,
+              version: "1",
+              iat: new Date().toISOString(),
+              exp,
+              nbf,
+              statement,
+              requestId,
+              resources,
+              signatureTypes,
+            };
+            return protocolParams;
+          }),
           walletPay,
         },
       }),
@@ -438,9 +463,6 @@ export class Engine extends IEngine {
       peerPublicKey,
     );
 
-    const { authentication, walletPayResult } =
-      this.prepareProposalRequestsResponses(proposalRequestsResponses);
-
     const sessionSettle = {
       relay: { protocol: relayProtocol ?? "irn" },
       namespaces,
@@ -449,8 +471,7 @@ export class Engine extends IEngine {
       ...(sessionProperties && { sessionProperties }),
       ...(scopedProperties && { scopedProperties }),
       ...(sessionConfig && { sessionConfig }),
-      authentication,
-      walletPayResult,
+      proposalRequestsResponses,
     };
     const transportType = TRANSPORT_TYPES.relay;
     event.addTrace(EVENT_CLIENT_SESSION_TRACES.subscribing_session_topic);
@@ -480,6 +501,8 @@ export class Engine extends IEngine {
       },
       controller: selfPublicKey,
       transportType: TRANSPORT_TYPES.relay,
+      authentication: proposalRequestsResponses?.authentication,
+      walletPayResult: proposalRequestsResponses?.walletPay,
     };
 
     await this.client.session.set(sessionTopic, session);
@@ -2154,8 +2177,7 @@ export class Engine extends IEngine {
         sessionProperties,
         scopedProperties,
         sessionConfig,
-        authentication,
-        walletPayResult,
+        proposalRequestsResponses,
       } = payload.params;
       const pendingSession = [...this.pendingSessions.values()].find(
         (s) => s.sessionTopic === topic,
@@ -2189,8 +2211,8 @@ export class Engine extends IEngine {
         ...(scopedProperties && { scopedProperties }),
         ...(sessionConfig && { sessionConfig }),
         transportType: TRANSPORT_TYPES.relay,
-        authentication,
-        walletPayResult,
+        authentication: proposalRequestsResponses?.authentication,
+        walletPayResult: proposalRequestsResponses?.walletPay,
       };
 
       await this.client.session.set(session.topic, session);
@@ -3437,29 +3459,5 @@ export class Engine extends IEngine {
       this.client.logger.warn(e, "Error extracting tx hashes from result");
     }
     return [];
-  };
-
-  private prepareProposalRequestsResponses = (
-    proposalRequestsResponses: EngineTypes.ApproveParams["proposalRequestsResponses"] = [],
-  ) => {
-    const authentication: AuthTypes.Cacao[] = [];
-    const walletPayResult: EngineTypes.WalletPayResult[] = [];
-
-    proposalRequestsResponses.forEach((response) => {
-      try {
-        if (typeof response === "object" && (response as AuthTypes.Cacao)?.h && "h" in response) {
-          authentication.push(response);
-        } else if (
-          typeof response === "object" &&
-          (response as EngineTypes.WalletPayResult)?.txid &&
-          "txid" in response
-        ) {
-          walletPayResult.push(response);
-        }
-      } catch (e) {
-        this.client.logger.warn(e, "Error preparing proposal requests responses");
-      }
-    });
-    return { authentication, walletPayResult };
   };
 }
