@@ -155,7 +155,7 @@ describe("EthereumProvider", function () {
     ]);
   });
 
-  describe.concurrent("validation", () => {
+  describe("validation", () => {
     it("should reject when lower than min expiry is used", async () => {
       const expiryToTest = SESSION_REQUEST_EXPIRY_BOUNDARIES.min - 1;
       await expect(
@@ -343,7 +343,7 @@ describe("EthereumProvider", function () {
       });
     });
   });
-  describe.concurrent("persistence", () => {
+  describe("persistence", () => {
     const db = "./test/tmp/test.db";
     const initOptions: EthereumProviderOptions = {
       projectId: process.env.TEST_PROJECT_ID || "",
@@ -453,7 +453,7 @@ describe("EthereumProvider", function () {
       await persistedProvider.signer.client.core.relayer.transportClose();
     });
   });
-  describe.concurrent("required & optional chains", () => {
+  describe("required & optional chains", () => {
     it("should connect without any required chains", async () => {
       const initOptions: EthereumProviderOptions = {
         projectId: process.env.TEST_PROJECT_ID || "",
@@ -635,7 +635,7 @@ describe("EthereumProvider", function () {
       await walletClient.core.relayer.transportClose();
     });
   });
-  describe.concurrent("events", () => {
+  describe("events", () => {
     it("should emit accountsChanged when a chain is changed and there are new accounts on the new chain", async () => {
       const walletAddresses = [
         "0x0000000000000000000000000000000000000000",
