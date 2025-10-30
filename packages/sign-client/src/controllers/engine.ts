@@ -1929,10 +1929,14 @@ export class Engine extends IEngine {
         await this.onRelayEventResponse({ topic, payload, transportType });
         this.client.core.history.delete(topic, payload.id);
       } else {
+        this.client.logger.error(`onRelayMessage() -> unknown payload: ${JSON.stringify(payload)}`);
         await this.onRelayEventUnknownPayload({ topic, payload, transportType });
       }
       await this.client.core.relayer.messages.ack(topic, message);
     } catch (error) {
+      this.client.logger.error(
+        `onRelayMessage() -> failed to process an inbound message: ${message}`,
+      );
       this.client.logger.error(error);
     }
   }
