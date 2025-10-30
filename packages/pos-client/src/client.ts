@@ -70,6 +70,15 @@ export class POSClient extends IPOSClient {
     }
   };
 
+  public sendPaymentsToWallet: IPOSClient["sendPaymentsToWallet"] = async () => {
+    try {
+      return await this.engine.sendPaymentsToWallet();
+    } catch (error: any) {
+      this.engine.signClient.logger.error(error.message);
+      throw error;
+    }
+  };
+
   // ---------- Private ----------------------------------------------- //
 
   private async initialize() {

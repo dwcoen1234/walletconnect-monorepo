@@ -87,6 +87,7 @@ export abstract class IPOSClient {
   public abstract setTokens: IPOSClientEngine["setTokens"];
   public abstract createPaymentIntent: IPOSClientEngine["createPaymentIntent"];
   public abstract restart: IPOSClientEngine["restart"];
+  public abstract sendPaymentsToWallet: IPOSClientEngine["sendPaymentsToWallet"];
 
   // ---------- Event Handlers ----------------------------------------------- //
   public abstract on: <E extends POSClientTypes.Event>(

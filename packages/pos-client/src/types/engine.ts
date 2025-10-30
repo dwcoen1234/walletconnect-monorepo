@@ -7,7 +7,7 @@ export declare namespace POSClientEngineTypes {
   type EngineEvents = POSClientTypes.Event | "await_approval";
 
   interface EventArguments extends POSClientTypes.EventArguments {
-    await_approval: { approval: () => Promise<SessionTypes.Struct>; intentId: number };
+    await_approval: { approval: () => Promise<SessionTypes.Struct> };
   }
 
   type TransactionParams = {
@@ -63,6 +63,10 @@ export declare namespace POSClientEngineTypes {
 export abstract class IPOSClientEngine {
   public abstract signClient: ISignClient;
   public abstract tokens: POSClientTypes.Token[];
+  public abstract supportedNamespaces: UtilsTypes.SupportedNamespaces;
+  public abstract session?: SessionTypes.Struct;
+  public abstract paymentIntents?: POSClientTypes.PaymentIntent[];
+  public abstract transactions?: POSClientEngineTypes.Transaction[];
 
   constructor(public client: IPOSClient) {}
   // ---------- Public Methods ------------------------------------------------- //
@@ -71,6 +75,7 @@ export abstract class IPOSClientEngine {
   public abstract setTokens(params: { tokens: POSClientTypes.Token[] }): Promise<void>;
   public abstract createPaymentIntent(params: {
     paymentIntents: POSClientTypes.PaymentIntent[];
+    manualControl?: boolean;
   }): Promise<void>;
 
   public abstract restart(params?: { reinit?: boolean }): Promise<void>;
@@ -102,24 +107,16 @@ export abstract class IPOSClientEngine {
   ) => boolean;
 
   // ---------- Internally used methods ----------------------------------------------- //
-  public abstract prepareTransactionsFromPaymentIntents(params: {
-    intentId: number;
-    session: SessionTypes.Struct;
-  }): Promise<POSClientEngineTypes.Transaction[]>;
+  public abstract prepareTransactionsFromPaymentIntents(): Promise<void>;
 
-  public abstract onSessionConnected(params: {
-    intentId: number;
-    session: SessionTypes.Struct;
-  }): Promise<void>;
+  public abstract onSessionConnected(params: { session: SessionTypes.Struct }): Promise<void>;
 
-  public abstract sendTransactionsToWallet(params: {
-    transactions: POSClientEngineTypes.Transaction[];
-    session: SessionTypes.Struct;
-    intentId: number;
-  }): Promise<void>;
+  public abstract sendTransactionsToWallet(): Promise<void>;
 
   public abstract awaitPaymentConfirmed(params: {
     transaction: POSClientEngineTypes.Transaction;
     result: unknown;
   }): Promise<void>;
+
+  public abstract sendPaymentsToWallet(): Promise<void>;
 }

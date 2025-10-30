@@ -1,4 +1,4 @@
-import { POS_CLIENT_VERSION } from "./client";
+import { POS_CLIENT_VERSION } from "./client.js";
 
 export const RPC_URL = ({ projectId }: { projectId: string }) => {
   return `https://rpc.walletconnect.org/v1/json-rpc?projectId=${projectId}&st=node&sv=js-pos-${POS_CLIENT_VERSION}`;

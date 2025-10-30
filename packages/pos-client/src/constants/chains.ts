@@ -1,4 +1,4 @@
-import { UtilsTypes } from "../types";
+import { UtilsTypes } from "../types/index.js";
 
 export const DEFAULT_NAMESPACES: UtilsTypes.SupportedNamespaces = [
   {

@@ -1,4 +1,3 @@
-export * from "./client";
-export * from "./chains";
-export * from "./client";
-export * from "./rpc";
+export * from "./client.js";
+export * from "./chains.js";
+export * from "./rpc.js";

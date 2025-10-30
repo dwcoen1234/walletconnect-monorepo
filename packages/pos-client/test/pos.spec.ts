@@ -212,7 +212,6 @@ describe("Sign Integration", () => {
       },
     ];
     await expect(pos.createPaymentIntent({ paymentIntents })).rejects.toThrow();
-    await new Promise((resolve) => setTimeout(resolve, 1000));
   });
 
   it("should establish a session, prepare transaction, send to wallet, receive response and await confirmation", async () => {
@@ -230,7 +229,7 @@ describe("Sign Integration", () => {
         recipient: `${tokenChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
       },
     ];
-
+    expect(pos.engine.session).to.not.exist;
     await Promise.all([
       new Promise<void>((resolve) => {
         pos.once("payment_successful", () => {
@@ -293,6 +292,8 @@ describe("Sign Integration", () => {
       }),
       pos.createPaymentIntent({ paymentIntents }),
     ]);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    expect(pos.engine.session).to.not.exist;
   });
 
   it("should accept multiple payment intents, establish a session, prepare transactions, send all requests to wallet, receive responses and await confirmations", async () => {
@@ -467,7 +468,6 @@ describe("Sign Integration", () => {
     ];
     await pos.setTokens({ tokens });
 
-    // await pos.createPaymentIntent({ paymentIntents });
     await Promise.all([
       new Promise<void>((resolve) => {
         pos.on("payment_failed", (result) => {
@@ -475,9 +475,126 @@ describe("Sign Integration", () => {
           resolve();
         });
       }),
-      connectSession({ pos, wallet, address: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52" }),
-      pos.createPaymentIntent({ paymentIntents }),
+      connectSession({
+        pos,
+        wallet,
+        address: `0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
+      }),
+      pos.createPaymentIntent({ paymentIntents, manualControl: true }),
     ]);
     await new Promise((resolve) => setTimeout(resolve, 2000));
+  });
+
+  it("should establish a session, prepare transaction, send to wallet, receive response and await confirmation - manual control", async () => {
+    // @ts-expect-error - testing private property
+    expect(pos.engine.manualControl).to.be.false;
+    const tokenChainId = "eip155:8453";
+
+    const paymentIntents: POSClientTypes.PaymentIntent[] = [
+      {
+        token: {
+          network: { name: "Ethereum", chainId: tokenChainId },
+          symbol: "USDC",
+          standard: "ERC20",
+          address: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`,
+        },
+        amount: "1",
+        recipient: `${tokenChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
+      },
+    ];
+
+    await Promise.all([
+      new Promise<void>((resolve) => {
+        pos.once("payment_successful", () => {
+          console.log("payment_successful");
+          resolve();
+        });
+      }),
+      new Promise<void>((resolve) => {
+        pos.once("payment_requested", () => {
+          console.log("payment_requested");
+          resolve();
+        });
+      }),
+      new Promise<void>((resolve) => {
+        pos.once("payment_broadcasted", (result) => {
+          console.log("payment_broadcasted", JSON.stringify(result, null, 2));
+          resolve();
+        });
+      }),
+      new Promise<void>((resolve) => {
+        wallet.events.once("session_request", async (sessionRequest) => {
+          console.log("session_request", JSON.stringify(sessionRequest, null, 2));
+          await wallet.respond({
+            topic: sessionRequest.topic,
+            response: formatJsonRpcResult(
+              sessionRequest.id,
+              "0xff16b7197277088039a45f9e23ccbb32077ebeec1e56e49b24b2f3731e1bd452",
+            ),
+          });
+          resolve();
+        });
+      }),
+      new Promise<void>((resolve) => {
+        wallet.events.once("session_proposal", async (sessionProposal) => {
+          console.log("session_proposal", JSON.stringify(sessionProposal, null, 2));
+          await wallet.approve({
+            id: sessionProposal.id,
+            namespaces: {
+              eip155: {
+                ...sessionProposal.params.optionalNamespaces.eip155,
+                accounts: [`${tokenChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`],
+              },
+            },
+          });
+          resolve();
+        });
+      }),
+      new Promise<void>((resolve) => {
+        pos.once("connected", async ({ session }) => {
+          console.log("connected");
+          expect(session).to.exist;
+          await pos.sendPaymentsToWallet();
+          resolve();
+        });
+      }),
+      new Promise<void>((resolve) => {
+        pos.once("qr_ready", async ({ uri }) => {
+          console.log("qr_ready", uri);
+          await wallet.pair({ uri });
+          resolve();
+        });
+      }),
+      pos.createPaymentIntent({ paymentIntents, manualControl: true }),
+    ]);
+    // @ts-expect-error - testing private property
+    await pos.engine.cleanup();
+  });
+  it("should create payment intent with manual control", async () => {
+    const paymentIntents: POSClientTypes.PaymentIntent[] = [
+      {
+        token: {
+          network: { name: "Ethereum", chainId: "eip155:8453" },
+          symbol: "USDC",
+          standard: "ERC20",
+          address: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`,
+        },
+        amount: "1",
+        recipient: `eip155:8453:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
+      },
+    ];
+    // @ts-expect-error - testing private property
+    expect(pos.engine.manualControl).to.be.false;
+    await pos.createPaymentIntent({ paymentIntents, manualControl: true });
+    // @ts-expect-error - testing private property
+    expect(pos.engine.manualControl).to.be.true;
+  });
+
+  it("should reject multiple calls to send payments to wallet", async () => {
+    // @ts-expect-error - testing private property
+    pos.engine.paymentsSendingInProgress = true;
+    await expect(pos.sendPaymentsToWallet()).rejects.toThrow();
+    // @ts-expect-error - testing private property
+    pos.engine.paymentsSendingInProgress = false;
   });
 });
