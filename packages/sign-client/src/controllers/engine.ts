@@ -106,6 +106,9 @@ import {
   getSignDirectHash,
   LimitedSet,
   getWalletSendCallsHashes,
+  getNamespacesChains,
+  getNamespacesMethods,
+  getNamespacesEvents,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -526,6 +529,7 @@ export class Engine extends IEngine {
           },
           tvf: {
             correlationId: id,
+            ...this.getTVFApproveParams(session),
           },
         },
       });
@@ -1925,10 +1929,14 @@ export class Engine extends IEngine {
         await this.onRelayEventResponse({ topic, payload, transportType });
         this.client.core.history.delete(topic, payload.id);
       } else {
+        this.client.logger.error(`onRelayMessage() -> unknown payload: ${JSON.stringify(payload)}`);
         await this.onRelayEventUnknownPayload({ topic, payload, transportType });
       }
       await this.client.core.relayer.messages.ack(topic, message);
     } catch (error) {
+      this.client.logger.error(
+        `onRelayMessage() -> failed to process an inbound message: ${message}`,
+      );
       this.client.logger.error(error);
     }
   }
@@ -3341,6 +3349,26 @@ export class Engine extends IEngine {
           }, 50);
         }
       }
+    }
+  };
+
+  private getTVFApproveParams = (session: SessionTypes.Struct) => {
+    try {
+      const approvedChains = getNamespacesChains(session.namespaces);
+      const approvedMethods = getNamespacesMethods(session.namespaces);
+      const approvedEvents = getNamespacesEvents(session.namespaces);
+      const sessionProperties = session.sessionProperties;
+      const scopedProperties = session.scopedProperties;
+      return {
+        approvedChains,
+        approvedMethods,
+        approvedEvents,
+        sessionProperties,
+        scopedProperties,
+      };
+    } catch (e) {
+      this.client.logger.warn(e, "Error getting TVF approve params");
+      return {};
     }
   };
 

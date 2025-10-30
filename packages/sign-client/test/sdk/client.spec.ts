@@ -1,17 +1,28 @@
 /* eslint-disable no-console */
-import { TEST_APP_METADATA_A, TEST_EMPTY_METADATA, TEST_WALLET_METADATA } from "./../shared/values";
+import {
+  TEST_APP_METADATA_A,
+  TEST_EMPTY_METADATA,
+  TEST_WALLET_METADATA,
+} from "./../shared/values.js";
 import {
   formatJsonRpcError,
   formatJsonRpcResult,
   JsonRpcError,
 } from "@walletconnect/jsonrpc-utils";
-import { calcExpiry, getSdkError, parseUri } from "@walletconnect/utils";
+import {
+  calcExpiry,
+  getNamespacesChains,
+  getNamespacesEvents,
+  getNamespacesMethods,
+  getSdkError,
+  parseUri,
+} from "@walletconnect/utils";
 import { expect, describe, it, vi } from "vitest";
 import SignClient, {
   ENGINE_QUEUE_STATES,
   ENGINE_RPC_OPTS,
   WALLETCONNECT_DEEPLINK_CHOICE,
-} from "../../src";
+} from "../../src/index.js";
 
 import {
   initTwoClients,
@@ -27,13 +38,14 @@ import {
   TEST_NAMESPACES_V2,
   initTwoPairedClients,
   TEST_CONNECT_PARAMS,
-} from "../shared";
+} from "../shared/index.js";
 import {
   EVENT_CLIENT_PAIRING_ERRORS,
   EVENT_CLIENT_PAIRING_TRACES,
   EVENT_CLIENT_SESSION_ERRORS,
   RELAYER_EVENTS,
 } from "@walletconnect/core";
+import { EngineTypes, RelayerTypes } from "@walletconnect/types";
 
 describe.concurrent("Sign Client Integration", () => {
   it("init", async () => {
@@ -78,8 +90,8 @@ describe.concurrent("Sign Client Integration", () => {
     it("connect (with new pairing)", async () => {
       const clients = await initTwoClients({}, {}, { logger: "warn" });
 
-      let proposeSessionPayload: { method: string; params: { correlationId: number } } | undefined;
-      let approveSessionPayload: { method: string; params: { correlationId: number } } | undefined;
+      let proposeSessionPayload: { method: string; params: RelayerTypes.ITVF } | undefined;
+      let approveSessionPayload: { method: string; params: RelayerTypes.ITVF } | undefined;
 
       clients.A.core.relayer.once(RELAYER_EVENTS.publish, (payload) => {
         if (payload.method === "wc_proposeSession") {
@@ -102,6 +114,25 @@ describe.concurrent("Sign Client Integration", () => {
       expect(proposeSessionPayload?.params.correlationId).to.be.greaterThan(0);
       expect(proposeSessionPayload?.params.correlationId).to.eq(
         approveSessionPayload?.params.correlationId,
+      );
+
+      const approvedChains = getNamespacesChains(sessionA.namespaces);
+      const approvedMethods = getNamespacesMethods(sessionA.namespaces);
+      const approvedEvents = getNamespacesEvents(sessionA.namespaces);
+      expect(approvedChains).to.exist;
+      expect(approvedChains).to.have.length.greaterThan(1);
+      expect(approvedMethods).to.exist;
+      expect(approvedMethods).to.have.length.greaterThan(1);
+      expect(approvedEvents).to.exist;
+      expect(approvedEvents).to.have.length.greaterThan(1);
+      expect(approvedChains).to.deep.equal(approveSessionPayload?.params.approvedChains);
+      expect(approvedMethods).to.deep.equal(approveSessionPayload?.params.approvedMethods);
+      expect(approvedEvents).to.deep.equal(approveSessionPayload?.params.approvedEvents);
+      expect(sessionA.scopedProperties).to.deep.equal(
+        approveSessionPayload?.params.scopedProperties,
+      );
+      expect(sessionA.sessionProperties).to.deep.equal(
+        approveSessionPayload?.params.sessionProperties,
       );
 
       expect(pairingA).to.be.exist;
