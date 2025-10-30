@@ -106,6 +106,9 @@ import {
   getSignDirectHash,
   LimitedSet,
   getWalletSendCallsHashes,
+  getNamespacesChains,
+  getNamespacesMethods,
+  getNamespacesEvents,
 } from "@walletconnect/utils";
 import EventEmmiter from "events";
 import {
@@ -526,6 +529,7 @@ export class Engine extends IEngine {
           },
           tvf: {
             correlationId: id,
+            ...this.getTVFApproveParams(session),
           },
         },
       });
@@ -3341,6 +3345,26 @@ export class Engine extends IEngine {
           }, 50);
         }
       }
+    }
+  };
+
+  private getTVFApproveParams = (session: SessionTypes.Struct) => {
+    try {
+      const approvedChains = getNamespacesChains(session.namespaces);
+      const approvedMethods = getNamespacesMethods(session.namespaces);
+      const approvedEvents = getNamespacesEvents(session.namespaces);
+      const sessionProperties = session.sessionProperties;
+      const scopedProperties = session.scopedProperties;
+      return {
+        approvedChains,
+        approvedMethods,
+        approvedEvents,
+        sessionProperties,
+        scopedProperties,
+      };
+    } catch (e) {
+      this.client.logger.warn(e, "Error getting TVF approve params");
+      return {};
     }
   };
 
