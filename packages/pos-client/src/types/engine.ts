@@ -2,6 +2,7 @@ import EventEmitter from "events";
 import { ISignClient, SessionTypes } from "@walletconnect/types";
 import { IPOSClient, POSClientTypes } from "./client.js";
 import { UtilsTypes } from "./index.js";
+import { Logger } from "@walletconnect/logger";
 
 export declare namespace POSClientEngineTypes {
   type EngineEvents = POSClientTypes.Event | "await_approval";
@@ -62,9 +63,9 @@ export declare namespace POSClientEngineTypes {
 
 export abstract class IPOSClientEngine {
   public abstract signClient: ISignClient;
+  public abstract logger: Logger;
   public abstract tokens: POSClientTypes.Token[];
   public abstract supportedNamespaces: UtilsTypes.SupportedNamespaces;
-  public abstract session?: SessionTypes.Struct;
   public abstract paymentIntents?: POSClientTypes.PaymentIntent[];
   public abstract transactions?: POSClientEngineTypes.Transaction[];
 
@@ -79,6 +80,7 @@ export abstract class IPOSClientEngine {
   }): Promise<void>;
 
   public abstract restart(params?: { reinit?: boolean }): Promise<void>;
+  public abstract disconnect(): Promise<void>;
 
   // ---------- Event Handlers ----------------------------------------------- //
   public abstract on: <E extends POSClientEngineTypes.EngineEvents>(

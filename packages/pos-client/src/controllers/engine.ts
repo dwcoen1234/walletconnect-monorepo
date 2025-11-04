@@ -1,5 +1,5 @@
 import { SignClient } from "@walletconnect/sign-client";
-import { ISignClient, ProposalTypes, SessionTypes } from "@walletconnect/types";
+import { ISignClient, ProposalTypes } from "@walletconnect/types";
 import { payloadId } from "@walletconnect/jsonrpc-utils";
 import { parseChainId } from "@walletconnect/utils";
 import { Logger, pino } from "@walletconnect/logger";
@@ -18,12 +18,13 @@ import {
   RPC_URL,
   RPC_ERROR_CODES,
   DEFAULT_LOGGER_LEVEL,
+  CLIENT_STORAGE_PREFIX,
 } from "../constants/index.js";
 
 export class Engine extends IPOSClientEngine {
   public signClient: ISignClient;
+  public logger: Logger;
   public tokens: POSClientTypes.Token[] = [];
-  public session?: SessionTypes.Struct;
   public supportedNamespaces: UtilsTypes.SupportedNamespaces = DEFAULT_NAMESPACES;
 
   // map to keep track of pending payment intents
@@ -32,8 +33,6 @@ export class Engine extends IPOSClientEngine {
 
   // transactions to be submitted to the wallet
   public transactions?: POSClientEngineTypes.Transaction[];
-
-  private logger: Logger;
 
   private paymentsSendingInProgress = false;
   private manualControl = false;
@@ -64,6 +63,15 @@ export class Engine extends IPOSClientEngine {
       customStoragePrefix: CLIENT_STORAGE_OPTIONS.customStoragePrefix,
       logger: this.client.opts.loggerOptions?.signLevel || DEFAULT_LOGGER_LEVEL,
     });
+
+    const persistedSessionTopic = await this.getPersistedSessionTopic();
+    if (persistedSessionTopic) {
+      try {
+        this.client.session = this.signClient.session.get(persistedSessionTopic);
+      } catch (error) {
+        this.logger.error(error, "Failed to get persisted session topic");
+      }
+    }
 
     try {
       this.logger.debug("Fetching supported namespaces/networks");
@@ -108,23 +116,36 @@ export class Engine extends IPOSClientEngine {
     const { paymentIntents, manualControl } = params;
     this.logger.debug({ paymentIntents }, "Creating payment intent");
 
-    if (this.session) {
-      this.logger.debug("createPaymentIntent() -> Cleaning up existing session");
-      await this.cleanup();
-    }
-
     if (paymentIntents.length === 0) {
       throw new Error("No payment intents provided");
     }
 
     this.manualControl = manualControl || false;
 
-    paymentIntents.forEach((paymentIntent) => {
+    for (const paymentIntent of paymentIntents) {
       if (!isValidPaymentIntent({ paymentIntent, supportedNamespaces: this.supportedNamespaces })) {
         throw new Error(`Invalid payment intent: ${JSON.stringify(paymentIntent)}`);
       }
-    });
+    }
     this.logger.debug({ paymentIntents }, "Payment intent validation success");
+
+    this.paymentIntents = paymentIntents;
+    this.logger.debug({ paymentIntents }, "Payment intents set");
+
+    if (this.client.session) {
+      try {
+        this.validateApprovedNamespacesWithPaymentIntents();
+
+        if (!this.manualControl) {
+          await this.sendPaymentsToWallet();
+        }
+        return;
+      } catch (error) {
+        this.logger.error(error);
+        await this.disconnect();
+      }
+    }
+
     const namespaces = this.composeNamespaces(paymentIntents);
     const { uri, approval } = await this.signClient.connect({
       optionalNamespaces: namespaces,
@@ -139,12 +160,14 @@ export class Engine extends IPOSClientEngine {
       });
       throw new Error("Failed to connect to the WalletConnect network");
     }
-    this.paymentIntents = paymentIntents;
-    this.logger.debug({ paymentIntents }, "Payment intents set");
     this.emit("await_approval", { approval });
     this.logger.debug("Emitted await_approval event");
     this.emit("qr_ready", { uri });
     this.logger.debug({ uri }, "Emitted qr_ready event");
+    if (this.manualControl) {
+      const session = await approval();
+      await this.onSessionConnected({ session });
+    }
   };
 
   public restart: IPOSClientEngine["restart"] = async (params) => {
@@ -152,8 +175,9 @@ export class Engine extends IPOSClientEngine {
     const manualControl = this.manualControl;
     if (params?.reinit) {
       this.tokens = [];
-      await this.cleanup();
-      this.logger.debug("Restarted: Cleared payment intents and transactions");
+      this.cleanup();
+      await this.disconnect();
+      this.logger.debug("Restarted: Cleared payment intents, transactions and disconnected");
       return;
     }
     // restart the payment intent flow from the beginning
@@ -228,7 +252,7 @@ export class Engine extends IPOSClientEngine {
       if (!paymentIntents) {
         throw new Error("No payment intents found");
       }
-      const session = this.session;
+      const session = this.client.session;
       if (!session) {
         throw new Error("No session found");
       }
@@ -244,14 +268,14 @@ export class Engine extends IPOSClientEngine {
         const { token, amount, recipient } = paymentIntent;
         const { namespace } = parseChainId(token.network.chainId);
         // gets the first address that matches the token network chain id
-        const account = session.namespaces[namespace].accounts.find((account) =>
+        const account = session.namespaces?.[namespace]?.accounts?.find((account) =>
           account.includes(`${token.network.chainId}:`),
         );
         if (!account) {
           throw new Error(
             `Address not found in session for chain id: ${
               token.network.chainId
-            }, approved addresses: ${session.namespaces[namespace].accounts.join(", ")}`,
+            }, approved addresses: ${session.namespaces?.[namespace]?.accounts?.join(", ")}`,
           );
         }
 
@@ -318,14 +342,14 @@ export class Engine extends IPOSClientEngine {
         "No transactions or payment intents to send, call createPaymentIntent() first",
       );
     }
-    const session = this.session;
+    const session = this.client.session;
     if (!session) {
       throw new Error("No session found");
     }
     this.logger.debug(
       {
         transactions,
-        sessionTopic: this.session?.topic,
+        sessionTopic: this.client.session?.topic,
       },
       "Sending transactions to wallet",
     );
@@ -383,7 +407,10 @@ export class Engine extends IPOSClientEngine {
         this.logger.error(error, "Error while awaiting payment confirmed");
       }
     }
-    await this.cleanup();
+    this.cleanup();
+    if (!this.manualControl) {
+      await this.disconnect();
+    }
   };
 
   awaitPaymentConfirmed: IPOSClientEngine["awaitPaymentConfirmed"] = async (params) => {
@@ -476,13 +503,25 @@ export class Engine extends IPOSClientEngine {
     });
     this.logger.debug({ sessionTopic: session.topic }, "Disabled deep links for session");
 
-    this.session = this.signClient.session.get(session.topic);
+    this.client.session = this.signClient.session.get(session.topic);
+    await this.persistSessionTopic(session.topic);
     this.emit("connected", { session });
     this.logger.debug("Emitted connected event");
 
     if (!this.manualControl) {
       await this.sendPaymentsToWallet();
     }
+  };
+
+  disconnect: IPOSClientEngine["disconnect"] = async () => {
+    if (this.client.session) {
+      await this.clearPersistedSessionTopic();
+      await this.signClient.disconnect({
+        topic: this.client.session.topic,
+        reason: { code: 4001, message: "User disconnected" },
+      });
+    }
+    this.client.session = undefined;
   };
 
   private fetchRpcRequest = async <T>(payload: string): Promise<T> => {
@@ -518,25 +557,56 @@ export class Engine extends IPOSClientEngine {
     return data as T;
   };
 
-  private cleanup = async () => {
-    if (this.session) {
-      await this.signClient
-        .disconnect({
-          topic: this.session.topic,
-          reason: { code: 4001, message: "User disconnected" },
-        })
-        .catch((error) => {
-          this.logger.error(error, "Error while disconnecting from session");
-        });
+  // validates that the approved namespaces contain at least one address that matches the payment intent
+  private validateApprovedNamespacesWithPaymentIntents = () => {
+    const session = this.client.session;
+    const paymentIntents = this.paymentIntents;
+    if (!session || !paymentIntents) {
+      throw new Error("No session or payment intents found");
     }
-    this.session = undefined;
+
+    const matchedAddresses: string[] = [];
+    for (const paymentIntent of paymentIntents) {
+      const { token } = paymentIntent;
+      const { namespace } = parseChainId(token.network.chainId);
+      // gets the first address that matches the token network chain id
+      const account = session.namespaces?.[namespace]?.accounts?.find((account) =>
+        account.includes(`${token.network.chainId}:`),
+      );
+      if (!account) {
+        continue;
+      }
+      matchedAddresses.push(account);
+    }
+
+    if (matchedAddresses.length === 0) {
+      throw new Error("No approved addresses satisfying the proposed payment intents");
+    }
+  };
+
+  private cleanup = () => {
     this.paymentIntents = undefined;
     this.transactions = undefined;
-    this.manualControl = false;
-    this.logger.debug("Cleaned up session, payment intents and transactions");
+    this.logger.debug("Cleaned up payment intents and transactions");
   };
 
   private getRpcUrl = () => {
     return RPC_URL({ projectId: this.client.opts.projectId });
+  };
+
+  private persistSessionTopic = async (topic: string) => {
+    await this.signClient.core.storage.setItem(this.getStoragePrefix() + "sessionTopic", topic);
+  };
+
+  private getPersistedSessionTopic = async () => {
+    return await this.signClient.core.storage.getItem(this.getStoragePrefix() + "sessionTopic");
+  };
+
+  private clearPersistedSessionTopic = async () => {
+    await this.signClient.core.storage.removeItem(this.getStoragePrefix() + "sessionTopic");
+  };
+
+  private getStoragePrefix = () => {
+    return CLIENT_STORAGE_PREFIX;
   };
 }

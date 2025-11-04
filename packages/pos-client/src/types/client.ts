@@ -79,6 +79,7 @@ export abstract class IPOSClient {
   public abstract engine: IPOSClientEngine;
   public abstract events: EventEmitter;
   public abstract metadata: POSClientTypes.Metadata;
+  public abstract session?: SessionTypes.Struct;
 
   constructor(public opts: POSClientTypes.Options) {}
 
@@ -88,6 +89,7 @@ export abstract class IPOSClient {
   public abstract createPaymentIntent: IPOSClientEngine["createPaymentIntent"];
   public abstract restart: IPOSClientEngine["restart"];
   public abstract sendPaymentsToWallet: IPOSClientEngine["sendPaymentsToWallet"];
+  public abstract disconnect: IPOSClientEngine["disconnect"];
 
   // ---------- Event Handlers ----------------------------------------------- //
   public abstract on: <E extends POSClientTypes.Event>(

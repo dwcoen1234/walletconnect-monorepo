@@ -8,6 +8,7 @@ export class POSClient extends IPOSClient {
   public events: IPOSClient["events"] = new EventEmitter();
   public engine: IPOSClient["engine"];
   public metadata: IPOSClient["metadata"];
+  public session: IPOSClient["session"];
 
   static async init(opts: POSClientTypes.Options) {
     const client = new POSClient(opts);
@@ -47,7 +48,7 @@ export class POSClient extends IPOSClient {
     try {
       return await this.engine.setTokens(params);
     } catch (error: any) {
-      this.engine.signClient.logger.error(error.message);
+      this.engine.logger.error(error.message);
       throw error;
     }
   };
@@ -56,7 +57,7 @@ export class POSClient extends IPOSClient {
     try {
       return await this.engine.createPaymentIntent(params);
     } catch (error: any) {
-      this.engine.signClient.logger.error(error.message);
+      this.engine.logger.error(error.message);
       throw error;
     }
   };
@@ -65,7 +66,7 @@ export class POSClient extends IPOSClient {
     try {
       return await this.engine.restart(params);
     } catch (error: any) {
-      this.engine.signClient.logger.error(error.message);
+      this.engine.logger.error(error.message);
       throw error;
     }
   };
@@ -74,20 +75,28 @@ export class POSClient extends IPOSClient {
     try {
       return await this.engine.sendPaymentsToWallet();
     } catch (error: any) {
-      this.engine.signClient.logger.error(error.message);
+      this.engine.logger.error(error.message);
       throw error;
     }
   };
 
+  public disconnect: IPOSClient["disconnect"] = async () => {
+    try {
+      return await this.engine.disconnect();
+    } catch (error: any) {
+      this.engine.logger.error(error.message);
+      throw error;
+    }
+  };
   // ---------- Private ----------------------------------------------- //
 
   private async initialize() {
     try {
       await this.engine.init();
-      this.engine.signClient.logger.info(`POSClient Initialization Success`);
+      this.engine.logger.info(`POSClient Initialization Success`);
     } catch (error: any) {
-      this.engine.signClient.logger.info(`POSClient Initialization Failure`);
-      this.engine.signClient.logger.error(error.message);
+      this.engine.logger.info(`POSClient Initialization Failure`);
+      this.engine.logger.error(error.message);
       throw error;
     }
   }
