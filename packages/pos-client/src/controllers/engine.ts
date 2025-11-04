@@ -521,6 +521,8 @@ export class Engine extends IPOSClientEngine {
         reason: { code: 4001, message: "User disconnected" },
       });
     }
+
+    this.manualControl = false;
     this.client.session = undefined;
   };
 

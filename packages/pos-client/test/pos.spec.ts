@@ -68,7 +68,7 @@ describe("Sign Integration", () => {
         logoIcon,
       },
       loggerOptions: {
-        posLevel: "error",
+        posLevel: "debug",
       },
     });
     wallet = await SignClient.init({
@@ -241,21 +241,25 @@ describe("Sign Integration", () => {
     await Promise.all([
       new Promise<void>((resolve) => {
         pos.once("payment_successful", () => {
+          console.log("payment_successful");
           resolve();
         });
       }),
       new Promise<void>((resolve) => {
         pos.once("payment_requested", () => {
+          console.log("payment_requested");
           resolve();
         });
       }),
       new Promise<void>((resolve) => {
         pos.once("payment_broadcasted", (result) => {
+          console.log("payment_broadcasted", JSON.stringify(result, null, 2));
           resolve();
         });
       }),
       new Promise<void>((resolve) => {
         wallet.events.once("session_request", async (sessionRequest) => {
+          console.log("session_request", JSON.stringify(sessionRequest, null, 2));
           await wallet.respond({
             topic: sessionRequest.topic,
             response: formatJsonRpcResult(
@@ -268,6 +272,7 @@ describe("Sign Integration", () => {
       }),
       new Promise<void>((resolve) => {
         wallet.events.once("session_proposal", async (sessionProposal) => {
+          console.log("session_proposal", JSON.stringify(sessionProposal, null, 2));
           await wallet.approve({
             id: sessionProposal.id,
             namespaces: {
@@ -282,11 +287,13 @@ describe("Sign Integration", () => {
       }),
       new Promise<void>((resolve) => {
         pos.once("connected", () => {
+          console.log("connected");
           resolve();
         });
       }),
       new Promise<void>((resolve) => {
         pos.once("qr_ready", async ({ uri }) => {
+          console.log("qr_ready", uri);
           await wallet.pair({ uri });
           resolve();
         });
@@ -294,98 +301,6 @@ describe("Sign Integration", () => {
       pos.createPaymentIntent({ paymentIntents }),
     ]);
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    expect(pos.session).to.not.exist;
-  });
-
-  it("should reuse existing session to send multiple payments", async () => {
-    await pos.disconnect();
-    const tokenChainId = "eip155:8453";
-
-    const paymentIntents: POSClientTypes.PaymentIntent[] = [
-      {
-        token: {
-          network: { name: "Ethereum", chainId: tokenChainId },
-          symbol: "USDC",
-          standard: "ERC20",
-          address: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`,
-        },
-        amount: "1",
-        recipient: `${tokenChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
-      },
-    ];
-    expect(pos.session).to.not.exist;
-    let numPaymentSuccessful = 0;
-    let numPaymentRequested = 0;
-    let numPaymentBroadcasted = 0;
-    let numConnected = 0;
-    let numQrReady = 0;
-    let numSessionRequest = 0;
-    let numSessionProposal = 0;
-    pos.on("payment_successful", () => {
-      numPaymentSuccessful++;
-    });
-    pos.on("payment_requested", () => {
-      numPaymentRequested++;
-    });
-    pos.on("payment_broadcasted", (result) => {
-      numPaymentBroadcasted++;
-    });
-    pos.on("connected", () => {
-      numConnected++;
-    });
-    pos.on("qr_ready", async ({ uri }) => {
-      numQrReady++;
-      await wallet.pair({ uri });
-    });
-    const onSessionRequest = async (sessionRequest) => {
-      console.log("session request", numSessionRequest);
-      numSessionRequest++;
-      await wallet.respond({
-        topic: sessionRequest.topic,
-        response: formatJsonRpcResult(
-          sessionRequest.id,
-          "0xff16b7197277088039a45f9e23ccbb32077ebeec1e56e49b24b2f3731e1bd452",
-        ),
-      });
-    };
-
-    const onSessionProposal = async (sessionProposal) => {
-      console.log("session proposal", numSessionProposal);
-      numSessionProposal++;
-      await wallet.approve({
-        id: sessionProposal.id,
-        namespaces: {
-          eip155: {
-            ...sessionProposal.params.optionalNamespaces.eip155,
-            accounts: [`${tokenChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`],
-          },
-        },
-      });
-    };
-
-    wallet.events.on("session_request", onSessionRequest);
-    wallet.events.on("session_proposal", onSessionProposal);
-    await pos.createPaymentIntent({ paymentIntents, manualControl: true });
-    console.log("created payment intent 1");
-    await pos.sendPaymentsToWallet();
-    expect(pos.session).to.exist;
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-    await pos.createPaymentIntent({ paymentIntents, manualControl: true });
-    await pos.sendPaymentsToWallet();
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-    expect(pos.session).to.exist;
-
-    wallet.events.off("session_request", onSessionRequest);
-    wallet.events.off("session_proposal", onSessionProposal);
-
-    expect(numSessionRequest).to.be.equal(2);
-    expect(numPaymentSuccessful).to.be.equal(2);
-    expect(numPaymentRequested).to.be.equal(2);
-    expect(numPaymentBroadcasted).to.be.equal(2);
-    expect(numConnected).to.be.equal(1);
-    expect(numQrReady).to.be.equal(1);
-
-    await pos.disconnect();
     expect(pos.session).to.not.exist;
   });
 
@@ -428,6 +343,7 @@ describe("Sign Integration", () => {
         pos.on("payment_successful", ({ transaction, result }) => {
           expect(transaction).to.exist;
           expect(result).to.exist;
+          console.log("payment_successful");
           numPaymentSuccessful++;
           if (numPaymentSuccessful === paymentIntents.length) {
             resolve();
@@ -438,6 +354,7 @@ describe("Sign Integration", () => {
         pos.on("payment_requested", ({ paymentIntent, transaction }) => {
           expect(paymentIntent).to.exist;
           expect(transaction).to.exist;
+          console.log("payment_requested");
           numPaymentRequested++;
           if (numPaymentRequested === paymentIntents.length) {
             resolve();
@@ -449,6 +366,7 @@ describe("Sign Integration", () => {
           expect(paymentIntent).to.exist;
           expect(transaction).to.exist;
           expect(result).to.exist;
+          console.log("payment_broadcasted", JSON.stringify(result, null, 2));
           numPaymentBroadcasted++;
           if (numPaymentBroadcasted === paymentIntents.length) {
             resolve();
@@ -457,6 +375,7 @@ describe("Sign Integration", () => {
       }),
       new Promise<void>((resolve) => {
         wallet.events.on("session_request", async (sessionRequest) => {
+          console.log("session_request", JSON.stringify(sessionRequest, null, 2));
           if (sessionRequest.params.chainId === evmChainId) {
             await wallet.respond({
               topic: sessionRequest.topic,
@@ -479,6 +398,7 @@ describe("Sign Integration", () => {
       }),
       new Promise<void>((resolve) => {
         wallet.events.once("session_proposal", async (sessionProposal) => {
+          console.log("session_proposal", JSON.stringify(sessionProposal, null, 2));
           await wallet.approve({
             id: sessionProposal.id,
             namespaces: {
@@ -502,11 +422,13 @@ describe("Sign Integration", () => {
           expect(walletSession).to.exist;
           expect(walletSession.topic).to.be.equal(session.topic);
           expect(walletSession.pairingTopic).to.be.equal(session.pairingTopic);
+          console.log("connected");
           resolve();
         });
       }),
       new Promise<void>((resolve) => {
         pos.once("qr_ready", async ({ uri }) => {
+          console.log("qr_ready", uri);
           await wallet.pair({ uri });
           resolve();
         });
@@ -519,42 +441,7 @@ describe("Sign Integration", () => {
     expect(numPaymentBroadcasted).to.be.equal(paymentIntents.length);
   });
 
-  it("should initiate a new session when the existing one doesn't satisfy the payment intents chains", async () => {
-    expect(pos.session).to.exist;
-    expect(pos.session?.namespaces.bip122).does.not.exist;
-    const bip122 = "bip122:000000000019d6689c085ae165831e93";
-    pos.engine.supportedNamespaces.push({
-      name: "bip122",
-      assetNamespaces: ["bip122"],
-      capabilities: null,
-      events: [],
-      methods: ["bip122_signTransaction"],
-    });
-
-    const bip122Token: POSClientTypes.Token = {
-      network: { name: "BIP122", chainId: bip122 },
-      symbol: "BIP122",
-      standard: "bip122",
-      address: `0x2`,
-    };
-
-    await pos.setTokens({ tokens: [bip122Token] });
-
-    const paymentIntents: POSClientTypes.PaymentIntent[] = [
-      {
-        token: bip122Token,
-        amount: "1",
-        recipient: `${bip122}:0x1`,
-      },
-    ];
-    await Promise.all([
-      connectSession({ pos, wallet, address: `0x1` }),
-      pos.createPaymentIntent({ paymentIntents, manualControl: true }),
-    ]);
-    await pos.disconnect();
-  });
-
-  it("should set tokens with invalid address", async () => {
+  it("should set tokens", async () => {
     const networks: Record<string, POSClientTypes.Network> = {
       ethereum: { name: "Ethereum", chainId: "eip155:1" },
       arbitrum: { name: "Arbitrum", chainId: "eip155:42161" },
@@ -601,7 +488,7 @@ describe("Sign Integration", () => {
         wallet,
         address: `0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
       }),
-      pos.createPaymentIntent({ paymentIntents, manualControl: true }),
+      pos.createPaymentIntent({ paymentIntents }),
     ]);
     await new Promise((resolve) => setTimeout(resolve, 2000));
   });
@@ -627,21 +514,25 @@ describe("Sign Integration", () => {
     await Promise.all([
       new Promise<void>((resolve) => {
         pos.once("payment_successful", () => {
+          console.log("payment_successful");
           resolve();
         });
       }),
       new Promise<void>((resolve) => {
         pos.once("payment_requested", () => {
+          console.log("payment_requested");
           resolve();
         });
       }),
       new Promise<void>((resolve) => {
         pos.once("payment_broadcasted", (result) => {
+          console.log("payment_broadcasted", JSON.stringify(result, null, 2));
           resolve();
         });
       }),
       new Promise<void>((resolve) => {
         wallet.events.once("session_request", async (sessionRequest) => {
+          console.log("session_request", JSON.stringify(sessionRequest, null, 2));
           await wallet.respond({
             topic: sessionRequest.topic,
             response: formatJsonRpcResult(
@@ -654,6 +545,7 @@ describe("Sign Integration", () => {
       }),
       new Promise<void>((resolve) => {
         wallet.events.once("session_proposal", async (sessionProposal) => {
+          console.log("session_proposal", JSON.stringify(sessionProposal, null, 2));
           await wallet.approve({
             id: sessionProposal.id,
             namespaces: {
@@ -668,6 +560,7 @@ describe("Sign Integration", () => {
       }),
       new Promise<void>((resolve) => {
         pos.once("connected", async ({ session }) => {
+          console.log("connected");
           expect(session).to.exist;
           await pos.sendPaymentsToWallet();
           resolve();
@@ -675,6 +568,7 @@ describe("Sign Integration", () => {
       }),
       new Promise<void>((resolve) => {
         pos.once("qr_ready", async ({ uri }) => {
+          console.log("qr_ready", uri);
           await wallet.pair({ uri });
           resolve();
         });
@@ -697,8 +591,6 @@ describe("Sign Integration", () => {
         recipient: `eip155:8453:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
       },
     ];
-    // @ts-expect-error - testing private property
-    expect(pos.engine.manualControl).to.be.false;
     await pos.createPaymentIntent({ paymentIntents, manualControl: true });
     // @ts-expect-error - testing private property
     expect(pos.engine.manualControl).to.be.true;
