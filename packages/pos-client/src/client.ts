@@ -2,6 +2,7 @@ import EventEmitter from "events";
 import { CLIENT_CONTEXT } from "./constants/index.js";
 import { Engine } from "./controllers/index.js";
 import { IPOSClient, POSClientTypes } from "./types/index.js";
+import { SessionTypes } from "@walletconnect/types";
 
 export class POSClient extends IPOSClient {
   public name: IPOSClient["name"];
@@ -22,6 +23,10 @@ export class POSClient extends IPOSClient {
     this.metadata = opts.metadata;
     this.name = CLIENT_CONTEXT;
     this.engine = new Engine(this);
+  }
+
+  get sessions(): SessionTypes.Struct[] {
+    return this.engine.signClient.session.getAll();
   }
 
   // ---------- Events ----------------------------------------------- //
@@ -71,9 +76,9 @@ export class POSClient extends IPOSClient {
     }
   };
 
-  public sendPaymentsToWallet: IPOSClient["sendPaymentsToWallet"] = async () => {
+  public sendPaymentsToWallet: IPOSClient["sendPaymentsToWallet"] = async (params) => {
     try {
-      return await this.engine.sendPaymentsToWallet();
+      return await this.engine.sendPaymentsToWallet(params);
     } catch (error: any) {
       this.engine.logger.error(error.message);
       throw error;

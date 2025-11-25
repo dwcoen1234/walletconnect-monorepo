@@ -151,7 +151,6 @@ describe("Sign Integration", () => {
     await pos.createPaymentIntent({ paymentIntents, manualControl: true });
     console.log("created payment intent 1");
     await pos.sendPaymentsToWallet();
-    expect(pos.session).to.exist;
     await new Promise((resolve) => setTimeout(resolve, 5000));
     await pos.engine.signClient.core.relayer.transportClose();
 
@@ -189,7 +188,11 @@ describe("Sign Integration", () => {
     await posAfterRestart.setTokens({ tokens });
 
     expect(posAfterRestart.session).to.exist;
-    await posAfterRestart.createPaymentIntent({ paymentIntents, manualControl: true });
+    await posAfterRestart.createPaymentIntent({
+      paymentIntents,
+      manualControl: true,
+      sessionTopic: pos.session?.topic,
+    });
     await posAfterRestart.sendPaymentsToWallet();
     await new Promise((resolve) => setTimeout(resolve, 5000));
 

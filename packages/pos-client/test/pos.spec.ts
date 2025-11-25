@@ -5,7 +5,7 @@ import { Core } from "@walletconnect/core";
 import { formatJsonRpcResult } from "@walletconnect/jsonrpc-utils";
 import { parseUri } from "@walletconnect/utils";
 import { SignClient } from "@walletconnect/sign-client";
-import { ISignClient } from "@walletconnect/types";
+import { ISignClient, SessionTypes } from "@walletconnect/types";
 
 import { POSClient, IPOSClient, POSClientTypes, RPC_ERROR_CODES } from "../src/index.js";
 import { TEST_METADATA } from "./shared/values.js";
@@ -46,6 +46,50 @@ const connectSession = async ({
   ]);
 };
 
+const getValidTokens = () => {
+  const networks: Record<string, POSClientTypes.Network> = {
+    ethereum: { name: "Ethereum", chainId: "eip155:1" },
+    arbitrum: { name: "Arbitrum", chainId: "eip155:42161" },
+    avalanche: { name: "Avalanche", chainId: "eip155:43114" },
+  };
+  const tokens: POSClientTypes.Token[] = [
+    {
+      network: networks.ethereum,
+      symbol: "ETH",
+      standard: "ERC20",
+      address: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+    },
+    {
+      network: networks.arbitrum,
+      symbol: "ARB",
+      standard: "ERC20",
+      address: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+    },
+    {
+      network: networks.avalanche,
+      symbol: "AVAX",
+      standard: "ERC20",
+      address: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+    },
+  ];
+  return tokens;
+};
+
+const getPaymentIntents = () => {
+  const paymentIntents: POSClientTypes.PaymentIntent[] = [
+    {
+      token: {
+        network: { name: "Ethereum", chainId: "eip155:8453" },
+        symbol: "USDC",
+        standard: "ERC20",
+        address: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`,
+      },
+      amount: "1",
+      recipient: `eip155:8453:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
+    },
+  ];
+  return paymentIntents;
+};
 describe("Sign Integration", () => {
   let wallet: ISignClient;
   let pos: IPOSClient;
@@ -78,12 +122,13 @@ describe("Sign Integration", () => {
     });
   });
 
-  afterEach((meta) => {
+  afterEach(async (meta) => {
     console.log(
       meta.task.name,
       meta.task.result?.state,
       meta.task.result?.state === "pass" ? "✅" : "❌",
     );
+    await pos.disconnect();
   });
 
   it("should initialize a POS client", async () => {
@@ -198,6 +243,11 @@ describe("Sign Integration", () => {
           resolve();
         });
       }),
+      connectSession({
+        pos,
+        wallet,
+        address: "0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52",
+      }),
       pos.createPaymentIntent({ paymentIntents }),
     ]);
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -237,7 +287,7 @@ describe("Sign Integration", () => {
         recipient: `${tokenChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
       },
     ];
-    expect(pos.session).to.not.exist;
+
     await Promise.all([
       new Promise<void>((resolve) => {
         pos.once("payment_successful", () => {
@@ -591,16 +641,95 @@ describe("Sign Integration", () => {
         recipient: `eip155:8453:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
       },
     ];
-    await pos.createPaymentIntent({ paymentIntents, manualControl: true });
+
+    await Promise.all([
+      connectSession({
+        pos,
+        wallet,
+        address: `0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
+      }),
+      pos.createPaymentIntent({ paymentIntents, manualControl: true }),
+    ]);
     // @ts-expect-error - testing private property
     expect(pos.engine.manualControl).to.be.true;
+    pos.disconnect();
   });
 
   it("should reject multiple calls to send payments to wallet", async () => {
     // @ts-expect-error - testing private property
-    pos.engine.paymentsSendingInProgress = true;
+    pos.engine.paymentsSendingInProgress[pos.session?.topic] = true;
     await expect(pos.sendPaymentsToWallet()).rejects.toThrow();
     // @ts-expect-error - testing private property
-    pos.engine.paymentsSendingInProgress = false;
+    pos.engine.paymentsSendingInProgress[pos.session?.topic] = false;
+  });
+
+  it("should connect multiple sessions and send payments to wallet", async () => {
+    const tokens = getValidTokens();
+    await pos.setTokens({ tokens });
+    const paymentIntents = getPaymentIntents();
+
+    const connectedSessions: SessionTypes.Struct[] = [];
+    pos.on("connected", ({ session }) => {
+      console.log("connected", session.topic);
+      connectedSessions.push(session);
+    });
+    // connect first session
+    await Promise.all([
+      connectSession({
+        pos,
+        wallet,
+        address: `0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
+      }),
+      pos.createPaymentIntent({ paymentIntents, manualControl: true }),
+    ]);
+    // await new Promise((resolve) => setTimeout(resolve, 1000));
+    // connect second session
+    await Promise.all([
+      connectSession({
+        pos,
+        wallet,
+        address: `0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
+      }),
+      pos.createPaymentIntent({ paymentIntents, manualControl: true }),
+    ]);
+    // await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    // not exact match because of the other tests that connect a session
+    expect(connectedSessions.length).to.be.greaterThanOrEqual(2);
+    expect(
+      pos.sessions.find((session) => session.topic === connectedSessions[0].topic)?.topic,
+    ).to.be.equal(wallet.session.get(connectedSessions[0].topic)?.topic);
+    expect(
+      pos.sessions.find((session) => session.topic === connectedSessions[1].topic)?.topic,
+    ).to.be.equal(wallet.session.get(connectedSessions[1].topic)?.topic);
+
+    const sessionRequestsReceived: string[] = [];
+    wallet.events.on("session_request", async (sessionRequest) => {
+      console.log("session_request", JSON.stringify(sessionRequest, null, 2));
+      sessionRequestsReceived.push(sessionRequest.topic);
+      await wallet.respond({
+        topic: sessionRequest.topic,
+        response: formatJsonRpcResult(
+          sessionRequest.id,
+          "0xff16b7197277088039a45f9e23ccbb32077ebeec1e56e49b24b2f3731e1bd452",
+        ),
+      });
+    });
+
+    await pos.createPaymentIntent({
+      paymentIntents,
+      manualControl: true,
+      sessionTopic: connectedSessions[0].topic,
+    });
+    await pos.sendPaymentsToWallet({ sessionTopic: connectedSessions[0].topic });
+    await pos.createPaymentIntent({
+      paymentIntents,
+      manualControl: true,
+      sessionTopic: connectedSessions[1].topic,
+    });
+    await pos.sendPaymentsToWallet({ sessionTopic: connectedSessions[1].topic });
+    expect(sessionRequestsReceived.length).to.be.equal(2);
+    expect(sessionRequestsReceived[0]).to.be.equal(connectedSessions[0].topic);
+    expect(sessionRequestsReceived[1]).to.be.equal(connectedSessions[1].topic);
   });
 });

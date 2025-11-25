@@ -23,16 +23,30 @@ export declare namespace POSClientTypes {
     payment_requested: {
       paymentIntent: PaymentIntent;
       transaction: POSClientEngineTypes.Transaction;
+      sessionTopic: string;
     };
-    payment_rejected: { error?: { message?: string; code: number }; paymentIntent: PaymentIntent };
+    payment_rejected: {
+      error?: { message?: string; code: number };
+      paymentIntent: PaymentIntent;
+      sessionTopic: string;
+    };
     payment_broadcasted: {
       paymentIntent: PaymentIntent;
       transaction: POSClientEngineTypes.Transaction;
       result: any;
+      sessionTopic: string;
     };
-    payment_failed: { error?: { message?: string; code: number }; transaction: any };
-    payment_successful: { transaction: POSClientEngineTypes.Transaction; result: any };
-    disconnected: any;
+    payment_failed: {
+      error?: { message?: string; code: number };
+      transaction: any;
+      sessionTopic: string;
+    };
+    payment_successful: {
+      transaction: POSClientEngineTypes.Transaction;
+      result: any;
+      sessionTopic: string;
+    };
+    disconnected: { sessionTopic: string };
   }
 
   interface Options {
@@ -79,7 +93,10 @@ export abstract class IPOSClient {
   public abstract engine: IPOSClientEngine;
   public abstract events: EventEmitter;
   public abstract metadata: POSClientTypes.Metadata;
+  /** the first session in the client */
   public abstract session?: SessionTypes.Struct;
+  /** all sessions in the client */
+  public abstract sessions: SessionTypes.Struct[];
 
   constructor(public opts: POSClientTypes.Options) {}
 

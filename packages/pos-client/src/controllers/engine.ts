@@ -29,12 +29,12 @@ export class Engine extends IPOSClientEngine {
 
   // map to keep track of pending payment intents
   // private paymentIntentsMap: Map<number, POSClientTypes.PaymentIntent[]> = new Map();
-  public paymentIntents?: POSClientTypes.PaymentIntent[];
+  public paymentIntents: IPOSClientEngine["paymentIntents"] = {};
 
   // transactions to be submitted to the wallet
-  public transactions?: POSClientEngineTypes.Transaction[];
+  public transactions: IPOSClientEngine["transactions"] = {};
 
-  private paymentsSendingInProgress = false;
+  private paymentsSendingInProgress: Record<string, boolean> = {};
   private manualControl = false;
 
   constructor(client: IPOSClientEngine["client"]) {
@@ -113,7 +113,7 @@ export class Engine extends IPOSClientEngine {
   };
 
   public createPaymentIntent: IPOSClientEngine["createPaymentIntent"] = async (params) => {
-    const { paymentIntents, manualControl } = params;
+    const { paymentIntents, manualControl, sessionTopic } = params;
     this.logger.debug({ paymentIntents }, "Creating payment intent");
 
     if (paymentIntents.length === 0) {
@@ -129,20 +129,18 @@ export class Engine extends IPOSClientEngine {
     }
     this.logger.debug({ paymentIntents }, "Payment intent validation success");
 
-    this.paymentIntents = paymentIntents;
-    this.logger.debug({ paymentIntents }, "Payment intents set");
-
-    if (this.client.session) {
+    if (sessionTopic) {
       try {
-        this.validateApprovedNamespacesWithPaymentIntents();
+        this.setPaymentIntents({ sessionTopic, paymentIntents });
+        this.validateApprovedNamespacesWithPaymentIntents(sessionTopic);
 
         if (!this.manualControl) {
-          await this.sendPaymentsToWallet();
+          await this.sendPaymentsToWallet({ sessionTopic });
         }
         return;
       } catch (error) {
         this.logger.error(error);
-        await this.disconnect();
+        await this.disconnect({ sessionTopic });
       }
     }
 
@@ -160,13 +158,18 @@ export class Engine extends IPOSClientEngine {
       });
       throw new Error("Failed to connect to the WalletConnect network");
     }
-    this.emit("await_approval", { approval });
+
+    this.emit("await_approval", { approval, paymentIntents });
     this.logger.debug("Emitted await_approval event");
     this.emit("qr_ready", { uri });
     this.logger.debug({ uri }, "Emitted qr_ready event");
+
     if (this.manualControl) {
-      const session = await approval();
-      await this.onSessionConnected({ session });
+      await new Promise<void>((resolve) =>
+        this.client.once("connected", () => {
+          resolve();
+        }),
+      );
     }
   };
 
@@ -175,19 +178,21 @@ export class Engine extends IPOSClientEngine {
     const manualControl = this.manualControl;
     if (params?.reinit) {
       this.tokens = [];
-      this.cleanup();
-      await this.disconnect();
+      this.cleanup({ sessionTopic: params.sessionTopic });
+      await this.disconnect({ sessionTopic: params.sessionTopic });
       this.logger.debug("Restarted: Cleared payment intents, transactions and disconnected");
       return;
     }
+
+    const topic = this.getSessionTopic();
     // restart the payment intent flow from the beginning
     const paymentIntents = this.paymentIntents;
     if (!paymentIntents) {
       throw new Error("No payment intents found");
     }
-    await this.createPaymentIntent({ paymentIntents, manualControl });
+    await this.createPaymentIntent({ paymentIntents: paymentIntents[topic], manualControl });
     this.logger.debug(
-      { paymentIntents },
+      { paymentIntents: paymentIntents[topic] },
       "Restarted: Created payment intent flow from the beginning",
     );
   };
@@ -247,19 +252,19 @@ export class Engine extends IPOSClientEngine {
   }
 
   prepareTransactionsFromPaymentIntents: IPOSClientEngine["prepareTransactionsFromPaymentIntents"] =
-    async () => {
-      const paymentIntents = this.paymentIntents;
+    async (params) => {
+      const { sessionTopic } = params;
+      const topic = this.getSessionTopic(sessionTopic);
+
+      const paymentIntents = this.paymentIntents[topic];
       if (!paymentIntents) {
         throw new Error("No payment intents found");
       }
-      const session = this.client.session;
-      if (!session) {
-        throw new Error("No session found");
-      }
 
+      const session = this.signClient.session.get(topic);
       this.logger.debug(
         {
-          sessionTopic: session.topic,
+          sessionTopic: topic,
         },
         "Preparing transactions from payment intents",
       );
@@ -309,56 +314,55 @@ export class Engine extends IPOSClientEngine {
         JSON.stringify(payload),
       );
       this.logger.debug({ response }, "Received wc_pos_buildTransactions");
-      this.transactions = response.result.transactions;
+      this.transactions[session.topic] = response.result.transactions;
 
       this.logger.debug(
         {
-          transactions: this.transactions,
+          transactions: this.transactions[session.topic],
         },
         "Payment intent to transactions map set",
       );
     };
 
-  sendPaymentsToWallet: IPOSClientEngine["sendPaymentsToWallet"] = async () => {
-    if (this.paymentsSendingInProgress) {
+  sendPaymentsToWallet: IPOSClientEngine["sendPaymentsToWallet"] = async (params = {}) => {
+    const sessionTopic = this.getSessionTopic(params.sessionTopic);
+    if (this.paymentsSendingInProgress[sessionTopic]) {
       throw new Error("Payments are already being sent, please wait for them to complete");
     }
-    this.paymentsSendingInProgress = true;
+    this.paymentsSendingInProgress[sessionTopic] = true;
 
     try {
-      await this.prepareTransactionsFromPaymentIntents();
-      this.sendTransactionsToWallet();
+      await this.prepareTransactionsFromPaymentIntents({ sessionTopic });
+      await this.sendTransactionsToWallet({ sessionTopic });
     } catch (error) {
       this.logger.error(error, "Error while sending payments to wallet");
     }
-    this.paymentsSendingInProgress = false;
+    this.paymentsSendingInProgress[sessionTopic] = false;
   };
 
-  sendTransactionsToWallet: IPOSClientEngine["sendTransactionsToWallet"] = async () => {
-    const transactions = this.transactions;
+  sendTransactionsToWallet: IPOSClientEngine["sendTransactionsToWallet"] = async (params) => {
+    const { sessionTopic } = params;
+    const transactions = this.transactions[sessionTopic];
     const paymentIntents = this.paymentIntents;
     if (!transactions || !paymentIntents) {
       throw new Error(
         "No transactions or payment intents to send, call createPaymentIntent() first",
       );
     }
-    const session = this.client.session;
-    if (!session) {
-      throw new Error("No session found");
-    }
+
     this.logger.debug(
       {
         transactions,
-        sessionTopic: this.client.session?.topic,
+        sessionTopic,
       },
       "Sending transactions to wallet",
     );
 
     for (let i = 0; i < transactions.length; i++) {
       const transaction = transactions[i];
-      const paymentIntent = paymentIntents[i];
+      const paymentIntent = paymentIntents[sessionTopic][i];
       try {
-        this.emit("payment_requested", { paymentIntent, transaction });
+        this.emit("payment_requested", { paymentIntent, transaction, sessionTopic });
         this.logger.debug(
           {
             transactionId: transaction.id,
@@ -369,7 +373,7 @@ export class Engine extends IPOSClientEngine {
         let result;
         try {
           result = await this.signClient.request({
-            topic: session.topic,
+            topic: sessionTopic,
             request: {
               method: transaction.method,
               params: transaction.params,
@@ -391,17 +395,23 @@ export class Engine extends IPOSClientEngine {
               code: 4001,
             },
             paymentIntent,
+            sessionTopic,
           });
           throw error;
         }
-        this.emit("payment_broadcasted", { paymentIntent, transaction, result });
+        this.emit("payment_broadcasted", {
+          paymentIntent,
+          transaction,
+          result,
+          sessionTopic,
+        });
         this.logger.debug(
           {
             transactionId: transaction.id,
           },
           "Emitted payment_broadcasted event",
         );
-        await this.awaitPaymentConfirmed({ transaction, result });
+        await this.awaitPaymentConfirmed({ transaction, result, sessionTopic });
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (error) {
         this.logger.error(error, "Error while awaiting payment confirmed");
@@ -409,13 +419,13 @@ export class Engine extends IPOSClientEngine {
     }
     this.cleanup();
     if (!this.manualControl) {
-      await this.disconnect();
+      await this.disconnect({ sessionTopic });
     }
   };
 
   awaitPaymentConfirmed: IPOSClientEngine["awaitPaymentConfirmed"] = async (params) => {
     try {
-      const { transaction, result } = params;
+      const { transaction, result, sessionTopic } = params;
       this.logger.debug({ transactionId: transaction.id, result }, "Awaiting payment confirmed");
       const payload = {
         id: payloadId(),
@@ -450,6 +460,7 @@ export class Engine extends IPOSClientEngine {
           this.emit("payment_successful", {
             transaction,
             result,
+            sessionTopic,
           });
           transactionResult = response.result;
           break;
@@ -461,6 +472,7 @@ export class Engine extends IPOSClientEngine {
               code: 4001,
             },
             transaction: result,
+            sessionTopic,
           });
           transactionResult = response.result;
           break;
@@ -475,10 +487,11 @@ export class Engine extends IPOSClientEngine {
   };
 
   private setupEventHandlers = () => {
-    this.on("await_approval", async ({ approval }) => {
+    this.on("await_approval", async ({ approval, paymentIntents }) => {
       try {
         this.logger.debug("On await_approval");
         const session = await approval();
+        this.setPaymentIntents({ sessionTopic: session.topic, paymentIntents });
         await this.onSessionConnected({ session });
       } catch (error) {
         this.logger.error(error, "Error while awaiting approval");
@@ -513,17 +526,19 @@ export class Engine extends IPOSClientEngine {
     }
   };
 
-  disconnect: IPOSClientEngine["disconnect"] = async () => {
-    if (this.client.session) {
-      await this.clearPersistedSessionTopic();
-      await this.signClient.disconnect({
-        topic: this.client.session.topic,
-        reason: { code: 4001, message: "User disconnected" },
-      });
-    }
+  disconnect: IPOSClientEngine["disconnect"] = async (params = {}) => {
+    const { sessionTopic } = params;
+    const topicToDisconnect = sessionTopic || this.client.session?.topic;
 
     this.manualControl = false;
     this.client.session = undefined;
+    await this.clearPersistedSessionTopic();
+    if (!topicToDisconnect) return;
+
+    await this.signClient.disconnect({
+      topic: topicToDisconnect,
+      reason: { code: 4001, message: "User disconnected" },
+    });
   };
 
   private fetchRpcRequest = async <T>(payload: string): Promise<T> => {
@@ -553,6 +568,7 @@ export class Engine extends IPOSClientEngine {
           code,
         },
         transaction: "",
+        sessionTopic: this.client.session?.topic || "",
       });
       throw new Error(message);
     }
@@ -560,9 +576,11 @@ export class Engine extends IPOSClientEngine {
   };
 
   // validates that the approved namespaces contain at least one address that matches the payment intent
-  private validateApprovedNamespacesWithPaymentIntents = () => {
-    const session = this.client.session;
-    const paymentIntents = this.paymentIntents;
+  private validateApprovedNamespacesWithPaymentIntents = (sessionTopic: string) => {
+    this.validateSessionTopic(sessionTopic);
+
+    const session = this.signClient.session.get(sessionTopic);
+    const paymentIntents = this.paymentIntents?.[sessionTopic];
     if (!session || !paymentIntents) {
       throw new Error("No session or payment intents found");
     }
@@ -586,9 +604,24 @@ export class Engine extends IPOSClientEngine {
     }
   };
 
-  private cleanup = () => {
-    this.paymentIntents = undefined;
-    this.transactions = undefined;
+  private setPaymentIntents = (params: {
+    sessionTopic: string;
+    paymentIntents: POSClientTypes.PaymentIntent[];
+  }) => {
+    const { sessionTopic, paymentIntents } = params;
+    this.paymentIntents[sessionTopic] = paymentIntents;
+    this.logger.debug({ paymentIntents }, "Payment intents set");
+  };
+
+  private cleanup = (params: { sessionTopic?: string } = {}) => {
+    const { sessionTopic } = params;
+    if (sessionTopic) {
+      delete this.paymentIntents[sessionTopic];
+      delete this.transactions[sessionTopic];
+    } else {
+      this.paymentIntents = {};
+      this.transactions = {};
+    }
     this.logger.debug("Cleaned up payment intents and transactions");
   };
 
@@ -610,5 +643,21 @@ export class Engine extends IPOSClientEngine {
 
   private getStoragePrefix = () => {
     return CLIENT_STORAGE_PREFIX;
+  };
+
+  private validateSessionTopic = (sessionTopic?: string) => {
+    if (!sessionTopic) return;
+    try {
+      this.signClient.session.get(sessionTopic);
+    } catch (error) {
+      this.logger.error(error, `No session found for topic: ${sessionTopic}`);
+      throw new Error(`No session found for topic: ${sessionTopic}`);
+    }
+  };
+
+  private getSessionTopic = (sessionTopic?: string): string => {
+    const topic = sessionTopic || this.client.session?.topic;
+    this.validateSessionTopic(topic);
+    return topic as string;
   };
 }

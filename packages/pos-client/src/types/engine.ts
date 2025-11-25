@@ -8,7 +8,10 @@ export declare namespace POSClientEngineTypes {
   type EngineEvents = POSClientTypes.Event | "await_approval";
 
   interface EventArguments extends POSClientTypes.EventArguments {
-    await_approval: { approval: () => Promise<SessionTypes.Struct> };
+    await_approval: {
+      approval: () => Promise<SessionTypes.Struct>;
+      paymentIntents: POSClientTypes.PaymentIntent[];
+    };
   }
 
   type TransactionParams = {
@@ -59,6 +62,43 @@ export declare namespace POSClientEngineTypes {
       error?: string;
     };
   };
+
+  type DisconnectParams = {
+    sessionTopic?: string;
+  };
+
+  type CreatePaymentIntentParams = {
+    paymentIntents: POSClientTypes.PaymentIntent[];
+    manualControl?: boolean;
+    sessionTopic?: string;
+  };
+
+  type RestartParams = {
+    reinit?: boolean;
+    sessionTopic?: string;
+  };
+
+  type SetTokensParams = {
+    tokens: POSClientTypes.Token[];
+  };
+
+  type AwaitPaymentConfirmedParams = {
+    transaction: POSClientEngineTypes.Transaction;
+    result: unknown;
+    sessionTopic: string;
+  };
+
+  type SendPaymentsToWalletParams = {
+    sessionTopic?: string;
+  };
+
+  type SendTransactionsToWalletParams = {
+    sessionTopic: string;
+  };
+
+  type PrepareTransactionsFromPaymentIntentsParams = {
+    sessionTopic?: string;
+  };
 }
 
 export abstract class IPOSClientEngine {
@@ -66,21 +106,20 @@ export abstract class IPOSClientEngine {
   public abstract logger: Logger;
   public abstract tokens: POSClientTypes.Token[];
   public abstract supportedNamespaces: UtilsTypes.SupportedNamespaces;
-  public abstract paymentIntents?: POSClientTypes.PaymentIntent[];
-  public abstract transactions?: POSClientEngineTypes.Transaction[];
+  public abstract paymentIntents: Record<string, POSClientTypes.PaymentIntent[]>;
+  public abstract transactions: Record<string, POSClientEngineTypes.Transaction[]>;
 
   constructor(public client: IPOSClient) {}
   // ---------- Public Methods ------------------------------------------------- //
   public abstract init(): Promise<void>;
 
-  public abstract setTokens(params: { tokens: POSClientTypes.Token[] }): Promise<void>;
-  public abstract createPaymentIntent(params: {
-    paymentIntents: POSClientTypes.PaymentIntent[];
-    manualControl?: boolean;
-  }): Promise<void>;
+  public abstract setTokens(params: POSClientEngineTypes.SetTokensParams): Promise<void>;
+  public abstract createPaymentIntent(
+    params: POSClientEngineTypes.CreatePaymentIntentParams,
+  ): Promise<void>;
 
-  public abstract restart(params?: { reinit?: boolean }): Promise<void>;
-  public abstract disconnect(): Promise<void>;
+  public abstract restart(params?: POSClientEngineTypes.RestartParams): Promise<void>;
+  public abstract disconnect(params?: POSClientEngineTypes.DisconnectParams): Promise<void>;
 
   // ---------- Event Handlers ----------------------------------------------- //
   public abstract on: <E extends POSClientEngineTypes.EngineEvents>(
@@ -109,16 +148,21 @@ export abstract class IPOSClientEngine {
   ) => boolean;
 
   // ---------- Internally used methods ----------------------------------------------- //
-  public abstract prepareTransactionsFromPaymentIntents(): Promise<void>;
+  public abstract prepareTransactionsFromPaymentIntents(
+    params: POSClientEngineTypes.PrepareTransactionsFromPaymentIntentsParams,
+  ): Promise<void>;
 
   public abstract onSessionConnected(params: { session: SessionTypes.Struct }): Promise<void>;
 
-  public abstract sendTransactionsToWallet(): Promise<void>;
+  public abstract sendTransactionsToWallet(
+    params: POSClientEngineTypes.SendTransactionsToWalletParams,
+  ): Promise<void>;
 
-  public abstract awaitPaymentConfirmed(params: {
-    transaction: POSClientEngineTypes.Transaction;
-    result: unknown;
-  }): Promise<void>;
+  public abstract awaitPaymentConfirmed(
+    params: POSClientEngineTypes.AwaitPaymentConfirmedParams,
+  ): Promise<void>;
 
-  public abstract sendPaymentsToWallet(): Promise<void>;
+  public abstract sendPaymentsToWallet(
+    params?: POSClientEngineTypes.SendPaymentsToWalletParams,
+  ): Promise<void>;
 }
