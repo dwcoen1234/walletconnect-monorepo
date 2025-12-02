@@ -1,5 +1,5 @@
 import { SignClient } from "@walletconnect/sign-client";
-import { ISignClient, ProposalTypes, SessionTypes } from "@walletconnect/types";
+import { ISignClient, ProposalTypes } from "@walletconnect/types";
 import { payloadId } from "@walletconnect/jsonrpc-utils";
 import { parseChainId } from "@walletconnect/utils";
 import { Logger, pino } from "@walletconnect/logger";
@@ -18,7 +18,6 @@ import {
   RPC_URL,
   RPC_ERROR_CODES,
   DEFAULT_LOGGER_LEVEL,
-  CLIENT_STORAGE_PREFIX,
 } from "../constants/index.js";
 
 export class Engine extends IPOSClientEngine {
