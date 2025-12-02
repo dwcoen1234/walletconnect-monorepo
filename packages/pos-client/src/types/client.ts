@@ -16,37 +16,42 @@ export declare namespace POSClientTypes {
     | "disconnected";
 
   interface EventArguments {
-    qr_ready: { uri: string };
+    qr_ready: { uri: string; userId?: string };
     connection_rejected: any;
     connection_failed: { error: { message: string; code: number } };
-    connected: { session: SessionTypes.Struct };
+    connected: { session: SessionTypes.Struct; userId?: string };
     payment_requested: {
       paymentIntent: PaymentIntent;
       transaction: POSClientEngineTypes.Transaction;
       sessionTopic: string;
+      userId?: string;
     };
     payment_rejected: {
       error?: { message?: string; code: number };
       paymentIntent: PaymentIntent;
       sessionTopic: string;
+      userId?: string;
     };
     payment_broadcasted: {
       paymentIntent: PaymentIntent;
       transaction: POSClientEngineTypes.Transaction;
       result: any;
       sessionTopic: string;
+      userId?: string;
     };
     payment_failed: {
       error?: { message?: string; code: number };
       transaction: any;
       sessionTopic: string;
+      userId?: string;
     };
     payment_successful: {
       transaction: POSClientEngineTypes.Transaction;
       result: any;
       sessionTopic: string;
+      userId?: string;
     };
-    disconnected: { sessionTopic: string };
+    disconnected: { sessionTopic: string; userId?: string };
   }
 
   interface Options {
@@ -103,6 +108,7 @@ export abstract class IPOSClient {
   // ---------- Public Methods ----------------------------------------------- //
 
   public abstract setTokens: IPOSClientEngine["setTokens"];
+  public abstract connect: IPOSClientEngine["connect"];
   public abstract createPaymentIntent: IPOSClientEngine["createPaymentIntent"];
   public abstract restart: IPOSClientEngine["restart"];
   public abstract sendPaymentsToWallet: IPOSClientEngine["sendPaymentsToWallet"];

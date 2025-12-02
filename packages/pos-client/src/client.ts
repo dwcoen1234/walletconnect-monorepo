@@ -9,7 +9,6 @@ export class POSClient extends IPOSClient {
   public events: IPOSClient["events"] = new EventEmitter();
   public engine: IPOSClient["engine"];
   public metadata: IPOSClient["metadata"];
-  public session: IPOSClient["session"];
 
   static async init(opts: POSClientTypes.Options) {
     const client = new POSClient(opts);
@@ -25,8 +24,12 @@ export class POSClient extends IPOSClient {
     this.engine = new Engine(this);
   }
 
-  get sessions(): SessionTypes.Struct[] {
+  get sessions(): IPOSClient["sessions"] {
     return this.engine.signClient.session.getAll();
+  }
+
+  get session(): IPOSClient["session"] {
+    return this.sessions[0];
   }
 
   // ---------- Events ----------------------------------------------- //
@@ -85,9 +88,18 @@ export class POSClient extends IPOSClient {
     }
   };
 
-  public disconnect: IPOSClient["disconnect"] = async () => {
+  public disconnect: IPOSClient["disconnect"] = async (params) => {
     try {
-      return await this.engine.disconnect();
+      return await this.engine.disconnect(params);
+    } catch (error: any) {
+      this.engine.logger.error(error.message);
+      throw error;
+    }
+  };
+
+  public connect: IPOSClient["connect"] = async (params) => {
+    try {
+      return await this.engine.connect(params);
     } catch (error: any) {
       this.engine.logger.error(error.message);
       throw error;

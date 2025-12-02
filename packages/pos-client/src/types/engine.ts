@@ -5,12 +5,20 @@ import { UtilsTypes } from "./index.js";
 import { Logger } from "@walletconnect/logger";
 
 export declare namespace POSClientEngineTypes {
+  /**
+   * @param userId - Arbitrary user ID to map a user to a session
+   */
+  interface ConnectParams {
+    userId: string;
+  }
+
   type EngineEvents = POSClientTypes.Event | "await_approval";
 
   interface EventArguments extends POSClientTypes.EventArguments {
     await_approval: {
       approval: () => Promise<SessionTypes.Struct>;
       paymentIntents: POSClientTypes.PaymentIntent[];
+      userId?: string;
     };
   }
 
@@ -71,11 +79,13 @@ export declare namespace POSClientEngineTypes {
     paymentIntents: POSClientTypes.PaymentIntent[];
     manualControl?: boolean;
     sessionTopic?: string;
+    userId?: string;
   };
 
   type RestartParams = {
     reinit?: boolean;
     sessionTopic?: string;
+    userId?: string;
   };
 
   type SetTokensParams = {
@@ -86,18 +96,27 @@ export declare namespace POSClientEngineTypes {
     transaction: POSClientEngineTypes.Transaction;
     result: unknown;
     sessionTopic: string;
+    userId?: string;
   };
 
   type SendPaymentsToWalletParams = {
     sessionTopic?: string;
+    userId?: string;
   };
 
   type SendTransactionsToWalletParams = {
     sessionTopic: string;
+    userId?: string;
   };
 
   type PrepareTransactionsFromPaymentIntentsParams = {
     sessionTopic?: string;
+    userId?: string;
+  };
+
+  type OnSessionConnectedParams = {
+    session: SessionTypes.Struct;
+    userId?: string;
   };
 }
 
@@ -114,11 +133,15 @@ export abstract class IPOSClientEngine {
   public abstract init(): Promise<void>;
 
   public abstract setTokens(params: POSClientEngineTypes.SetTokensParams): Promise<void>;
+
+  public abstract connect(params: POSClientEngineTypes.ConnectParams): Promise<SessionTypes.Struct>;
+
   public abstract createPaymentIntent(
     params: POSClientEngineTypes.CreatePaymentIntentParams,
   ): Promise<void>;
 
   public abstract restart(params?: POSClientEngineTypes.RestartParams): Promise<void>;
+
   public abstract disconnect(params?: POSClientEngineTypes.DisconnectParams): Promise<void>;
 
   // ---------- Event Handlers ----------------------------------------------- //
@@ -152,7 +175,9 @@ export abstract class IPOSClientEngine {
     params: POSClientEngineTypes.PrepareTransactionsFromPaymentIntentsParams,
   ): Promise<void>;
 
-  public abstract onSessionConnected(params: { session: SessionTypes.Struct }): Promise<void>;
+  public abstract onSessionConnected(
+    params: POSClientEngineTypes.OnSessionConnectedParams,
+  ): Promise<void>;
 
   public abstract sendTransactionsToWallet(
     params: POSClientEngineTypes.SendTransactionsToWalletParams,
