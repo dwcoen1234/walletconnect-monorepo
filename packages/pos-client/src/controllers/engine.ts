@@ -184,12 +184,12 @@ export class Engine extends IPOSClientEngine {
       throw new Error("No payment intents found for session topic: " + topic);
     }
     await this.createPaymentIntent({
-      paymentIntents: paymentIntents[topic],
+      paymentIntents,
       manualControl,
       userId,
     });
     this.logger.debug(
-      { paymentIntents: paymentIntents[topic], userId },
+      { paymentIntents, userId },
       "Restarted: Created payment intent flow from the beginning",
     );
   };
@@ -625,7 +625,7 @@ export class Engine extends IPOSClientEngine {
 
     this.logger.debug({ data }, "Received RPC request response");
 
-    if (!result.ok || data.error) {
+    if (!result.ok || data?.error) {
       const code = data.error?.code || -18900;
       const message = RPC_ERROR_CODES?.[code]
         ? `${RPC_ERROR_CODES?.[code]}: ${data.error?.message}`
