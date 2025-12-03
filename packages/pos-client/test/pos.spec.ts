@@ -627,8 +627,6 @@ describe("Sign Integration", () => {
       }),
       pos.createPaymentIntent({ paymentIntents, manualControl: true }),
     ]);
-    // @ts-expect-error - testing private property
-    await pos.engine.cleanup();
   });
   it("should create payment intent with manual control", async () => {
     const paymentIntents: POSClientTypes.PaymentIntent[] = [

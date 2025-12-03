@@ -63,6 +63,10 @@ export class Engine extends IPOSClientEngine {
       logger: this.client.opts.loggerOptions?.signLevel || DEFAULT_LOGGER_LEVEL,
     });
 
+    this.signClient.events.on("session_delete", ({ topic }) => {
+      this.cleanup({ sessionTopic: topic });
+    });
+
     try {
       this.logger.debug("Fetching supported namespaces/networks");
       const supportedNamespaces =
@@ -171,7 +175,6 @@ export class Engine extends IPOSClientEngine {
     const { reinit, sessionTopic, userId } = params || {};
     if (reinit) {
       this.tokens = [];
-      this.cleanup({ sessionTopic });
       await this.disconnect({ sessionTopic });
       this.logger.debug("Restarted: Cleared payment intents, transactions and disconnected");
       return;
@@ -180,13 +183,14 @@ export class Engine extends IPOSClientEngine {
     const topic = this.getSessionTopic(sessionTopic);
     // restart the payment intent flow from the beginning
     const paymentIntents = this.paymentIntents[topic];
-    if (!paymentIntents) {
-      throw new Error("No payment intents found for session topic: " + topic);
+    if (!paymentIntents || !paymentIntents?.length) {
+      throw new Error("No payment intents found for !session topi?c: " + topic);
     }
     await this.createPaymentIntent({
       paymentIntents,
       manualControl,
       userId,
+      sessionTopic: topic,
     });
     this.logger.debug(
       { paymentIntents, userId },
@@ -488,7 +492,7 @@ export class Engine extends IPOSClientEngine {
         this.logger.error(error, "Error while awaiting payment confirmed");
       }
     }
-    this.cleanup();
+
     if (!this.manualControl) {
       await this.disconnect({ sessionTopic });
     }
@@ -602,7 +606,7 @@ export class Engine extends IPOSClientEngine {
 
     this.manualControl = false;
     if (!topicToDisconnect) return;
-
+    this.cleanup({ sessionTopic: topicToDisconnect });
     await this.signClient.disconnect({
       topic: topicToDisconnect,
       reason: { code: 4001, message: "User disconnected" },
@@ -684,13 +688,10 @@ export class Engine extends IPOSClientEngine {
 
   private cleanup = (params: { sessionTopic?: string } = {}) => {
     const { sessionTopic } = params;
-    if (sessionTopic) {
-      delete this.paymentIntents[sessionTopic];
-      delete this.transactions[sessionTopic];
-    } else {
-      this.paymentIntents = {};
-      this.transactions = {};
-    }
+    if (!sessionTopic) return;
+
+    delete this.paymentIntents[sessionTopic];
+    delete this.transactions[sessionTopic];
     this.logger.debug({ sessionTopic }, "Cleaned up payment intents and transactions");
   };
 
@@ -716,7 +717,12 @@ export class Engine extends IPOSClientEngine {
     }
 
     const topic = sessionTopic || this.client.session?.topic;
+    if (!topic) {
+      throw new Error(
+        "No session topic found. Please provide a sessionTopic or establish a session first.",
+      );
+    }
     this.validateSessionTopic(topic);
-    return topic as string;
+    return topic;
   };
 }
