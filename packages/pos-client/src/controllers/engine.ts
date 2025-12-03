@@ -185,7 +185,7 @@ export class Engine extends IPOSClientEngine {
     // restart the payment intent flow from the beginning
     const paymentIntents = this.paymentIntents[topic];
     if (!paymentIntents || !paymentIntents?.length) {
-      throw new Error("No payment intents found for !session topi?c: " + topic);
+      throw new Error("No payment intents found for session topic: " + topic);
     }
     await this.createPaymentIntent({
       paymentIntents,
