@@ -177,7 +177,7 @@ export class Engine extends IPOSClientEngine {
       return;
     }
 
-    const topic = this.getSessionTopic();
+    const topic = this.getSessionTopic(sessionTopic);
     // restart the payment intent flow from the beginning
     const paymentIntents = this.paymentIntents[topic];
     if (!paymentIntents) {
@@ -408,7 +408,7 @@ export class Engine extends IPOSClientEngine {
   sendTransactionsToWallet: IPOSClientEngine["sendTransactionsToWallet"] = async (params) => {
     const { sessionTopic, userId } = params;
     const transactions = this.transactions[sessionTopic];
-    const paymentIntents = this.paymentIntents;
+    const paymentIntents = this.paymentIntents[sessionTopic];
     if (!transactions || !paymentIntents) {
       throw new Error(
         "No transactions or payment intents to send, call createPaymentIntent() first",
@@ -426,7 +426,7 @@ export class Engine extends IPOSClientEngine {
 
     for (let i = 0; i < transactions.length; i++) {
       const transaction = transactions[i];
-      const paymentIntent = paymentIntents[sessionTopic][i];
+      const paymentIntent = paymentIntents[i];
       try {
         this.emit("payment_requested", { paymentIntent, transaction, sessionTopic, userId });
         this.logger.debug(
@@ -626,10 +626,10 @@ export class Engine extends IPOSClientEngine {
     this.logger.debug({ data }, "Received RPC request response");
 
     if (!result.ok || data?.error) {
-      const code = data.error?.code || -18900;
+      const code = data?.error?.code || -18900;
       const message = RPC_ERROR_CODES?.[code]
-        ? `${RPC_ERROR_CODES?.[code]}: ${data.error?.message}`
-        : data.error?.message;
+        ? `${RPC_ERROR_CODES?.[code]}: ${data?.error?.message}`
+        : data?.error?.message;
       this.emit("payment_failed", {
         error: {
           message,
