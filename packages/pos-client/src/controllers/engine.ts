@@ -70,14 +70,15 @@ export class Engine extends IPOSClientEngine {
     try {
       this.logger.debug("Fetching supported namespaces/networks");
       const supportedNamespaces =
-        await this.fetchRpcRequest<POSClientEngineTypes.RPCSupportedNetworksResult>(
-          JSON.stringify({
+        await this.fetchRpcRequest<POSClientEngineTypes.RPCSupportedNetworksResult>({
+          payload: JSON.stringify({
             id: payloadId(),
             jsonrpc: "2.0",
             method: "wc_pos_supportedNetworks",
             params: {},
           }),
-        );
+          userId: "",
+        });
       this.logger.debug(
         {
           supportedNamespaces: supportedNamespaces.result.namespaces,
@@ -212,6 +213,7 @@ export class Engine extends IPOSClientEngine {
           message: "Failed to connect to the WalletConnect network",
           code: 4001,
         },
+        userId,
       });
       throw new Error("Failed to connect to the WalletConnect network");
     }
@@ -372,9 +374,10 @@ export class Engine extends IPOSClientEngine {
       };
 
       this.logger.debug({ payload, userId }, "Fetching wc_pos_buildTransactions");
-      const response = await this.fetchRpcRequest<POSClientEngineTypes.RPCTransactions>(
-        JSON.stringify(payload),
-      );
+      const response = await this.fetchRpcRequest<POSClientEngineTypes.RPCTransactions>({
+        payload: JSON.stringify(payload),
+        userId,
+      });
       this.logger.debug({ response, userId }, "Received wc_pos_buildTransactions");
       this.transactions[session.topic] = response.result.transactions;
 
@@ -521,7 +524,7 @@ export class Engine extends IPOSClientEngine {
         numCheckAttempts++;
 
         const response = await this.fetchRpcRequest<POSClientEngineTypes.RPCCheckTransactionResult>(
-          JSON.stringify(payload),
+          { payload: JSON.stringify(payload), userId },
         );
         this.logger.debug(
           {
@@ -577,6 +580,7 @@ export class Engine extends IPOSClientEngine {
             message: (error as Error)?.message,
             code: 4001,
           },
+          userId,
         });
       }
     });
@@ -613,8 +617,9 @@ export class Engine extends IPOSClientEngine {
     });
   };
 
-  private fetchRpcRequest = async <T>(payload: string): Promise<T> => {
-    this.logger.debug({ url: this.getRpcUrl(), payload }, "Fetching RPC request");
+  private fetchRpcRequest = async <T>(params: { payload: string; userId?: string }): Promise<T> => {
+    const { payload, userId } = params;
+    this.logger.debug({ url: this.getRpcUrl(), payload, userId }, "Fetching RPC request");
     const result = await fetch(this.getRpcUrl(), {
       method: "POST",
       body: payload,
@@ -641,6 +646,7 @@ export class Engine extends IPOSClientEngine {
         },
         transaction: "",
         sessionTopic: this.client.session?.topic || "",
+        userId,
       });
       throw new Error(message);
     }
