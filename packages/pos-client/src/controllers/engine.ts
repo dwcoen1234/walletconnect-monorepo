@@ -626,15 +626,19 @@ export class Engine extends IPOSClientEngine {
   };
 
   disconnect: IPOSClientEngine["disconnect"] = async (params = {}) => {
-    const { sessionTopic } = params;
-    const topicToDisconnect = this.getSessionTopic(sessionTopic);
+    try {
+      const { sessionTopic } = params;
+      const topicToDisconnect = this.getSessionTopic(sessionTopic);
 
-    if (!topicToDisconnect) return;
-    this.cleanup({ sessionTopic: topicToDisconnect });
-    await this.signClient.disconnect({
-      topic: topicToDisconnect,
-      reason: { code: 4001, message: "User disconnected" },
-    });
+      if (!topicToDisconnect) return;
+      this.cleanup({ sessionTopic: topicToDisconnect });
+      await this.signClient.disconnect({
+        topic: topicToDisconnect,
+        reason: { code: 4001, message: "User disconnected" },
+      });
+    } catch (error) {
+      this.logger.error(error, "Error while disconnecting");
+    }
   };
 
   private fetchRpcRequest = async <T>(params: { payload: string; userId?: string }): Promise<T> => {
