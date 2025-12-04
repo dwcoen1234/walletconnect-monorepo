@@ -546,8 +546,6 @@ describe("Sign Integration", () => {
   });
 
   it("should establish a session, prepare transaction, send to wallet, receive response and await confirmation - manual control", async () => {
-    // @ts-expect-error - testing private property
-    expect(pos.engine.manualControl).to.be.false;
     const tokenChainId = "eip155:8453";
 
     const paymentIntents: POSClientTypes.PaymentIntent[] = [
@@ -642,6 +640,11 @@ describe("Sign Integration", () => {
       },
     ];
 
+    let connectedSession: SessionTypes.Struct | undefined;
+
+    pos.once("connected", ({ session }) => {
+      connectedSession = session;
+    });
     await Promise.all([
       connectSession({
         pos,
@@ -650,8 +653,8 @@ describe("Sign Integration", () => {
       }),
       pos.createPaymentIntent({ paymentIntents, manualControl: true }),
     ]);
-    // @ts-expect-error - testing private property
-    expect(pos.engine.manualControl).to.be.true;
+    // @ts-expect-error - private property
+    expect(pos.engine.manualControl[connectedSession.topic]).to.be.true;
     pos.disconnect();
   });
 

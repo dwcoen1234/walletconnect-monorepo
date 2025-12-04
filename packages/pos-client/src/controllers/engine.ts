@@ -34,7 +34,7 @@ export class Engine extends IPOSClientEngine {
   public transactions: IPOSClientEngine["transactions"] = {};
 
   private paymentsSendingInProgress: Record<string, boolean> = {};
-  private manualControl = false;
+  private manualControl: Record<string, boolean> = {};
 
   constructor(client: IPOSClientEngine["client"]) {
     super(client);
@@ -65,6 +65,7 @@ export class Engine extends IPOSClientEngine {
 
     this.signClient.events.on("session_delete", ({ topic }) => {
       this.cleanup({ sessionTopic: topic });
+      this.emit("disconnected", { sessionTopic: topic });
     });
 
     try {
@@ -115,8 +116,6 @@ export class Engine extends IPOSClientEngine {
       throw new Error("No payment intents provided");
     }
 
-    this.manualControl = manualControl || false;
-
     for (const paymentIntent of paymentIntents) {
       if (!isValidPaymentIntent({ paymentIntent, supportedNamespaces: this.supportedNamespaces })) {
         throw new Error(`Invalid payment intent: ${JSON.stringify(paymentIntent)}`);
@@ -125,11 +124,12 @@ export class Engine extends IPOSClientEngine {
     this.logger.debug({ paymentIntents, userId }, "Payment intent validation success");
 
     if (sessionTopic) {
+      this.manualControl[sessionTopic] = manualControl || false;
       try {
         this.setPaymentIntents({ sessionTopic, paymentIntents, userId });
         this.validateApprovedNamespacesWithPaymentIntents(sessionTopic);
 
-        if (!this.manualControl) {
+        if (!manualControl) {
           await this.sendPaymentsToWallet({ sessionTopic, userId });
         }
         return;
@@ -165,14 +165,15 @@ export class Engine extends IPOSClientEngine {
     this.emit("qr_ready", { uri, userId });
     this.logger.debug({ uri, userId }, "Emitted qr_ready event");
 
-    if (this.manualControl) {
-      await approvalAwaiter();
+    if (manualControl) {
+      const session = await approvalAwaiter();
+      this.manualControl[session.topic] = true;
     }
   };
 
   public restart: IPOSClientEngine["restart"] = async (params) => {
     this.logger.debug({ params }, "Restarting");
-    const manualControl = this.manualControl;
+
     const { reinit, sessionTopic, userId } = params || {};
     if (reinit) {
       this.tokens = [];
@@ -182,6 +183,7 @@ export class Engine extends IPOSClientEngine {
     }
 
     const topic = this.getSessionTopic(sessionTopic);
+    const manualControl = this.manualControl[topic];
     // restart the payment intent flow from the beginning
     const paymentIntents = this.paymentIntents[topic];
     if (!paymentIntents || !paymentIntents?.length) {
@@ -228,8 +230,9 @@ export class Engine extends IPOSClientEngine {
     this.emit("qr_ready", { uri, userId });
     this.logger.debug({ uri, userId }, "Emitted qr_ready event");
 
-    this.manualControl = true;
-    return await approvalAwaiter();
+    const session = await approvalAwaiter();
+    this.manualControl[session.topic] = true;
+    return session;
   };
 
   // ---------- Event Handlers ----------------------------------------------- //
@@ -505,7 +508,7 @@ export class Engine extends IPOSClientEngine {
       }
     }
 
-    if (!this.manualControl) {
+    if (!this.manualControl[sessionTopic]) {
       await this.disconnect({ sessionTopic });
     }
   };
@@ -617,7 +620,7 @@ export class Engine extends IPOSClientEngine {
     this.logger.debug({ sessionTopic: session.topic, userId }, "Disabled deep links for session");
     this.logger.debug({ sessionTopic: session.topic, userId }, "Emitted connected event");
 
-    if (!this.manualControl) {
+    if (!this.manualControl[session.topic]) {
       await this.sendPaymentsToWallet({ sessionTopic: session.topic, userId });
     }
   };
@@ -626,7 +629,6 @@ export class Engine extends IPOSClientEngine {
     const { sessionTopic } = params;
     const topicToDisconnect = this.getSessionTopic(sessionTopic);
 
-    this.manualControl = false;
     if (!topicToDisconnect) return;
     this.cleanup({ sessionTopic: topicToDisconnect });
     await this.signClient.disconnect({
@@ -714,6 +716,7 @@ export class Engine extends IPOSClientEngine {
 
     delete this.paymentIntents[sessionTopic];
     delete this.transactions[sessionTopic];
+    delete this.manualControl[sessionTopic];
     this.logger.debug({ sessionTopic }, "Cleaned up payment intents and transactions");
   };
 
