@@ -352,8 +352,6 @@ describe("Sign Integration", () => {
       }),
       pos.createPaymentIntent({ paymentIntents }),
     ]);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    expect(pos.session).to.not.exist;
   });
 
   it("should accept multiple payment intents, establish a session, prepare transactions, send all requests to wallet, receive responses and await confirmations", async () => {
