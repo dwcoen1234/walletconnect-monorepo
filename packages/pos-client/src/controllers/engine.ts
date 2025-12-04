@@ -511,8 +511,8 @@ export class Engine extends IPOSClientEngine {
   };
 
   awaitPaymentConfirmed: IPOSClientEngine["awaitPaymentConfirmed"] = async (params) => {
+    const { transaction, result, sessionTopic, userId } = params;
     try {
-      const { transaction, result, sessionTopic, userId } = params;
       this.logger.debug({ transactionId: transaction.id, result }, "Awaiting payment confirmed");
       const payload = {
         id: payloadId(),
@@ -572,6 +572,15 @@ export class Engine extends IPOSClientEngine {
       }
     } catch (error) {
       this.logger.error(error, "Error while awaiting payment confirmations");
+      this.emit("payment_failed", {
+        error: {
+          message: (error as Error)?.message,
+          code: 4001,
+        },
+        transaction,
+        sessionTopic,
+        userId,
+      });
     }
   };
 
