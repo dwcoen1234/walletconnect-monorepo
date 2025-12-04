@@ -807,7 +807,40 @@ describe("Sign Integration", () => {
         recipient: `${tokenChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`,
       },
     ];
+
+    pos.setTokens({ tokens: getValidTokens() });
     const testUserId = "test user id" + Math.random();
+
+    let connectEventReceived = false;
+    pos.once("connected", ({ userId }) => {
+      expect(userId).to.be.equal(testUserId);
+      console.log("connected");
+      connectEventReceived = true;
+    });
+
+    pos.once("qr_ready", async ({ uri, userId }) => {
+      expect(userId).to.be.equal(testUserId);
+      console.log("qr_ready", uri);
+      await wallet.pair({ uri });
+    });
+
+    wallet.events.once("session_proposal", async (sessionProposal) => {
+      console.log("session_proposal", JSON.stringify(sessionProposal, null, 2));
+      await wallet.approve({
+        id: sessionProposal.id,
+        namespaces: {
+          eip155: {
+            ...sessionProposal.params.optionalNamespaces.eip155,
+            accounts: [`${tokenChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`],
+          },
+        },
+      });
+    });
+
+    const session = await pos.connect({ userId: testUserId });
+    expect(connectEventReceived).to.be.true;
+    expect(pos.session?.topic).to.be.equal(session.topic);
+
     await Promise.all([
       new Promise<void>((resolve) => {
         pos.once("payment_successful", ({ userId }) => {
@@ -843,37 +876,7 @@ describe("Sign Integration", () => {
           resolve();
         });
       }),
-      new Promise<void>((resolve) => {
-        wallet.events.once("session_proposal", async (sessionProposal) => {
-          console.log("session_proposal", JSON.stringify(sessionProposal, null, 2));
-          await wallet.approve({
-            id: sessionProposal.id,
-            namespaces: {
-              eip155: {
-                ...sessionProposal.params.optionalNamespaces.eip155,
-                accounts: [`${tokenChainId}:0x13A2Ff792037AA2cd77fE1f4B522921ac59a9C52`],
-              },
-            },
-          });
-          resolve();
-        });
-      }),
-      new Promise<void>((resolve) => {
-        pos.once("connected", ({ userId }) => {
-          expect(userId).to.be.equal(testUserId);
-          console.log("connected");
-          resolve();
-        });
-      }),
-      new Promise<void>((resolve) => {
-        pos.once("qr_ready", async ({ uri, userId }) => {
-          expect(userId).to.be.equal(testUserId);
-          console.log("qr_ready", uri);
-          await wallet.pair({ uri });
-          resolve();
-        });
-      }),
-      pos.createPaymentIntent({ paymentIntents, userId: testUserId }),
+      pos.createPaymentIntent({ paymentIntents, sessionTopic: session.topic, userId: testUserId }),
     ]);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     expect(pos.session).to.not.exist;
