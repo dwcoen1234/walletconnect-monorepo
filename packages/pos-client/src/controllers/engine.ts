@@ -508,9 +508,8 @@ export class Engine extends IPOSClientEngine {
       }
     }
 
-    if (!this.manualControl[sessionTopic]) {
-      await this.disconnect({ sessionTopic });
-    }
+    if (this.manualControl[sessionTopic] === true) return;
+    await this.disconnect({ sessionTopic });
   };
 
   awaitPaymentConfirmed: IPOSClientEngine["awaitPaymentConfirmed"] = async (params) => {
@@ -620,9 +619,8 @@ export class Engine extends IPOSClientEngine {
     this.logger.debug({ sessionTopic: session.topic, userId }, "Disabled deep links for session");
     this.logger.debug({ sessionTopic: session.topic, userId }, "Emitted connected event");
 
-    if (!this.manualControl[session.topic]) {
-      await this.sendPaymentsToWallet({ sessionTopic: session.topic, userId });
-    }
+    if (this.manualControl[session.topic] === true) return;
+    await this.sendPaymentsToWallet({ sessionTopic: session.topic, userId });
   };
 
   disconnect: IPOSClientEngine["disconnect"] = async (params = {}) => {
