@@ -19,6 +19,7 @@ export declare namespace POSClientEngineTypes {
       approval: () => Promise<SessionTypes.Struct>;
       paymentIntents: POSClientTypes.PaymentIntent[];
       userId?: string;
+      manualControl: boolean;
     };
   }
 
@@ -117,6 +118,7 @@ export declare namespace POSClientEngineTypes {
   type OnSessionConnectedParams = {
     session: SessionTypes.Struct;
     userId?: string;
+    manualControl?: boolean;
   };
 }
 

@@ -109,9 +109,9 @@ export class Engine extends IPOSClientEngine {
   };
 
   public createPaymentIntent: IPOSClientEngine["createPaymentIntent"] = async (params) => {
-    const { paymentIntents, manualControl, sessionTopic, userId } = params;
+    const { paymentIntents, sessionTopic, userId } = params;
     this.logger.debug({ paymentIntents, userId }, "Creating payment intent");
-
+    const manualControl = params.manualControl || false;
     if (paymentIntents.length === 0) {
       throw new Error("No payment intents provided");
     }
@@ -124,7 +124,7 @@ export class Engine extends IPOSClientEngine {
     this.logger.debug({ paymentIntents, userId }, "Payment intent validation success");
 
     if (sessionTopic) {
-      this.manualControl[sessionTopic] = manualControl || false;
+      this.manualControl[sessionTopic] = manualControl;
       try {
         this.setPaymentIntents({ sessionTopic, paymentIntents, userId });
         this.validateApprovedNamespacesWithPaymentIntents(sessionTopic);
@@ -160,6 +160,7 @@ export class Engine extends IPOSClientEngine {
       approval: approvalAwaiter,
       paymentIntents,
       userId,
+      manualControl,
     });
     this.logger.debug("Emitted await_approval event");
     this.emit("qr_ready", { uri, userId });
@@ -167,7 +168,7 @@ export class Engine extends IPOSClientEngine {
 
     if (manualControl) {
       const session = await approvalAwaiter();
-      this.manualControl[session.topic] = true;
+      this.manualControl[session.topic] = manualControl;
     }
   };
 
@@ -203,7 +204,7 @@ export class Engine extends IPOSClientEngine {
 
   public connect: IPOSClientEngine["connect"] = async (params) => {
     const { userId } = params;
-
+    const manualControl = true;
     const namespaces = this.composeNamespacesFromTokens();
     const { uri, approval } = await this.signClient.connect({
       optionalNamespaces: namespaces,
@@ -223,6 +224,7 @@ export class Engine extends IPOSClientEngine {
     const approvalAwaiter = createApprovalAwaiter(approval);
     this.emit("await_approval", {
       approval: approvalAwaiter,
+      manualControl,
       paymentIntents: [],
       userId,
     });
@@ -231,7 +233,7 @@ export class Engine extends IPOSClientEngine {
     this.logger.debug({ uri, userId }, "Emitted qr_ready event");
 
     const session = await approvalAwaiter();
-    this.manualControl[session.topic] = true;
+    this.manualControl[session.topic] = manualControl;
     return session;
   };
 
@@ -587,12 +589,12 @@ export class Engine extends IPOSClientEngine {
   };
 
   private setupEventHandlers = () => {
-    this.on("await_approval", async ({ approval, paymentIntents, userId }) => {
+    this.on("await_approval", async ({ approval, paymentIntents, userId, manualControl }) => {
       try {
         this.logger.debug("On await_approval");
         const session = await approval();
         this.setPaymentIntents({ sessionTopic: session.topic, paymentIntents });
-        await this.onSessionConnected({ session, userId });
+        await this.onSessionConnected({ session, userId, manualControl });
       } catch (error) {
         this.logger.error(error, "Error while awaiting approval");
         this.emit("connection_rejected", {
@@ -607,7 +609,7 @@ export class Engine extends IPOSClientEngine {
   };
 
   onSessionConnected: IPOSClientEngine["onSessionConnected"] = async (params) => {
-    const { session, userId } = params;
+    const { session, userId, manualControl } = params;
     this.logger.debug({ sessionTopic: session.topic, userId }, "On session connected");
     this.emit("connected", { session, userId });
     // disable deep links for the session
@@ -619,7 +621,7 @@ export class Engine extends IPOSClientEngine {
     this.logger.debug({ sessionTopic: session.topic, userId }, "Disabled deep links for session");
     this.logger.debug({ sessionTopic: session.topic, userId }, "Emitted connected event");
 
-    if (this.manualControl[session.topic] === true) return;
+    if (manualControl === true) return;
     await this.sendPaymentsToWallet({ sessionTopic: session.topic, userId });
   };
 
