@@ -715,6 +715,7 @@ export class Engine extends IPOSClientEngine {
     delete this.paymentIntents[sessionTopic];
     delete this.transactions[sessionTopic];
     delete this.manualControl[sessionTopic];
+    delete this.paymentsSendingInProgress[sessionTopic];
     this.logger.debug({ sessionTopic }, "Cleaned up payment intents and transactions");
   };
 
