@@ -408,6 +408,8 @@ export class Engine extends IPOSClientEngine {
       await this.sendTransactionsToWallet({ sessionTopic: topic, userId });
     } catch (error) {
       this.logger.error(error, "Error while sending payments to wallet");
+      this.paymentsSendingInProgress[topic] = false;
+      throw error;
     }
     this.paymentsSendingInProgress[topic] = false;
   };
@@ -419,6 +421,13 @@ export class Engine extends IPOSClientEngine {
     if (!transactions || !paymentIntents) {
       throw new Error(
         "No transactions or payment intents to send, call createPaymentIntent() first",
+      );
+    }
+
+    if (transactions.length !== paymentIntents.length) {
+      throw new Error(
+        `Mismatch between transactions (${transactions.length}) and payment intents (${paymentIntents.length}). ` +
+          `The RPC response returned an unexpected number of transactions.`,
       );
     }
 
@@ -634,11 +643,11 @@ export class Engine extends IPOSClientEngine {
 
     this.logger.debug({ data }, "Received RPC request response");
 
-    if (!result.ok || data?.error) {
+    if (!result.ok || !data || data?.error) {
       const code = data?.error?.code || -18900;
       const message = RPC_ERROR_CODES?.[code]
         ? `${RPC_ERROR_CODES?.[code]}: ${data?.error?.message}`
-        : data?.error?.message;
+        : data?.error?.message || "Failed to parse RPC response";
       this.emit("payment_failed", {
         error: {
           message,
@@ -653,7 +662,7 @@ export class Engine extends IPOSClientEngine {
     return data as T;
   };
 
-  // validates that the approved namespaces contain at least one address that matches the payment intent
+  // validates that the approved namespaces contain addresses that match ALL payment intents
   private validateApprovedNamespacesWithPaymentIntents = (sessionTopic: string) => {
     this.validateSessionTopic(sessionTopic);
 
@@ -663,7 +672,6 @@ export class Engine extends IPOSClientEngine {
       throw new Error("No session or payment intents found");
     }
 
-    const matchedAddresses: string[] = [];
     for (const paymentIntent of paymentIntents) {
       const { token } = paymentIntent;
       const { namespace } = parseChainId(token.network.chainId);
@@ -672,13 +680,12 @@ export class Engine extends IPOSClientEngine {
         account.includes(`${token.network.chainId}:`),
       );
       if (!account) {
-        continue;
+        throw new Error(
+          `Address not found in session for chain id: ${
+            token.network.chainId
+          }, approved addresses: ${session.namespaces?.[namespace]?.accounts?.join(", ")}`,
+        );
       }
-      matchedAddresses.push(account);
-    }
-
-    if (matchedAddresses.length === 0) {
-      throw new Error("No approved addresses satisfying the proposed payment intents");
     }
   };
 
