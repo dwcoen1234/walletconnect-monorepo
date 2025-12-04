@@ -166,7 +166,8 @@ export class Engine extends IPOSClientEngine {
     this.logger.debug({ uri, userId }, "Emitted qr_ready event");
 
     if (manualControl) {
-      await approvalAwaiter();
+      const session = await approvalAwaiter();
+      this.manualControl[session.topic] = true;
     }
   };
 
