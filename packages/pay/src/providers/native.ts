@@ -109,9 +109,16 @@ export class NativeProvider implements PayProvider {
     }
 
     // Initialize the module with config
-    const configJson = JSON.stringify(config);
     if (module.initialize) {
-      module.initialize(configJson);
+      try {
+        const configJson = JSON.stringify(config);
+        module.initialize(configJson);
+      } catch (error) {
+        throw new PayError(
+          "INITIALIZATION_ERROR",
+          `Failed to initialize native Pay module: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
 
     this.module = module;

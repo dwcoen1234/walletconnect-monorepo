@@ -12,6 +12,7 @@ export type PayErrorCode =
   | "PAYMENT_REQUEST"
   | "CONFIRM_PAYMENT"
   | "NATIVE_MODULE_NOT_FOUND"
+  | "INITIALIZATION_ERROR"
   | "UNKNOWN";
 
 /**
