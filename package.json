@@ -25,7 +25,8 @@
     "providers/universal-provider",
     "providers/signer-connection",
     "providers/ethereum-provider",
-    "packages/pos-client"
+    "packages/pos-client",
+    "packages/pay"
   ],
   "scripts": {
     "clean": "npm run clean --workspaces --if-present",
