@@ -99,9 +99,11 @@ android {
 repositories {
   mavenCentral()
   google()
+  maven { url 'https://jitpack.io' }
 }
 
 def kotlin_version = getExtOrDefault("kotlinVersion")
+def yttrium_version = rootProject.ext.has("yttriumVersion") ? rootProject.ext.get("yttriumVersion") : "0.+"
 
 dependencies {
   // For < 0.71, this will be from the local maven repo
@@ -109,6 +111,12 @@ dependencies {
   //noinspection GradleDynamicVersion
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+  
+  // Yttrium - WalletConnect Pay uniffi bindings
+  implementation "com.github.ArcticDev78:yttrium:$yttrium_version"
+  
+  // Coroutines for async uniffi calls
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
 }
 
 if (isNewArchitectureEnabled()) {
