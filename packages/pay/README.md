@@ -181,7 +181,6 @@ interface ConfirmPaymentParams {
   optionId: string; // Selected option ID
   signatures: string[]; // Wallet RPC signatures
   collectedData?: CollectDataFieldResult[]; // Collected data fields
-  maxPollMs?: number; // Max poll time in ms
 }
 ```
 

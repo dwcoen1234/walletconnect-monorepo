@@ -151,7 +151,6 @@ export class PayClient {
    * @param params.optionId - Selected option ID
    * @param params.signatures - Array of signatures from wallet RPC calls
    * @param params.collectedData - Optional collected data fields
-   * @param params.maxPollMs - Optional maximum time to poll for final status
    * @returns Confirm payment response with final status
    * @throws ConfirmPaymentError if the request fails
    */
@@ -162,7 +161,6 @@ export class PayClient {
         optionId: params.optionId,
         signaturesCount: params.signatures.length,
         hasCollectedData: !!params.collectedData,
-        maxPollMs: params.maxPollMs,
       },
       `${LOGGER_CONTEXT} confirmPayment`,
     );

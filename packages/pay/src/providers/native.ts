@@ -159,7 +159,6 @@ export class NativeProvider implements PayProvider {
       optionId: params.optionId,
       signatures: params.signatures,
       collectedData: params.collectedData,
-      maxPollMs: params.maxPollMs,
     };
 
     try {

@@ -4,7 +4,7 @@
  * Tests the PayClient class with an injected mock provider
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   MockProvider,
   createMockPaymentOptionsResponse,
@@ -60,7 +60,6 @@ class TestablePayClient {
     optionId: string;
     signatures: string[];
     collectedData?: { id: string; value: string }[];
-    maxPollMs?: number;
   }) {
     try {
       return await this.provider.confirmPayment(params);
@@ -166,13 +165,11 @@ describe("PayClient", () => {
         optionId: "opt_full",
         signatures: ["0xsig1", "0xsig2"],
         collectedData: [{ id: "name", value: "Test" }],
-        maxPollMs: 5000,
       });
 
       const call = mockProvider.calls.confirmPayment[0];
       expect(call.signatures).toHaveLength(2);
       expect(call.collectedData).toHaveLength(1);
-      expect(call.maxPollMs).toBe(5000);
     });
 
     it("should throw ConfirmPaymentError on failure", async () => {

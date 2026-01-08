@@ -410,22 +410,6 @@ describe("PayClient with MockProvider", () => {
       });
     });
 
-    it("should pass maxPollMs", async () => {
-      const mockResponse = createMockConfirmResponse("processing", false);
-      mockProvider.setConfirmResponse("pay_poll", "opt_1", mockResponse);
-
-      const params: ConfirmPaymentParams = {
-        paymentId: "pay_poll",
-        optionId: "opt_1",
-        signatures: ["0xsig1"],
-        maxPollMs: 5000,
-      };
-
-      await mockProvider.confirmPayment(params);
-
-      expect(mockProvider.calls.confirmPayment[0].maxPollMs).toBe(5000);
-    });
-
     it("should throw error for non-existent payment", async () => {
       const params: ConfirmPaymentParams = {
         paymentId: "pay_not_found",
@@ -445,7 +429,6 @@ describe("PayClient with MockProvider", () => {
         optionId: "opt_track",
         signatures: ["0xsig1", "0xsig2"],
         collectedData: [{ id: "name", value: "Test" }],
-        maxPollMs: 3000,
       };
 
       await mockProvider.confirmPayment(params);

@@ -189,8 +189,6 @@ export interface ConfirmPaymentParams {
   signatures: string[];
   /** Collected data fields (if required) */
   collectedData?: CollectDataFieldResult[];
-  /** Maximum time to poll for payment status, in milliseconds */
-  maxPollMs?: number;
 }
 
 // ==================== Response Types ====================
