@@ -248,8 +248,9 @@ describe("UniversalProvider 5792 utils", function () {
     });
     expect(cachedResult).to.eql(sessionPropertiesResponse);
 
+    // Use a DIFFERENT chain to test that different chainIds params create different cache entries
     const secondCapabilitiesResult = {
-      "0x1": {
+      "0x89": {
         atomicBatch: {
           supported: true,
         },
@@ -267,10 +268,10 @@ describe("UniversalProvider 5792 utils", function () {
       });
     });
 
-    // this req has additional chainId param so it should not use cached result but make a new request to the wallet
+    // this req has a DIFFERENT chainId param so it should not use cached result but make a new request to the wallet
     const result2 = await dapp.request({
       method: "wallet_getCapabilities",
-      params: [walletAddress, ["0x1"]],
+      params: [walletAddress, ["0x89"]], // Chain 137 - different from chain 1
     });
     await responsePromise2;
     expect(result2).to.eql(secondCapabilitiesResult);
@@ -279,7 +280,7 @@ describe("UniversalProvider 5792 utils", function () {
     expect(updatedSession2.sessionProperties).to.exist;
     expect(updatedSession2.sessionProperties?.capabilities).to.exist;
     expect(Object.keys(updatedSession2.sessionProperties?.capabilities || {}).length).to.eql(2);
-    expect(updatedSession2.sessionProperties?.capabilities[`${walletAddress}0x1`]).to.eql(
+    expect(updatedSession2.sessionProperties?.capabilities[`${walletAddress}0x89`]).to.eql(
       secondCapabilitiesResult,
     );
 
