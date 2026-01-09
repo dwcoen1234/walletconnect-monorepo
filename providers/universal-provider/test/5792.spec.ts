@@ -542,8 +542,11 @@ describe("UniversalProvider 5792 utils", function () {
     };
 
     // Set up listener BEFORE making request to avoid race condition
+    // Use a flag to track if the request was received
+    let receivedSecondRequest = false;
     const responsePromise2 = new Promise<void>((resolve) => {
       wallet.client.once("session_request", async (event) => {
+        receivedSecondRequest = true;
         walletRequestCount++;
         await wallet.client.respond({
           topic: event.topic,
@@ -557,7 +560,20 @@ describe("UniversalProvider 5792 utils", function () {
       method: "wallet_getCapabilities",
       params: [walletAddress], // NO explicit chainIds - should NOT use cache after chain switch
     });
-    await responsePromise2;
+
+    // If cache was properly invalidated, we should receive a new request
+    // Wait for the response with a timeout
+    await Promise.race([
+      responsePromise2,
+      new Promise<void>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Timeout: cache was not invalidated after chain switch")),
+          5000,
+        ),
+      ),
+    ]);
+
+    expect(receivedSecondRequest).to.eql(true, "Expected a new request after chain switch");
     expect(result2).to.eql(chain137Capabilities);
 
     // Verify a new request was made to the wallet
