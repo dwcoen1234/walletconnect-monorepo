@@ -220,25 +220,23 @@ describe("UniversalProvider 5792 utils", function () {
         },
       },
     };
-    await Promise.all([
-      new Promise<void>((resolve) => {
-        wallet.client.once("session_request", async (event) => {
-          await wallet.client.respond({
-            topic: event.topic,
-            response: formatJsonRpcResult(event.id, sessionPropertiesResponse),
-          });
-          resolve();
+    // Set up listener BEFORE making request to avoid race condition
+    const responsePromise1 = new Promise<void>((resolve) => {
+      wallet.client.once("session_request", async (event) => {
+        await wallet.client.respond({
+          topic: event.topic,
+          response: formatJsonRpcResult(event.id, sessionPropertiesResponse),
         });
-      }),
-      new Promise<void>(async (resolve) => {
-        const result = await dapp.request({
-          method: "wallet_getCapabilities",
-          params: [walletAddress],
-        });
-        expect(result).to.eql(sessionPropertiesResponse);
         resolve();
-      }),
-    ]);
+      });
+    });
+
+    const result1 = await dapp.request({
+      method: "wallet_getCapabilities",
+      params: [walletAddress],
+    });
+    await responsePromise1;
+    expect(result1).to.eql(sessionPropertiesResponse);
     // now the sessionProperties should be cached
     const updatedSession = dapp.client.session.get(sessionA.topic);
     expect(updatedSession.sessionProperties).to.exist;
@@ -258,26 +256,24 @@ describe("UniversalProvider 5792 utils", function () {
       },
     };
 
-    await Promise.all([
-      new Promise<void>((resolve) => {
-        wallet.client.once("session_request", async (event) => {
-          await wallet.client.respond({
-            topic: event.topic,
-            response: formatJsonRpcResult(event.id, secondCapabilitiesResult),
-          });
-          resolve();
+    // Set up listener BEFORE making request to avoid race condition
+    const responsePromise2 = new Promise<void>((resolve) => {
+      wallet.client.once("session_request", async (event) => {
+        await wallet.client.respond({
+          topic: event.topic,
+          response: formatJsonRpcResult(event.id, secondCapabilitiesResult),
         });
-      }),
-      new Promise<void>(async (resolve) => {
-        const result = await dapp.request({
-          method: "wallet_getCapabilities",
-          // this req has additional chainId param so it should not use cached result but make a new request to the wallet
-          params: [walletAddress, ["0x1"]],
-        });
-        expect(result).to.eql(secondCapabilitiesResult);
         resolve();
-      }),
-    ]);
+      });
+    });
+
+    // this req has additional chainId param so it should not use cached result but make a new request to the wallet
+    const result2 = await dapp.request({
+      method: "wallet_getCapabilities",
+      params: [walletAddress, ["0x1"]],
+    });
+    await responsePromise2;
+    expect(result2).to.eql(secondCapabilitiesResult);
 
     const updatedSession2 = dapp.client.session.get(sessionA.topic);
     expect(updatedSession2.sessionProperties).to.exist;
