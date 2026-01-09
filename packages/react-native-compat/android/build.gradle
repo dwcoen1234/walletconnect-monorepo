@@ -103,7 +103,7 @@ repositories {
 }
 
 def kotlin_version = getExtOrDefault("kotlinVersion")
-def yttrium_version = rootProject.ext.has("yttriumVersion") ? rootProject.ext.get("yttriumVersion") : "kotlin-wcpay-0.9.115"
+def yttrium_version = rootProject.ext.has("yttriumVersion") ? rootProject.ext.get("yttriumVersion") : "kotlin-wcpay-0.9.116"
 
 dependencies {
   // For < 0.71, this will be from the local maven repo
