@@ -1,5 +1,10 @@
 ---
 "@walletconnect/core": patch
+"@walletconnect/sign-client": patch
+"@walletconnect/types": patch
+"@walletconnect/utils": patch
+"@walletconnect/ethereum-provider": patch
+"@walletconnect/universal-provider": patch
 ---
 
 chore: update @walletconnect/logger to 3.0.2
