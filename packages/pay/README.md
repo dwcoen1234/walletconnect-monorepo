@@ -35,8 +35,16 @@ import { PayClient } from "@walletconnect/pay";
 const client = new PayClient({
   projectId: "your-project-id",
   apiKey: "your-api-key",
+});
+```
+
+The SDK automatically detects your application's bundle ID in React Native. If you need to override it:
+
+```typescript
+const client = new PayClient({
+  projectId: "your-project-id",
+  apiKey: "your-api-key",
   metadata: {
-    name: "Your App Name",
     bundleId: "com.your.app",
   },
 });
@@ -138,13 +146,13 @@ if (options.collectData) {
 new PayClient(options: PayClientOptions)
 ```
 
-| Option    | Type        | Required | Description                     |
-| --------- | ----------- | -------- | ------------------------------- |
-| projectId | string      | Yes      | WalletConnect Project ID        |
-| apiKey    | string      | Yes      | Pay API key                     |
-| metadata  | AppMetadata | Yes      | Application metadata            |
-| baseUrl   | string      | No       | Custom API base URL             |
-| logger    | Logger      | No       | Custom logger instance or level |
+| Option    | Type        | Required | Description                                              |
+| --------- | ----------- | -------- | -------------------------------------------------------- |
+| projectId | string      | Yes      | WalletConnect Project ID                                 |
+| apiKey    | string      | Yes      | Pay API key                                              |
+| metadata  | AppMetadata | No       | Application metadata (bundleId auto-detected if omitted) |
+| baseUrl   | string      | No       | Custom API base URL                                      |
+| logger    | Logger      | No       | Custom logger instance or level                          |
 
 #### Methods
 

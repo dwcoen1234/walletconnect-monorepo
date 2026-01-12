@@ -6,6 +6,7 @@
 
 import { getDefaultLoggerOptions, pino } from "@walletconnect/logger";
 import type { Logger } from "@walletconnect/logger";
+import { getAppId } from "@walletconnect/utils";
 
 import { PAY_API_BASE_URL, SDK_NAME, SDK_VERSION, LOGGER_CONTEXT } from "./constants/index.js";
 import { getSdkPlatform } from "./utils/index.js";
@@ -63,7 +64,7 @@ export class PayClient {
       sdkName: SDK_NAME,
       sdkVersion: SDK_VERSION,
       sdkPlatform: getSdkPlatform(),
-      bundleId: this.metadata.bundleId,
+      bundleId: this.metadata?.bundleId ?? getAppId() ?? "",
     };
 
     // Create provider (auto-detects available provider)

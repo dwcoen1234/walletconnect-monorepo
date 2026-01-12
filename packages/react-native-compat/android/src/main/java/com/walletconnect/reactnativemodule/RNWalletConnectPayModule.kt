@@ -4,7 +4,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.Promise
 import kotlinx.coroutines.*
-import uniffi.yttrium.WalletConnectPayJson
+import uniffi.yttrium_wcpay.WalletConnectPayJson
 
 /**
  * React Native module for WalletConnect Pay
