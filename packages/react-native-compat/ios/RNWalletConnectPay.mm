@@ -1,20 +1,17 @@
 #import "RNWalletConnectPay.h"
 #import <React/RCTBridge.h>
 
-// Import Swift/Yttrium
-#if __has_include(<Yttrium/Yttrium-Swift.h>)
-#import <Yttrium/Yttrium-Swift.h>
-#elif __has_include(<YttriumWrapper/YttriumWrapper-Swift.h>)
-#import <YttriumWrapper/YttriumWrapper-Swift.h>
-#elif __has_include("Yttrium-Swift.h")
-#import "Yttrium-Swift.h"
+// Import the Swift bridge - this header is auto-generated
+#if __has_include(<react_native_compat/react_native_compat-Swift.h>)
+#import <react_native_compat/react_native_compat-Swift.h>
+#elif __has_include("react_native_compat-Swift.h")
+#import "react_native_compat-Swift.h"
 #else
-// Fallback - uniffi generated code should be available
-@import Yttrium;
+@class RNWalletConnectPayBridge;
 #endif
 
 @implementation RNWalletConnectPay {
-    WalletConnectPayJson *_client;
+    RNWalletConnectPayBridge *_bridge;
     dispatch_queue_t _queue;
 }
 
@@ -25,6 +22,7 @@ RCT_EXPORT_MODULE()
     self = [super init];
     if (self) {
         _queue = dispatch_queue_create("com.walletconnect.pay", DISPATCH_QUEUE_SERIAL);
+        _bridge = [[RNWalletConnectPayBridge alloc] init];
     }
     return self;
 }
@@ -37,7 +35,7 @@ RCT_EXPORT_METHOD(initialize:(NSString *)configJson)
 {
     dispatch_async(_queue, ^{
         NSError *error = nil;
-        self->_client = [[WalletConnectPayJson alloc] init:configJson error:&error];
+        [self->_bridge initialize:configJson error:&error];
         if (error) {
             NSLog(@"[RNWalletConnectPay] Failed to initialize: %@", error.localizedDescription);
         }
@@ -54,21 +52,13 @@ RCT_EXPORT_METHOD(getPaymentOptions:(NSString *)requestJson
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-    dispatch_async(_queue, ^{
-        if (!self->_client) {
-            reject(@"PAY_ERROR", @"Pay client not initialized. Call initialize() first.", nil);
-            return;
-        }
-        
-        NSError *error = nil;
-        NSString *result = [self->_client getPaymentOptions:requestJson error:&error];
-        
+    [_bridge getPaymentOptions:requestJson completion:^(NSString *result, NSError *error) {
         if (error) {
             reject(@"PAY_ERROR", error.localizedDescription, error);
         } else {
             resolve(result);
         }
-    });
+    }];
 }
 
 /**
@@ -81,21 +71,13 @@ RCT_EXPORT_METHOD(getRequiredPaymentActions:(NSString *)requestJson
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-    dispatch_async(_queue, ^{
-        if (!self->_client) {
-            reject(@"PAY_ERROR", @"Pay client not initialized. Call initialize() first.", nil);
-            return;
-        }
-        
-        NSError *error = nil;
-        NSString *result = [self->_client getRequiredPaymentActions:requestJson error:&error];
-        
+    [_bridge getRequiredPaymentActions:requestJson completion:^(NSString *result, NSError *error) {
         if (error) {
             reject(@"PAY_ERROR", error.localizedDescription, error);
         } else {
             resolve(result);
         }
-    });
+    }];
 }
 
 /**
@@ -108,21 +90,13 @@ RCT_EXPORT_METHOD(confirmPayment:(NSString *)requestJson
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-    dispatch_async(_queue, ^{
-        if (!self->_client) {
-            reject(@"PAY_ERROR", @"Pay client not initialized. Call initialize() first.", nil);
-            return;
-        }
-        
-        NSError *error = nil;
-        NSString *result = [self->_client confirmPayment:requestJson error:&error];
-        
+    [_bridge confirmPayment:requestJson completion:^(NSString *result, NSError *error) {
         if (error) {
             reject(@"PAY_ERROR", error.localizedDescription, error);
         } else {
             resolve(result);
         }
-    });
+    }];
 }
 
 + (BOOL)requiresMainQueueSetup
