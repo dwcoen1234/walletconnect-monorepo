@@ -30,23 +30,11 @@ The SDK auto-detects the best available provider for your environment.
 ### Initialize the Client
 
 ```typescript
-import { PayClient } from "@walletconnect/pay";
+import { WalletConnectPay } from "@walletconnect/pay";
 
-const client = new PayClient({
+const client = new WalletConnectPay({
   projectId: "your-project-id",
   apiKey: "your-api-key",
-});
-```
-
-The SDK automatically detects your application's bundle ID in React Native. If you need to override it:
-
-```typescript
-const client = new PayClient({
-  projectId: "your-project-id",
-  apiKey: "your-api-key",
-  metadata: {
-    bundleId: "com.your.app",
-  },
 });
 ```
 
@@ -138,21 +126,20 @@ if (options.collectData) {
 
 ## API Reference
 
-### PayClient
+### WalletConnectPay
 
 #### Constructor
 
 ```typescript
-new PayClient(options: PayClientOptions)
+new WalletConnectPay(options: WalletConnectPayOptions)
 ```
 
-| Option    | Type        | Required | Description                                              |
-| --------- | ----------- | -------- | -------------------------------------------------------- |
-| projectId | string      | Yes      | WalletConnect Project ID                                 |
-| apiKey    | string      | Yes      | Pay API key                                              |
-| metadata  | AppMetadata | No       | Application metadata (bundleId auto-detected if omitted) |
-| baseUrl   | string      | No       | Custom API base URL                                      |
-| logger    | Logger      | No       | Custom logger instance or level                          |
+| Option    | Type   | Required | Description                     |
+| --------- | ------ | -------- | ------------------------------- |
+| projectId | string | Yes      | WalletConnect Project ID        |
+| apiKey    | string | Yes      | Pay API key                     |
+| baseUrl   | string | No       | Custom API base URL             |
+| logger    | Logger | No       | Custom logger instance or level |
 
 #### Methods
 

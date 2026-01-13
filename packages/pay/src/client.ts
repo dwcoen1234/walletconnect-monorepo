@@ -11,7 +11,7 @@ import { getAppId } from "@walletconnect/utils";
 import { PAY_API_BASE_URL, SDK_NAME, SDK_VERSION, LOGGER_CONTEXT } from "./constants/index.js";
 import { getSdkPlatform } from "./utils/index.js";
 import type {
-  PayClientOptions,
+  WalletConnectPayOptions,
   PaymentOptionsResponse,
   ConfirmPaymentResponse,
   Action,
@@ -29,10 +29,9 @@ import {
 } from "./types/index.js";
 import { createProvider, isProviderAvailable } from "./providers/index.js";
 
-export class PayClient {
+export class WalletConnectPay {
   public readonly projectId: string;
   public readonly apiKey: string;
-  public readonly metadata: PayClientOptions["metadata"];
   public readonly baseUrl: string;
 
   private readonly logger: Logger;
@@ -42,10 +41,9 @@ export class PayClient {
    * Initialize a new Pay client
    * @param opts - Client options
    */
-  constructor(opts: PayClientOptions) {
+  constructor(opts: WalletConnectPayOptions) {
     this.projectId = opts.projectId;
     this.apiKey = opts.apiKey;
-    this.metadata = opts.metadata;
     this.baseUrl = opts.baseUrl ?? PAY_API_BASE_URL;
 
     // Initialize logger
@@ -64,7 +62,7 @@ export class PayClient {
       sdkName: SDK_NAME,
       sdkVersion: SDK_VERSION,
       sdkPlatform: getSdkPlatform(),
-      bundleId: this.metadata?.bundleId ?? getAppId() ?? "",
+      bundleId: getAppId() ?? "",
     };
 
     // Create provider (auto-detects available provider)

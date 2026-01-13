@@ -1,7 +1,7 @@
 /**
- * PayClient Tests
+ * WalletConnectPay Tests
  *
- * Tests the PayClient class with an injected mock provider
+ * Tests the WalletConnectPay class with an injected mock provider
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -20,10 +20,10 @@ import {
 } from "../src/types/index.js";
 
 /**
- * Create a PayClient-like wrapper that uses a mock provider
- * This simulates how PayClient would work with the provider
+ * Create a WalletConnectPay-like wrapper that uses a mock provider
+ * This simulates how WalletConnectPay would work with the provider
  */
-class TestablePayClient {
+class TestableWalletConnectPay {
   private readonly provider: MockProvider;
 
   constructor(provider: MockProvider) {
@@ -70,13 +70,13 @@ class TestablePayClient {
   }
 }
 
-describe("PayClient", () => {
+describe("WalletConnectPay", () => {
   let mockProvider: MockProvider;
-  let client: TestablePayClient;
+  let client: TestableWalletConnectPay;
 
   beforeEach(() => {
     mockProvider = new MockProvider();
-    client = new TestablePayClient(mockProvider);
+    client = new TestableWalletConnectPay(mockProvider);
   });
 
   describe("getPaymentOptions", () => {

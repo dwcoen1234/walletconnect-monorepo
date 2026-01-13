@@ -1,7 +1,7 @@
 /**
  * WalletConnect Pay SDK Tests
  *
- * Tests the PayClient with a mock provider simulating yttrium/pay responses
+ * Tests the WalletConnectPay with a mock provider simulating yttrium/pay responses
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -21,7 +21,7 @@ import type {
 } from "../src/types/index.js";
 import { PayError } from "../src/types/index.js";
 
-describe("PayClient with MockProvider", () => {
+describe("WalletConnectPay with MockProvider", () => {
   let mockProvider: MockProvider;
 
   beforeEach(() => {
