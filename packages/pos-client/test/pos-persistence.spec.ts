@@ -164,6 +164,10 @@ describe("Sign Integration", () => {
 
     // simulate restart by closing transport
     await pos.engine.signClient.core.relayer.transportClose();
+    console.log("transport closed");
+
+    // allow relay to stabilize after transport close
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // #given - restart POS client with same database to reuse session
     const posAfterRestart = await POSClient.init({
@@ -185,6 +189,11 @@ describe("Sign Integration", () => {
     expect(posAfterRestart.session).to.exist;
     const persistedSessionTopic = posAfterRestart.session?.topic;
     expect(persistedSessionTopic).to.exist;
+
+    console.log(
+      "relayer connected after restart:",
+      posAfterRestart.engine.signClient.core.relayer.connected,
+    );
 
     // #given - second payment flow with proper event waiting
     const secondPaymentSuccessful = new Promise<void>((resolve) => {
@@ -219,5 +228,5 @@ describe("Sign Integration", () => {
 
     await posAfterRestart.disconnect();
     expect(posAfterRestart.session).to.not.exist;
-  });
+  }, 90_000);
 });
