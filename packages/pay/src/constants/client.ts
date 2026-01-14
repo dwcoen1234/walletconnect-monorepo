@@ -6,10 +6,10 @@
 export const PAY_API_BASE_URL = "https://api.pay.walletconnect.com";
 
 /** SDK name for tracking */
-export const SDK_NAME = "@walletconnect/pay";
+export const SDK_NAME = "js-walletconnect-pay";
 
 /** SDK version (from package.json) */
-export const SDK_VERSION = `js-1.0.0`;
+export const SDK_VERSION = `1.0.0`;
 
 /** Client context name */
 export const CLIENT_CONTEXT = "pay";

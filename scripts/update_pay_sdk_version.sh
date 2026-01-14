@@ -8,15 +8,15 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 file_location="$REPO_ROOT/packages/pay/src/constants/client.ts"
 package_json="$REPO_ROOT/packages/pay/package.json"
-regex="SDK_VERSION = \`js-.*\`"
+regex="SDK_VERSION = \`.*\`"
 
 # Get the version from packages/pay/package.json
 next_version=$(grep -E '"version": "(.*)"' "$package_json" | head -1 | sed -E 's/.*"version": "(.*)".*/\1/')
 
 # Define the replace value
-new_value="SDK_VERSION = \`js-$next_version\`"
+new_value="SDK_VERSION = \`$next_version\`"
 
-echo "[SCRIPT] Updating SDK_VERSION to js-$next_version in $file_location..."
+echo "[SCRIPT] Updating SDK_VERSION to $next_version in $file_location..."
 
 # Use sed to update the value in the file
 if [ "$(uname)" = "Darwin" ]; then
