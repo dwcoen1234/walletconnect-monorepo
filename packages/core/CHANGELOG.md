@@ -1,5 +1,15 @@
 # @walletconnect/core
 
+## 2.23.3
+
+### Patch Changes
+
+- [#7124](https://github.com/WalletConnect/walletconnect-monorepo/pull/7124) [`f0a791b`](https://github.com/WalletConnect/walletconnect-monorepo/commit/f0a791bde68af920e31f07ad15e5510d0c272889) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - fix(core): cancel scheduled reconnection when fatal error is received
+
+- Updated dependencies []:
+  - @walletconnect/utils@2.23.3
+  - @walletconnect/types@2.23.3
+
 ## 2.23.2
 
 ### Patch Changes
