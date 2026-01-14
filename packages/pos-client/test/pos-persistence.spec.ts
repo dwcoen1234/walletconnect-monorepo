@@ -101,9 +101,12 @@ describe("Sign Integration", () => {
     let numConnected = 0;
     let numQrReady = 0;
     let numSessionProposal = 0;
+    let numSessionRequest = 0;
+    let numPaymentSuccessful = 0;
 
     const onSessionRequest = async (sessionRequest) => {
-      console.log("session request received");
+      numSessionRequest++;
+      console.log("session request received", numSessionRequest);
       await wallet.respond({
         topic: sessionRequest.topic,
         response: formatJsonRpcResult(
@@ -133,6 +136,7 @@ describe("Sign Integration", () => {
     // #given - first payment flow with proper event waiting
     const firstPaymentSuccessful = new Promise<void>((resolve) => {
       pos.once("payment_successful", () => {
+        numPaymentSuccessful++;
         console.log("first payment_successful");
         resolve();
       });
@@ -185,6 +189,7 @@ describe("Sign Integration", () => {
     // #given - second payment flow with proper event waiting
     const secondPaymentSuccessful = new Promise<void>((resolve) => {
       posAfterRestart.once("payment_successful", () => {
+        numPaymentSuccessful++;
         console.log("second payment_successful");
         resolve();
       });
@@ -205,6 +210,8 @@ describe("Sign Integration", () => {
     expect(numSessionProposal).to.equal(1);
     expect(numConnected).to.equal(1);
     expect(numQrReady).to.equal(1);
+    expect(numSessionRequest).to.equal(2);
+    expect(numPaymentSuccessful).to.equal(2);
 
     // cleanup
     wallet.events.off("session_request", onSessionRequest);
