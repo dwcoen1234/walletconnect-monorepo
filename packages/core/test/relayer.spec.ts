@@ -500,12 +500,11 @@ describe("Relayer", () => {
       // #when - simulate disconnect which schedules a reconnection
       relayer.provider.events.emit(RELAYER_PROVIDER_EVENTS.disconnect);
 
-      // Wait a bit to ensure reconnection is scheduled (reconnect timeout is 100ms)
+      // Wait to ensure reconnection is scheduled (reconnect timeout is 100ms)
       await throttle(50);
 
       // @ts-expect-error - accessing private property for testing
-      // At this point, a reconnection should be scheduled
-      const reconnectScheduled = relayer.reconnectTimeout !== undefined;
+      expect(relayer.reconnectTimeout).to.not.be.undefined;
 
       // Then fatal error arrives - this should cancel the scheduled reconnection
       relayer.provider.events.emit(
@@ -520,15 +519,11 @@ describe("Relayer", () => {
       expect(relayer.transportExplicitlyClosed).to.be.true;
 
       // @ts-expect-error - accessing private property for testing
-      // The reconnect timeout should have been cleared by the error handler
       expect(relayer.reconnectTimeout).to.be.undefined;
 
-      // If reconnection was scheduled, verify it was properly cancelled
-      if (reconnectScheduled) {
-        // Wait for heartbeat to ensure no reconnection happens
-        await throttle(6000);
-        expect(relayer.connected).to.be.false;
-      }
+      // Wait for heartbeat to ensure no reconnection happens
+      await throttle(6000);
+      expect(relayer.connected).to.be.false;
     });
   });
   describe.skipIf(!TEST_PROJECT_ID_MOBILE || !TEST_MOBILE_APP_ID)(

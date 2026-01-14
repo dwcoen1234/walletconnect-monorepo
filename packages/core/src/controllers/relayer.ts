@@ -272,6 +272,7 @@ export class Relayer extends IRelayer {
     this.transportExplicitlyClosed = true;
     clearTimeout(this.reconnectTimeout);
     this.reconnectTimeout = undefined;
+    this.reconnectInProgress = false;
     await this.transportDisconnect();
   }
 
@@ -583,7 +584,8 @@ export class Relayer extends IRelayer {
     this.transportExplicitlyClosed = true;
     clearTimeout(this.reconnectTimeout);
     this.reconnectTimeout = undefined;
-    this.transportClose();
+    this.reconnectInProgress = false;
+    this.transportClose().catch((e) => this.logger.warn(e));
   };
 
   private registerProviderListeners = () => {
