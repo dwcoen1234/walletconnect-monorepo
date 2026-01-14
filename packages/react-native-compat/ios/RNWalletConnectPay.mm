@@ -52,13 +52,15 @@ RCT_EXPORT_METHOD(getPaymentOptions:(NSString *)requestJson
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-    [_bridge getPaymentOptions:requestJson completion:^(NSString *result, NSError *error) {
-        if (error) {
-            reject(@"PAY_ERROR", error.localizedDescription, error);
-        } else {
-            resolve(result);
-        }
-    }];
+    dispatch_async(_queue, ^{
+        [self->_bridge getPaymentOptions:requestJson completion:^(NSString *result, NSError *error) {
+            if (error) {
+                reject(@"PAY_ERROR", error.localizedDescription, error);
+            } else {
+                resolve(result);
+            }
+        }];
+    });
 }
 
 /**
@@ -71,13 +73,15 @@ RCT_EXPORT_METHOD(getRequiredPaymentActions:(NSString *)requestJson
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-    [_bridge getRequiredPaymentActions:requestJson completion:^(NSString *result, NSError *error) {
-        if (error) {
-            reject(@"PAY_ERROR", error.localizedDescription, error);
-        } else {
-            resolve(result);
-        }
-    }];
+    dispatch_async(_queue, ^{
+        [self->_bridge getRequiredPaymentActions:requestJson completion:^(NSString *result, NSError *error) {
+            if (error) {
+                reject(@"PAY_ERROR", error.localizedDescription, error);
+            } else {
+                resolve(result);
+            }
+        }];
+    });
 }
 
 /**
@@ -90,13 +94,15 @@ RCT_EXPORT_METHOD(confirmPayment:(NSString *)requestJson
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-    [_bridge confirmPayment:requestJson completion:^(NSString *result, NSError *error) {
-        if (error) {
-            reject(@"PAY_ERROR", error.localizedDescription, error);
-        } else {
-            resolve(result);
-        }
-    }];
+    dispatch_async(_queue, ^{
+        [self->_bridge confirmPayment:requestJson completion:^(NSString *result, NSError *error) {
+            if (error) {
+                reject(@"PAY_ERROR", error.localizedDescription, error);
+            } else {
+                resolve(result);
+            }
+        }];
+    });
 }
 
 + (BOOL)requiresMainQueueSetup
