@@ -1,5 +1,17 @@
 # @walletconnect/ethereum-provider
 
+## 2.23.3
+
+### Patch Changes
+
+- [#7126](https://github.com/WalletConnect/walletconnect-monorepo/pull/7126) [`040e37a`](https://github.com/WalletConnect/walletconnect-monorepo/commit/040e37a2c7a7a52192669faae049cf6e2f1faeeb) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - chore: upgrade @reown/appkit to fix circular dependencies
+
+- Updated dependencies []:
+  - @walletconnect/sign-client@2.23.3
+  - @walletconnect/universal-provider@2.23.3
+  - @walletconnect/utils@2.23.3
+  - @walletconnect/types@2.23.3
+
 ## 2.23.2
 
 ### Patch Changes

@@ -1,5 +1,7 @@
 # @walletconnect/types
 
+## 2.23.3
+
 ## 2.23.2
 
 ### Patch Changes
