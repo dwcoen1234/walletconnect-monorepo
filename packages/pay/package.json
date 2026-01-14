@@ -41,9 +41,9 @@
     "prettier": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}'"
   },
   "dependencies": {
-    "@walletconnect/logger": "3.0.1",
-    "@walletconnect/types": "2.23.1",
-    "@walletconnect/utils": "2.23.1"
+    "@walletconnect/logger": "3.0.2",
+    "@walletconnect/types": "2.23.2",
+    "@walletconnect/utils": "2.23.2"
   },
   "peerDependencies": {
     "react-native": ">=0.64.0"
