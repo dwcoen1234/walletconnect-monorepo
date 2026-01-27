@@ -14,11 +14,11 @@ const PAY_LINKING_ERROR =
 const isTurboModuleEnabled = global.__turboModuleProxy != null;
 
 const RNWalletConnectModule = isTurboModuleEnabled
-  ? require("../module/NativeRNWalletConnectModule.ts").default
+  ? require("./NativeRNWalletConnectModule.ts").default
   : NativeModules.RNWalletConnectModule;
 
 const RNWalletConnectPay = isTurboModuleEnabled
-  ? require("../module/NativeRNWalletConnectPay.ts").default
+  ? require("./NativeRNWalletConnectPay.ts").default
   : NativeModules.RNWalletConnectPay;
 
 function getExpoModule(): any | undefined {
