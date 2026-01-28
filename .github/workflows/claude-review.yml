@@ -41,8 +41,10 @@ jobs:
             - packages/core: Core WalletConnect functionality
             - packages/types: TypeScript type definitions
             - packages/utils: Utility functions
+            - packages/react-native-compat: React Native compatibility layer
             - providers/universal-provider: Universal provider for multi-chain support
             - providers/ethereum-provider: Ethereum-specific provider
+            - providers/signer-connection: Signer connection provider
             - packages/pos-client: Point of Sale client
             - packages/pay: Payment functionality
 
