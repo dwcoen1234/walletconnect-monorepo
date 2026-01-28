@@ -223,8 +223,13 @@ export class UniversalProvider implements IUniversalProvider {
       // ignore without active session
       if (!this.session) return;
       const [namespace, chainId] = this.validateChain(chain);
-      // provider may be undefined during cleanup race conditions
-      this.getProvider(namespace)?.setDefaultChain(chainId, rpcUrl);
+      const provider = this.getProvider(namespace);
+      if (provider) {
+        provider.setDefaultChain(chainId, rpcUrl);
+      } else if (this.session) {
+        this.logger.warn(`Provider for namespace '${namespace}' not found in setDefaultChain`);
+      }
+      // If session is undefined, we're in cleanup - silently ignore
     } catch (error) {
       // ignore the error if the fx is used prematurely before namespaces are set
       if (!/Please call connect/.test((error as Error).message)) throw error;
@@ -484,8 +489,13 @@ export class UniversalProvider implements IUniversalProvider {
     this.updateNamespaceChain(namespace, chainId);
 
     if (!internal) {
-      // provider may be undefined during cleanup race conditions
-      this.getProvider(namespace)?.setDefaultChain(chainId);
+      const provider = this.getProvider(namespace);
+      if (provider) {
+        provider.setDefaultChain(chainId);
+      } else if (this.session) {
+        this.logger.warn(`Provider for namespace '${namespace}' not found during chain change`);
+      }
+      // If session is undefined, we're in cleanup - silently ignore
     } else {
       // emit the events during the `internal` cycle of chain change
       // otherwise events are emitted twice
