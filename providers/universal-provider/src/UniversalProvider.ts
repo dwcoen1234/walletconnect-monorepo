@@ -223,8 +223,8 @@ export class UniversalProvider implements IUniversalProvider {
       // ignore without active session
       if (!this.session) return;
       const [namespace, chainId] = this.validateChain(chain);
-      const provider = this.getProvider(namespace);
-      provider.setDefaultChain(chainId, rpcUrl);
+      // provider may be undefined during cleanup race conditions
+      this.getProvider(namespace)?.setDefaultChain(chainId, rpcUrl);
     } catch (error) {
       // ignore the error if the fx is used prematurely before namespaces are set
       if (!/Please call connect/.test((error as Error).message)) throw error;
@@ -484,7 +484,8 @@ export class UniversalProvider implements IUniversalProvider {
     this.updateNamespaceChain(namespace, chainId);
 
     if (!internal) {
-      this.getProvider(namespace).setDefaultChain(chainId);
+      // provider may be undefined during cleanup race conditions
+      this.getProvider(namespace)?.setDefaultChain(chainId);
     } else {
       // emit the events during the `internal` cycle of chain change
       // otherwise events are emitted twice
