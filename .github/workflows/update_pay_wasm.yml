@@ -9,10 +9,6 @@ on:
         default: "false"
         type: boolean
 
-env:
-  YTTRIUM_REPO: "reown-com/yttrium"
-  RELEASE_PREFIX: "wasm-pay-"
-
 jobs:
   check-and-update:
     runs-on: ubuntu-latest
@@ -38,12 +34,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST_RELEASE=$(gh release list --repo ${{ env.YTTRIUM_REPO }} --limit 20 | grep "${{ env.RELEASE_PREFIX }}" | head -1 | awk '{print $1}')
+          LATEST_RELEASE=$(gh release list --repo reown-com/yttrium --limit 20 | grep "wasm-pay-" | head -1 | awk '{print $1}')
           if [ -z "$LATEST_RELEASE" ]; then
             echo "No wasm-pay releases found"
             exit 1
           fi
-          LATEST_VERSION=${LATEST_RELEASE#${{ env.RELEASE_PREFIX }}}
+          LATEST_VERSION=${LATEST_RELEASE#wasm-pay-}
           echo "tag=$LATEST_RELEASE" >> $GITHUB_OUTPUT
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo "Latest release: $LATEST_RELEASE (version: $LATEST_VERSION)"
@@ -69,7 +65,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download ${{ steps.latest.outputs.tag }} \
-            --repo ${{ env.YTTRIUM_REPO }} \
+            --repo reown-com/yttrium \
             --pattern "*.zip" \
             --dir ./release
 
@@ -178,7 +174,7 @@ jobs:
             --body "$(cat <<EOF
           ## Summary
 
-          Updates the Pay SDK WASM module to version \`$VERSION\` from [yttrium](https://github.com/${{ env.YTTRIUM_REPO }}/releases/tag/${{ steps.latest.outputs.tag }}).
+          Updates the Pay SDK WASM module to version \`$VERSION\` from [yttrium](https://github.com/reown-com/yttrium/releases/tag/${{ steps.latest.outputs.tag }}).
 
           ### Changes
           - Updated \`wasm-data.ts\` with new brotli-compressed base64 WASM
