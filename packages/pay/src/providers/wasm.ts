@@ -17,6 +17,14 @@ let wasmInitialized = false;
 let initPromise: Promise<void> | null = null;
 
 /**
+ * Reset WASM state (for testing only)
+ */
+export function resetWasmState(): void {
+  wasmInitialized = false;
+  initPromise = null;
+}
+
+/**
  * Decode base64 string to Uint8Array
  */
 function base64Decode(base64: string): Uint8Array {
@@ -28,16 +36,31 @@ function base64Decode(base64: string): Uint8Array {
     }
     return bytes;
   }
-  return new Uint8Array(Buffer.from(base64, "base64"));
+  if (typeof Buffer !== "undefined") {
+    return new Uint8Array(Buffer.from(base64, "base64"));
+  }
+  throw new PayError(
+    "INITIALIZATION_ERROR",
+    "No base64 decoder available (requires atob or Buffer)",
+  );
 }
 
 /**
  * Decompress brotli data
  */
 async function decompressBrotli(compressed: Uint8Array): Promise<Uint8Array> {
-  return new Promise((resolve) => {
-    const decompressed = decompress(Buffer.from(compressed));
-    resolve(new Uint8Array(decompressed));
+  return new Promise((resolve, reject) => {
+    try {
+      const decompressed = decompress(Buffer.from(compressed));
+      resolve(new Uint8Array(decompressed));
+    } catch (error) {
+      reject(
+        new PayError(
+          "INITIALIZATION_ERROR",
+          `Brotli decompression failed: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+    }
   });
 }
 

@@ -49,26 +49,41 @@ export function buildConfirmPaymentRequest(params: ConfirmPaymentParams): string
  * Parse payment options response from JSON
  */
 export function parsePaymentOptionsResponse(responseJson: string): PaymentOptionsResponse {
-  return JSON.parse(responseJson) as PaymentOptionsResponse;
+  const parsed = JSON.parse(responseJson);
+  if (!parsed || typeof parsed !== "object") {
+    throw new PayError("JSON_PARSE", "Invalid payment options response format");
+  }
+  return parsed as PaymentOptionsResponse;
 }
 
 /**
  * Parse required actions response from JSON
  */
 export function parseRequiredActionsResponse(responseJson: string): Action[] {
-  return JSON.parse(responseJson) as Action[];
+  const parsed = JSON.parse(responseJson);
+  if (!Array.isArray(parsed)) {
+    throw new PayError(
+      "JSON_PARSE",
+      "Invalid required actions response format: expected array",
+    );
+  }
+  return parsed as Action[];
 }
 
 /**
  * Parse confirm payment response from JSON
  */
 export function parseConfirmPaymentResponse(responseJson: string): ConfirmPaymentResponse {
-  return JSON.parse(responseJson) as ConfirmPaymentResponse;
+  const parsed = JSON.parse(responseJson);
+  if (!parsed || typeof parsed !== "object") {
+    throw new PayError("JSON_PARSE", "Invalid confirm payment response format");
+  }
+  return parsed as ConfirmPaymentResponse;
 }
 
 /**
  * Wrap provider errors with PayError
  */
-export function wrapProviderError(error: unknown): never {
-  throw PayError.fromNativeError(error);
+export function wrapProviderError(error: unknown): PayError {
+  return PayError.fromNativeError(error);
 }

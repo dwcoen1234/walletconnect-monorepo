@@ -47,7 +47,7 @@ export class UnifiedProvider implements PayProvider {
       const responseJson = await this.backend.getPaymentOptions(buildPaymentOptionsRequest(params));
       return parsePaymentOptionsResponse(responseJson);
     } catch (error) {
-      wrapProviderError(error);
+      throw wrapProviderError(error);
     }
   }
 
@@ -58,7 +58,7 @@ export class UnifiedProvider implements PayProvider {
       );
       return parseRequiredActionsResponse(responseJson);
     } catch (error) {
-      wrapProviderError(error);
+      throw wrapProviderError(error);
     }
   }
 
@@ -67,7 +67,7 @@ export class UnifiedProvider implements PayProvider {
       const responseJson = await this.backend.confirmPayment(buildConfirmPaymentRequest(params));
       return parseConfirmPaymentResponse(responseJson);
     } catch (error) {
-      wrapProviderError(error);
+      throw wrapProviderError(error);
     }
   }
 }
