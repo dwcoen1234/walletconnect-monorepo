@@ -44,9 +44,7 @@ export class UnifiedProvider implements PayProvider {
 
   async getPaymentOptions(params: GetPaymentOptionsParams): Promise<PaymentOptionsResponse> {
     try {
-      const responseJson = await this.backend.getPaymentOptions(
-        buildPaymentOptionsRequest(params),
-      );
+      const responseJson = await this.backend.getPaymentOptions(buildPaymentOptionsRequest(params));
       return parsePaymentOptionsResponse(responseJson);
     } catch (error) {
       wrapProviderError(error);
