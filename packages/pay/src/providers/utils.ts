@@ -62,10 +62,7 @@ export function parsePaymentOptionsResponse(responseJson: string): PaymentOption
 export function parseRequiredActionsResponse(responseJson: string): Action[] {
   const parsed = JSON.parse(responseJson);
   if (!Array.isArray(parsed)) {
-    throw new PayError(
-      "JSON_PARSE",
-      "Invalid required actions response format: expected array",
-    );
+    throw new PayError("JSON_PARSE", "Invalid required actions response format: expected array");
   }
   return parsed as Action[];
 }
