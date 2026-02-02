@@ -1,0 +1,181 @@
+name: Update Pay WASM
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force update even if version matches"
+        required: false
+        default: "false"
+        type: boolean
+
+env:
+  YTTRIUM_REPO: "reown-com/yttrium"
+  RELEASE_PREFIX: "wasm-pay-"
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: v2.0
+
+      - name: Get current WASM version
+        id: current
+        run: |
+          CURRENT_VERSION=$(grep -oP 'YTTRIUM_PAY_VERSION = "\K[^"]+' packages/pay/src/providers/wasm/wasm-data.ts || echo "0.0.0")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Get latest release from yttrium
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_RELEASE=$(gh release list --repo ${{ env.YTTRIUM_REPO }} --limit 20 | grep "${{ env.RELEASE_PREFIX }}" | head -1 | awk '{print $1}')
+          if [ -z "$LATEST_RELEASE" ]; then
+            echo "No wasm-pay releases found"
+            exit 1
+          fi
+          LATEST_VERSION=${LATEST_RELEASE#${{ env.RELEASE_PREFIX }}}
+          echo "tag=$LATEST_RELEASE" >> $GITHUB_OUTPUT
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "Latest release: $LATEST_RELEASE (version: $LATEST_VERSION)"
+
+      - name: Compare versions
+        id: compare
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          LATEST="${{ steps.latest.outputs.version }}"
+          FORCE="${{ inputs.force }}"
+          
+          if [ "$CURRENT" = "$LATEST" ] && [ "$FORCE" != "true" ]; then
+            echo "Version $CURRENT is already up to date"
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          else
+            echo "Update needed: $CURRENT -> $LATEST"
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download release
+        if: steps.compare.outputs.needs_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ steps.latest.outputs.tag }} \
+            --repo ${{ env.YTTRIUM_REPO }} \
+            --pattern "*.zip" \
+            --dir ./release
+          
+          echo "Downloaded release:"
+          ls -lh ./release/
+          
+          unzip -o ./release/*.zip -d ./release/extracted
+          echo "Extracted contents:"
+          find ./release/extracted -type f
+
+      - name: Install brotli
+        if: steps.compare.outputs.needs_update == 'true'
+        run: sudo apt-get install -y brotli
+
+      - name: Process WASM and update files
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          WASM_DIR="./release/extracted/wasm-pay"
+          DEST_DIR="packages/pay/src/providers/wasm"
+          VERSION="${{ steps.latest.outputs.version }}"
+          
+          # Find the WASM file
+          WASM_FILE=$(find ./release/extracted -name "yttrium_bg.wasm" | head -1)
+          if [ -z "$WASM_FILE" ]; then
+            echo "Error: yttrium_bg.wasm not found"
+            find ./release/extracted -type f
+            exit 1
+          fi
+          echo "Found WASM file: $WASM_FILE"
+          echo "Original size: $(stat -c%s "$WASM_FILE") bytes"
+          
+          # Compress with brotli
+          brotli -9 -k "$WASM_FILE"
+          WASM_BR="${WASM_FILE}.br"
+          echo "Compressed size: $(stat -c%s "$WASM_BR") bytes"
+          
+          # Convert to base64
+          WASM_B64=$(base64 -w 0 "$WASM_BR")
+          echo "Base64 length: ${#WASM_B64} characters"
+          
+          # Create wasm-data.ts
+          cat > "$DEST_DIR/wasm-data.ts" << EOF
+          // Auto-generated: Brotli-compressed WASM base64
+          export const YTTRIUM_PAY_VERSION = "$VERSION";
+          export const YTTRIUM_PAY = "$WASM_B64";
+          EOF
+          
+          # Copy JS and TS files
+          JS_FILE=$(find ./release/extracted -name "yttrium.js" | head -1)
+          DTS_FILE=$(find ./release/extracted -name "yttrium.d.ts" | head -1)
+          
+          if [ -n "$JS_FILE" ]; then
+            cp "$JS_FILE" "$DEST_DIR/yttrium.js"
+            echo "Copied yttrium.js"
+          fi
+          
+          if [ -n "$DTS_FILE" ]; then
+            cp "$DTS_FILE" "$DEST_DIR/yttrium.d.ts"
+            echo "Copied yttrium.d.ts"
+          fi
+          
+          echo "Updated files in $DEST_DIR:"
+          ls -lh "$DEST_DIR/"
+
+      - name: Run prettier
+        if: steps.compare.outputs.needs_update == 'true'
+        run: |
+          npm ci
+          npx prettier --write "packages/pay/src/providers/wasm/*.{ts,js}"
+
+      - name: Create Pull Request
+        if: steps.compare.outputs.needs_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.latest.outputs.version }}"
+          BRANCH="chore/update-pay-wasm-$VERSION"
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git checkout -b "$BRANCH"
+          git add packages/pay/src/providers/wasm/
+          git commit -m "chore(pay): update WASM to $VERSION"
+          git push -u origin "$BRANCH"
+          
+          gh pr create \
+            --title "chore(pay): update WASM to $VERSION" \
+            --base v2.0 \
+            --body "$(cat <<EOF
+          ## Summary
+          
+          Updates the Pay SDK WASM module to version \`$VERSION\` from [yttrium](https://github.com/${{ env.YTTRIUM_REPO }}/releases/tag/${{ steps.latest.outputs.tag }}).
+          
+          ### Changes
+          - Updated \`wasm-data.ts\` with new brotli-compressed base64 WASM
+          - Updated \`yttrium.js\` bindings
+          - Updated \`yttrium.d.ts\` type definitions
+          
+          ### Version
+          - Previous: \`${{ steps.current.outputs.version }}\`
+          - New: \`$VERSION\`
+          
+          ---
+          *Auto-generated by [update_pay_wasm.yml](https://github.com/${{ github.repository }}/actions/workflows/update_pay_wasm.yml)*
+          EOF
+          )"
+          
+          echo "PR created successfully"
