@@ -4,22 +4,25 @@
 
 import type { PayProvider, PayProviderConfig, PayProviderType } from "../types/index.js";
 import { createNativeProvider, isNativeProviderAvailable } from "./native.js";
+import { createWasmProvider, isWasmProviderAvailable } from "./wasm.js";
 
 export * from "./native.js";
+export * from "./wasm.js";
 
 /**
  * Detect the best available provider type for the current environment
+ * Priority: Native (React Native) > WASM (Browser/Node.js)
  */
 export function detectProviderType(): PayProviderType | null {
-  // Check for native module (React Native)
+  // Check for native module (React Native) - preferred for mobile
   if (isNativeProviderAvailable()) {
     return "native";
   }
 
-  // Future: Check for WASM support
-  // if (isWasmProviderAvailable()) {
-  //   return "wasm";
-  // }
+  // Check for WASM support (Browser/Node.js)
+  if (isWasmProviderAvailable()) {
+    return "wasm";
+  }
 
   return null;
 }
@@ -33,7 +36,7 @@ export function createProvider(config: PayProviderConfig): PayProvider {
 
   if (!providerType) {
     throw new Error(
-      "No Pay provider available. Make sure you are running in React Native with the native module installed, or in a browser with WASM support.",
+      "No Pay provider available. Make sure you are running in React Native with the native module installed, or in a browser/Node.js environment with WebAssembly support.",
     );
   }
 
@@ -41,8 +44,7 @@ export function createProvider(config: PayProviderConfig): PayProvider {
     case "native":
       return createNativeProvider(config);
     case "wasm":
-      // Future: return createWasmProvider(config);
-      throw new Error("WASM provider not yet implemented");
+      return createWasmProvider(config);
     default:
       throw new Error(`Unknown provider type: ${providerType}`);
   }
