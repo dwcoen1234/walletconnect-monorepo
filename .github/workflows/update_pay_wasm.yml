@@ -336,8 +336,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          rm -rf ./release-wasm
+
           git checkout -b "$BRANCH"
-          git add -A
+          git add packages/pay/src/providers/wasm/ \
+               packages/react-native-compat/react-native-compat.podspec \
+               packages/react-native-compat/android/build.gradle \
+               .changeset/
           git commit -m "$TITLE"
           git push -u origin "$BRANCH"
 
