@@ -65,7 +65,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAGS=$(gh release list --repo reown-com/yttrium --limit 50 --json tagName --jq '.[].tagName' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$')
+          TAGS=$(gh release list --repo reown-com/yttrium --limit 10 --json tagName --jq '.[].tagName' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$')
 
           for TAG in $TAGS; do
             ASSETS=$(gh release view "$TAG" --repo reown-com/yttrium --json assets --jq '.assets[].name')
@@ -86,7 +86,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAGS=$(gh release list --repo reown-com/yttrium --limit 50 --json tagName --jq '.[].tagName' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$')
+          TAGS=$(gh release list --repo reown-com/yttrium --limit 10 --json tagName --jq '.[].tagName' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$')
 
           for TAG in $TAGS; do
             ASSETS=$(gh release view "$TAG" --repo reown-com/yttrium --json assets --jq '.assets[].name')
