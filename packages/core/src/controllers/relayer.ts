@@ -275,13 +275,10 @@ export class Relayer extends IRelayer {
 
   public async transportClose() {
     this.transportExplicitlyClosed = true;
-    clearTimeout(this.reconnectTimeout);
-    this.reconnectTimeout = undefined;
-    this.reconnectInProgress = false;
     clearTimeout(this.stalledRestartTimeout);
     this.stalledRestartInProgress = false;
     this.stalledRestartBackoff = 0;
-    await this.transportDisconnect();
+    await this.resetTransport();
   }
 
   async transportOpen(relayUrl?: string) {
@@ -317,8 +314,15 @@ export class Relayer extends IRelayer {
     if (this.connectionAttemptInProgress) return;
     this.relayUrl = relayUrl || this.relayUrl;
     await this.confirmOnlineStateOrThrow();
-    await this.transportClose();
+    await this.resetTransport();
     await this.transportOpen();
+  }
+
+  private async resetTransport() {
+    await this.transportDisconnect();
+    clearTimeout(this.reconnectTimeout);
+    this.reconnectTimeout = undefined;
+    this.reconnectInProgress = false;
   }
 
   public async confirmOnlineStateOrThrow() {

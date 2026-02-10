@@ -256,7 +256,8 @@ describe("Subscriber", () => {
       requestStub = Sinon.stub(relayer, "request");
     });
 
-    afterEach(() => {
+    afterEach(async () => {
+      await relayer.transportClose();
       restartStub.restore();
       requestStub.restore();
     });

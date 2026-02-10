@@ -728,7 +728,7 @@ describe("Relayer", () => {
     });
     afterEach(async () => {
       restartStub.restore();
-      await disconnectSocket(relayer);
+      await relayer.transportClose();
     });
 
     it("should call restartTransport immediately on first connection_stalled", async () => {
