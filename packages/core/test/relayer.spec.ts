@@ -715,4 +715,84 @@ describe("Relayer", () => {
       });
     },
   );
+
+  describe("connection_stalled", () => {
+    let restartStub: Sinon.SinonStub;
+
+    beforeEach(async () => {
+      core = new Core(TEST_CORE_OPTIONS);
+      relayer = core.relayer;
+      await core.start();
+      relayer.subscriber.topicMap.set(randomTopic, randomTopic);
+      restartStub = Sinon.stub(relayer, "restartTransport").resolves();
+    });
+    afterEach(async () => {
+      restartStub.restore();
+      await disconnectSocket(relayer);
+    });
+
+    it("should call restartTransport immediately on first connection_stalled", async () => {
+      // #when
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // #then - first emission has 0 delay (backoff=0 * base)
+      expect(restartStub.calledOnce).to.be.true;
+    });
+
+    it("should not call restartTransport when transport is explicitly closed", async () => {
+      // #given
+      await relayer.transportClose();
+
+      // #when
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // #then
+      expect(restartStub.called).to.be.false;
+    });
+
+    it("should not trigger multiple restarts from rapid connection_stalled emissions", async () => {
+      // #when - emit multiple times rapidly
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // #then - only one restart despite multiple emissions
+      expect(restartStub.calledOnce).to.be.true;
+    });
+
+    it("should apply exponential backoff on subsequent connection_stalled emissions", async () => {
+      // #when - first emission (0ms delay)
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(restartStub.calledOnce).to.be.true;
+
+      // #when - second emission (2s delay) - should NOT fire yet after 50ms
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(restartStub.callCount).to.equal(1);
+
+      // #then - should fire after the 2s backoff
+      await new Promise((resolve) => setTimeout(resolve, 2100));
+      expect(restartStub.callCount).to.equal(2);
+    });
+
+    it("should reset backoff after successful connection", async () => {
+      // #given - trigger first stalled restart (immediate)
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(restartStub.callCount).to.equal(1);
+
+      // #when - simulate successful connection via onConnectHandler
+      // @ts-expect-error - private method
+      relayer.onConnectHandler();
+
+      // #then - next stalled event should be immediate again (backoff reset)
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(restartStub.callCount).to.equal(2);
+    });
+  });
 });

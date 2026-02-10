@@ -97,6 +97,11 @@ export class Relayer extends IRelayer {
   private reconnectInProgress = false;
   private requestsInFlight: string[] = [];
   private connectTimeout = toMiliseconds(ONE_SECOND * 15);
+  private stalledRestartInProgress = false;
+  private stalledRestartTimeout: NodeJS.Timeout | undefined;
+  private stalledRestartBackoff = 0;
+  private readonly stalledRestartBaseInterval = toMiliseconds(ONE_SECOND * 2);
+  private readonly stalledRestartMaxInterval = toMiliseconds(THIRTY_SECONDS);
   constructor(opts: RelayerOptions) {
     super(opts);
     this.core = opts.core;
@@ -273,6 +278,8 @@ export class Relayer extends IRelayer {
     clearTimeout(this.reconnectTimeout);
     this.reconnectTimeout = undefined;
     this.reconnectInProgress = false;
+    clearTimeout(this.stalledRestartTimeout);
+    this.stalledRestartInProgress = false;
     await this.transportDisconnect();
   }
 
@@ -567,6 +574,7 @@ export class Relayer extends IRelayer {
 
   private onConnectHandler = () => {
     this.logger.warn({}, "Relayer connected 🛜");
+    this.stalledRestartBackoff = 0;
     this.startPingTimeout();
     this.events.emit(RELAYER_EVENTS.connect);
   };
@@ -632,6 +640,26 @@ export class Relayer extends IRelayer {
           this.logger.warn(error, (error as Error)?.message);
         }
       }
+    });
+
+    this.events.on(RELAYER_EVENTS.connection_stalled, () => {
+      if (this.transportExplicitlyClosed) return;
+      if (this.stalledRestartInProgress) return;
+      this.stalledRestartInProgress = true;
+
+      const delay = Math.min(
+        this.stalledRestartBackoff * this.stalledRestartBaseInterval,
+        this.stalledRestartMaxInterval,
+      );
+      this.stalledRestartBackoff++;
+
+      this.logger.warn(`Connection stalled, restarting transport${delay ? ` in ${delay}ms` : ""}...`);
+      this.stalledRestartTimeout = setTimeout(() => {
+        this.stalledRestartInProgress = false;
+        this.restartTransport().catch((error) =>
+          this.logger.error(error, (error as Error)?.message),
+        );
+      }, delay);
     });
   }
 
