@@ -319,6 +319,7 @@ export class Relayer extends IRelayer {
   }
 
   private async resetTransport() {
+    this.reconnectInProgress = true;
     await this.transportDisconnect();
     clearTimeout(this.reconnectTimeout);
     this.reconnectTimeout = undefined;
