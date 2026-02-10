@@ -653,10 +653,13 @@ export class Relayer extends IRelayer {
       if (this.stalledRestartInProgress) return;
       this.stalledRestartInProgress = true;
 
-      const delay = Math.min(
-        this.stalledRestartBackoff * this.stalledRestartBaseInterval,
-        this.stalledRestartMaxInterval,
-      );
+      const delay =
+        this.stalledRestartBackoff === 0
+          ? 0
+          : Math.min(
+              Math.pow(2, this.stalledRestartBackoff - 1) * this.stalledRestartBaseInterval,
+              this.stalledRestartMaxInterval,
+            );
       this.stalledRestartBackoff++;
 
       this.logger.warn(
