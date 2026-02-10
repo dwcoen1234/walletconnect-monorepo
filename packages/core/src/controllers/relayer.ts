@@ -319,11 +319,14 @@ export class Relayer extends IRelayer {
   }
 
   private async resetTransport() {
+    // Guards must be set synchronously before any async work:
+    // - reconnectInProgress prevents onProviderDisconnect from scheduling a competing reconnect
+    // - clearTimeout prevents a pending reconnectTimeout from firing during transportDisconnect
     this.reconnectInProgress = true;
-    await this.transportDisconnect();
-    await this.subscriber.stop();
     clearTimeout(this.reconnectTimeout);
     this.reconnectTimeout = undefined;
+    await this.transportDisconnect();
+    await this.subscriber.stop();
     this.reconnectInProgress = false;
   }
 
