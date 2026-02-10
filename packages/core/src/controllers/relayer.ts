@@ -670,6 +670,7 @@ export class Relayer extends IRelayer {
       );
       this.stalledRestartTimeout = setTimeout(async () => {
         try {
+          if (this.transportExplicitlyClosed) return;
           await this.restartTransport();
         } catch (error) {
           this.logger.error(error, (error as Error)?.message);
