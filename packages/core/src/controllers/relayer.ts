@@ -280,6 +280,7 @@ export class Relayer extends IRelayer {
     this.reconnectInProgress = false;
     clearTimeout(this.stalledRestartTimeout);
     this.stalledRestartInProgress = false;
+    this.stalledRestartBackoff = 0;
     await this.transportDisconnect();
   }
 
@@ -574,7 +575,6 @@ export class Relayer extends IRelayer {
 
   private onConnectHandler = () => {
     this.logger.warn({}, "Relayer connected 🛜");
-    this.stalledRestartBackoff = 0;
     this.startPingTimeout();
     this.events.emit(RELAYER_EVENTS.connect);
   };
@@ -656,11 +656,14 @@ export class Relayer extends IRelayer {
       this.logger.warn(
         `Connection stalled, restarting transport${delay ? ` in ${delay}ms` : ""}...`,
       );
-      this.stalledRestartTimeout = setTimeout(() => {
-        this.stalledRestartInProgress = false;
-        this.restartTransport().catch((error) =>
-          this.logger.error(error, (error as Error)?.message),
-        );
+      this.stalledRestartTimeout = setTimeout(async () => {
+        try {
+          await this.restartTransport();
+        } catch (error) {
+          this.logger.error(error, (error as Error)?.message);
+        } finally {
+          this.stalledRestartInProgress = false;
+        }
       }, delay);
     });
   }

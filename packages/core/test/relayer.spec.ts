@@ -779,17 +779,33 @@ describe("Relayer", () => {
       expect(restartStub.callCount).to.equal(2);
     });
 
-    it("should reset backoff after successful connection", async () => {
-      // #given - trigger first stalled restart (immediate)
+    it("should NOT reset backoff on successful connection", async () => {
+      // #given - trigger first stalled restart (immediate, backoff goes 0 → 1)
       relayer.events.emit(RELAYER_EVENTS.connection_stalled);
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(restartStub.callCount).to.equal(1);
 
-      // #when - simulate successful connection via onConnectHandler
+      // #when - simulate successful connection
       // @ts-expect-error - private method
       relayer.onConnectHandler();
 
-      // #then - next stalled event should be immediate again (backoff reset)
+      // #then - next stalled event should NOT be immediate (backoff=1 → 2s delay)
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(restartStub.callCount).to.equal(1);
+    });
+
+    it("should reset backoff after explicit transportClose", async () => {
+      // #given - trigger first stalled restart (immediate, backoff goes 0 → 1)
+      relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(restartStub.callCount).to.equal(1);
+
+      // #when - explicit transport close resets backoff
+      await relayer.transportClose();
+      relayer.transportExplicitlyClosed = false;
+
+      // #then - next stalled event should be immediate again (backoff was reset to 0)
       relayer.events.emit(RELAYER_EVENTS.connection_stalled);
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(restartStub.callCount).to.equal(2);
