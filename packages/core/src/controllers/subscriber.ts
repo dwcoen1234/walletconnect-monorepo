@@ -312,8 +312,8 @@ export class Subscriber extends ISubscriber {
     return null;
   }
 
-  private async rpcBatchSubscribe(subscriptions: SubscriberTypes.Params[]) {
-    if (!subscriptions.length) return;
+  private async rpcBatchSubscribe(subscriptions: SubscriberTypes.Params[]): Promise<boolean> {
+    if (!subscriptions.length) return true;
     const relay = subscriptions[0].relay;
     const api = getRelayProtocolApi(relay!.protocol);
     const request: RequestArguments<RelayJsonRpc.BatchSubscribeParams> = {
@@ -325,19 +325,23 @@ export class Subscriber extends ISubscriber {
     this.logger.debug(`Outgoing Relay Payload`);
     this.logger.trace({ type: "payload", direction: "outgoing", request });
     try {
-      const subscribe = await createExpiringPromise(
-        new Promise((resolve) => {
+      await createExpiringPromise(
+        new Promise((resolve, reject) => {
           this.relayer
             .request(request)
-            .catch((e) => this.logger.warn(e))
-            .then(resolve);
+            .then(resolve)
+            .catch((e) => {
+              this.logger.warn(e);
+              reject(e);
+            });
         }),
         this.subscribeTimeout,
         "rpcBatchSubscribe failed, please try again",
       );
-      await subscribe;
+      return true;
     } catch (err) {
       this.relayer.events.emit(RELAYER_EVENTS.connection_stalled);
+      return false;
     }
   }
 
@@ -510,7 +514,16 @@ export class Subscriber extends ISubscriber {
   private async batchSubscribe(subscriptions: SubscriberTypes.Params[]) {
     if (!subscriptions.length) return;
 
-    await this.rpcBatchSubscribe(subscriptions);
+    const success = await this.rpcBatchSubscribe(subscriptions);
+    if (!success) {
+      this.logger.warn(
+        `Batch subscribe failed for ${subscriptions.length} topics, adding to pending for retry`,
+      );
+      subscriptions.forEach((s) => {
+        this.pending.set(s.topic, s);
+      });
+      return;
+    }
     this.onBatchSubscribe(
       await Promise.all(
         subscriptions.map(async (s) => {

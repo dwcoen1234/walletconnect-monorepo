@@ -9,6 +9,7 @@ import {
   CORE_DEFAULT,
   CORE_STORAGE_PREFIX,
   MESSAGES_STORAGE_VERSION,
+  RELAYER_EVENTS,
   RELAYER_PROVIDER_EVENTS,
   Subscriber,
   SUBSCRIBER_CONTEXT,
@@ -243,6 +244,120 @@ describe("Subscriber", () => {
           }),
         ),
       ).to.be.true;
+    });
+  });
+
+  describe("batchSubscribe error handling", () => {
+    let restartStub: Sinon.SinonStub;
+    let requestStub: Sinon.SinonStub;
+
+    beforeEach(() => {
+      restartStub = Sinon.stub(relayer, "restartTransport").resolves();
+      requestStub = Sinon.stub(relayer, "request");
+    });
+
+    afterEach(async () => {
+      await relayer.transportClose();
+      restartStub.restore();
+      requestStub.restore();
+    });
+
+    it("should not mark topics as subscribed when batch subscribe RPC fails", async () => {
+      // #given
+      requestStub.rejects(new Error("relay error"));
+      const topic = generateRandomBytes32();
+
+      // @ts-expect-error - private property
+      subscriber.cached = [{ topic, relay: { protocol: "irn" } }];
+
+      // #when - simulate reconnect which triggers batchSubscribe via onRestart
+      // @ts-expect-error - private method
+      await subscriber.onRestart();
+
+      // #then - batch subscribe RPC was attempted with the correct topic
+      expect(requestStub.calledOnce).to.equal(true);
+      expect(
+        requestStub.calledWith(
+          Sinon.match({ method: "irn_batchSubscribe", params: { topics: [topic] } }),
+        ),
+      ).to.equal(true);
+      // topics should NOT be in subscriptions/topicMap
+      expect(subscriber.subscriptions.size).to.equal(0);
+      expect(subscriber.topics.length).to.equal(0);
+      expect(await subscriber.isSubscribed(topic)).to.equal(false);
+    });
+
+    it("should add failed batch topics to pending for retry", async () => {
+      // #given
+      requestStub.rejects(new Error("relay error"));
+      const topic = generateRandomBytes32();
+
+      // @ts-expect-error - private property
+      subscriber.cached = [{ topic, relay: { protocol: "irn" } }];
+
+      // #when
+      // @ts-expect-error - private method
+      await subscriber.onRestart();
+
+      // #then - batch subscribe RPC was attempted
+      expect(requestStub.calledOnce).to.equal(true);
+      expect(
+        requestStub.calledWith(
+          Sinon.match({ method: "irn_batchSubscribe", params: { topics: [topic] } }),
+        ),
+      ).to.equal(true);
+      // topics should be in pending for retry on next heartbeat
+      expect(subscriber.pending.has(topic)).to.equal(true);
+    });
+
+    it("should emit connection_stalled when batch subscribe fails", async () => {
+      // #given
+      requestStub.rejects(new Error("relay error"));
+      const topic = generateRandomBytes32();
+      const stalledSpy = Sinon.spy();
+      relayer.events.on(RELAYER_EVENTS.connection_stalled, stalledSpy);
+
+      // @ts-expect-error - private property
+      subscriber.cached = [{ topic, relay: { protocol: "irn" } }];
+
+      // #when
+      // @ts-expect-error - private method
+      await subscriber.onRestart();
+
+      // #then - batch subscribe RPC was attempted
+      expect(requestStub.calledOnce).to.equal(true);
+      expect(
+        requestStub.calledWith(
+          Sinon.match({ method: "irn_batchSubscribe", params: { topics: [topic] } }),
+        ),
+      ).to.equal(true);
+      expect(stalledSpy.calledOnce).to.equal(true);
+    });
+
+    it("should register subscriptions when batch subscribe succeeds", async () => {
+      // #given
+      requestStub.resolves({});
+      const topic = generateRandomBytes32();
+
+      // @ts-expect-error - private property
+      subscriber.cached = [{ topic, relay: { protocol: "irn" } }];
+
+      // #when
+      // @ts-expect-error - private method
+      await subscriber.onRestart();
+
+      // #then - batch subscribe RPC was attempted
+      expect(requestStub.calledOnce).to.equal(true);
+      expect(
+        requestStub.calledWith(
+          Sinon.match({ method: "irn_batchSubscribe", params: { topics: [topic] } }),
+        ),
+      ).to.equal(true);
+      // topics should be in subscriptions/topicMap
+      expect(subscriber.subscriptions.size).to.equal(1);
+      expect(subscriber.topics.length).to.equal(1);
+      expect(await subscriber.isSubscribed(topic)).to.equal(true);
+      expect(subscriber.pending.has(topic)).to.equal(false);
     });
   });
 });

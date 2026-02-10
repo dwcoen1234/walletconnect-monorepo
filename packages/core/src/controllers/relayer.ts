@@ -97,6 +97,11 @@ export class Relayer extends IRelayer {
   private reconnectInProgress = false;
   private requestsInFlight: string[] = [];
   private connectTimeout = toMiliseconds(ONE_SECOND * 15);
+  private stalledRestartInProgress = false;
+  private stalledRestartTimeout: NodeJS.Timeout | undefined;
+  private stalledRestartBackoff = 0;
+  private readonly stalledRestartBaseInterval = toMiliseconds(ONE_SECOND * 2);
+  private readonly stalledRestartMaxInterval = toMiliseconds(THIRTY_SECONDS);
   constructor(opts: RelayerOptions) {
     super(opts);
     this.core = opts.core;
@@ -270,10 +275,10 @@ export class Relayer extends IRelayer {
 
   public async transportClose() {
     this.transportExplicitlyClosed = true;
-    clearTimeout(this.reconnectTimeout);
-    this.reconnectTimeout = undefined;
-    this.reconnectInProgress = false;
-    await this.transportDisconnect();
+    clearTimeout(this.stalledRestartTimeout);
+    this.stalledRestartInProgress = false;
+    this.stalledRestartBackoff = 0;
+    await this.resetTransport();
   }
 
   async transportOpen(relayUrl?: string) {
@@ -309,8 +314,20 @@ export class Relayer extends IRelayer {
     if (this.connectionAttemptInProgress) return;
     this.relayUrl = relayUrl || this.relayUrl;
     await this.confirmOnlineStateOrThrow();
-    await this.transportClose();
+    await this.resetTransport();
     await this.transportOpen();
+  }
+
+  private async resetTransport() {
+    // Guards must be set synchronously before any async work:
+    // - reconnectInProgress prevents onProviderDisconnect from scheduling a competing reconnect
+    // - clearTimeout prevents a pending reconnectTimeout from firing during transportDisconnect
+    this.reconnectInProgress = true;
+    clearTimeout(this.reconnectTimeout);
+    this.reconnectTimeout = undefined;
+    await this.transportDisconnect();
+    await this.subscriber.stop();
+    this.reconnectInProgress = false;
   }
 
   public async confirmOnlineStateOrThrow() {
@@ -632,6 +649,35 @@ export class Relayer extends IRelayer {
           this.logger.warn(error, (error as Error)?.message);
         }
       }
+    });
+
+    this.events.on(RELAYER_EVENTS.connection_stalled, () => {
+      if (this.transportExplicitlyClosed) return;
+      if (this.stalledRestartInProgress) return;
+      this.stalledRestartInProgress = true;
+
+      const delay =
+        this.stalledRestartBackoff === 0
+          ? 0
+          : Math.min(
+              Math.pow(2, this.stalledRestartBackoff - 1) * this.stalledRestartBaseInterval,
+              this.stalledRestartMaxInterval,
+            );
+      this.stalledRestartBackoff++;
+
+      this.logger.warn(
+        `Connection stalled, restarting transport${delay ? ` in ${delay}ms` : ""}...`,
+      );
+      this.stalledRestartTimeout = setTimeout(async () => {
+        try {
+          if (this.transportExplicitlyClosed) return;
+          await this.restartTransport();
+        } catch (error) {
+          this.logger.error(error, (error as Error)?.message);
+        } finally {
+          this.stalledRestartInProgress = false;
+        }
+      }, delay);
     });
   }
 
