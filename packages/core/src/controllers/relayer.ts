@@ -653,7 +653,9 @@ export class Relayer extends IRelayer {
       );
       this.stalledRestartBackoff++;
 
-      this.logger.warn(`Connection stalled, restarting transport${delay ? ` in ${delay}ms` : ""}...`);
+      this.logger.warn(
+        `Connection stalled, restarting transport${delay ? ` in ${delay}ms` : ""}...`,
+      );
       this.stalledRestartTimeout = setTimeout(() => {
         this.stalledRestartInProgress = false;
         this.restartTransport().catch((error) =>
