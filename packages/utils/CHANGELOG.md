@@ -1,5 +1,14 @@
 # @walletconnect/utils
 
+## 2.23.5
+
+### Patch Changes
+
+- [#7147](https://github.com/WalletConnect/walletconnect-monorepo/pull/7147) [`737c6d4`](https://github.com/WalletConnect/walletconnect-monorepo/commit/737c6d4a3c1afcc1de037325e1c45575ddb9414f) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Replaced bs58 dependency with @scure/base for base58 encoding/decoding
+
+- Updated dependencies []:
+  - @walletconnect/types@2.23.5
+
 ## 2.23.4
 
 ### Patch Changes
