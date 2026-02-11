@@ -13,7 +13,7 @@ export type PaymentStatus = "requires_action" | "processing" | "succeeded" | "fa
 /**
  * Type of data collection field
  */
-export type CollectDataFieldType = "text" | "date";
+export type CollectDataFieldType = "text" | "date" | "checkbox";
 
 // ==================== Display Types ====================
 
@@ -113,6 +113,8 @@ export interface CollectDataField {
  */
 export interface CollectDataAction {
   fields: CollectDataField[];
+  url?: string;
+  schema?: string;
 }
 
 /**
@@ -212,6 +214,14 @@ export interface PaymentOptionsResponse {
 }
 
 /**
+ * Transaction result info returned after payment confirmation
+ */
+export interface PaymentResultInfo {
+  txId: string;
+  optionAmount: PayAmount;
+}
+
+/**
  * Response from confirm payment
  */
 export interface ConfirmPaymentResponse {
@@ -221,4 +231,6 @@ export interface ConfirmPaymentResponse {
   isFinal: boolean;
   /** Time to poll for payment status, in milliseconds */
   pollInMs?: number;
+  /** Transaction result info, present when payment succeeds */
+  info?: PaymentResultInfo;
 }
