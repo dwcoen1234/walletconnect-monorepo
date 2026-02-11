@@ -1,5 +1,15 @@
 # @walletconnect/core
 
+## 2.23.5
+
+### Patch Changes
+
+- [#7163](https://github.com/WalletConnect/walletconnect-monorepo/pull/7163) [`ceecb3b`](https://github.com/WalletConnect/walletconnect-monorepo/commit/ceecb3b9480357dc32ddb071a864290de6cd645b) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixed batch subscribe silently swallowing errors and marking topics as subscribed when the RPC failed. Failed topics are now kept in pending for retry, and connection_stalled triggers a transport restart with exponential backoff.
+
+- Updated dependencies [[`737c6d4`](https://github.com/WalletConnect/walletconnect-monorepo/commit/737c6d4a3c1afcc1de037325e1c45575ddb9414f)]:
+  - @walletconnect/utils@2.23.5
+  - @walletconnect/types@2.23.5
+
 ## 2.23.4
 
 ### Patch Changes

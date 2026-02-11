@@ -1,5 +1,14 @@
 # @walletconnect/sign-client
 
+## 2.23.5
+
+### Patch Changes
+
+- Updated dependencies [[`ceecb3b`](https://github.com/WalletConnect/walletconnect-monorepo/commit/ceecb3b9480357dc32ddb071a864290de6cd645b), [`737c6d4`](https://github.com/WalletConnect/walletconnect-monorepo/commit/737c6d4a3c1afcc1de037325e1c45575ddb9414f)]:
+  - @walletconnect/core@2.23.5
+  - @walletconnect/utils@2.23.5
+  - @walletconnect/types@2.23.5
+
 ## 2.23.4
 
 ### Patch Changes

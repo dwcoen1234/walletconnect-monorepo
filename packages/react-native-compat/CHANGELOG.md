@@ -1,5 +1,15 @@
 # @walletconnect/react-native-compat
 
+## 2.23.5
+
+### Patch Changes
+
+- [#7144](https://github.com/WalletConnect/walletconnect-monorepo/pull/7144) [`91d0d7d`](https://github.com/WalletConnect/walletconnect-monorepo/commit/91d0d7d238930c21fb484ab9e27b56a10da79b46) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixed incorrect relative import paths for TurboModule native modules
+
+- [#7162](https://github.com/WalletConnect/walletconnect-monorepo/pull/7162) [`ee36e4a`](https://github.com/WalletConnect/walletconnect-monorepo/commit/ee36e4abf66be7874e9e4120fb310e3b87ad978c) Thanks [@github-actions](https://github.com/apps/github-actions)! - chore: update yttrium native dependencies
+  - Update YttriumWrapper (iOS) to 0.10.37
+  - Update yttrium-wcpay (Android) to 0.10.38
+
 ## 2.23.4
 
 ### Patch Changes

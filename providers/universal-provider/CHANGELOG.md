@@ -1,5 +1,16 @@
 # @walletconnect/universal-provider
 
+## 2.23.5
+
+### Patch Changes
+
+- [#7148](https://github.com/WalletConnect/walletconnect-monorepo/pull/7148) [`c077ff0`](https://github.com/WalletConnect/walletconnect-monorepo/commit/c077ff01d701a16738daf56d9a7e1fd77ca874d1) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Fixed TypeError in onChainChanged when provider is undefined during cleanup race conditions
+
+- Updated dependencies [[`737c6d4`](https://github.com/WalletConnect/walletconnect-monorepo/commit/737c6d4a3c1afcc1de037325e1c45575ddb9414f)]:
+  - @walletconnect/utils@2.23.5
+  - @walletconnect/sign-client@2.23.5
+  - @walletconnect/types@2.23.5
+
 ## 2.23.4
 
 ### Patch Changes
