@@ -1,25 +1,36 @@
 /**
  * Provider exports for WalletConnect Pay SDK
+ *
+ * WASM provider is loaded dynamically to avoid pulling in TextDecoder-dependent
+ * code in React Native debug builds where TextDecoder is unavailable.
  */
 
+import { isReactNative } from "@walletconnect/utils";
 import type { PayProvider, PayProviderConfig, PayProviderType } from "../types/index.js";
 import { createNativeProvider, isNativeProviderAvailable } from "./native.js";
-import { createWasmProvider, isWasmProviderAvailable } from "./wasm.js";
 
 export * from "./native.js";
-export * from "./wasm.js";
+
+function isWasmProviderAvailable(): boolean {
+  return !isReactNative() && typeof WebAssembly !== "undefined";
+}
+
+export { isWasmProviderAvailable };
+
+async function loadWasmProvider(config: PayProviderConfig): Promise<PayProvider> {
+  const { createWasmProvider } = await import("./wasm.js");
+  return createWasmProvider(config);
+}
 
 /**
  * Detect the best available provider type for the current environment
  * Priority: Native (React Native) > WASM (Browser/Node.js)
  */
 export function detectProviderType(): PayProviderType | null {
-  // Check for native module (React Native) - preferred for mobile
   if (isNativeProviderAvailable()) {
     return "native";
   }
 
-  // Check for WASM support (Browser/Node.js)
   if (isWasmProviderAvailable()) {
     return "wasm";
   }
@@ -28,26 +39,33 @@ export function detectProviderType(): PayProviderType | null {
 }
 
 /**
- * Create a provider based on auto-detection
- * @param config - Provider configuration
+ * Create a provider based on auto-detection.
+ * Returns a Promise because the WASM provider is loaded dynamically.
  */
-export function createProvider(config: PayProviderConfig): PayProvider {
-  const providerType = detectProviderType();
+export function createProvider(config: PayProviderConfig): Promise<PayProvider> {
+  return new Promise((resolve, reject) => {
+    const providerType = detectProviderType();
 
-  if (!providerType) {
-    throw new Error(
-      "No Pay provider available. Make sure you are running in React Native with the native module installed, or in a browser/Node.js environment with WebAssembly support.",
-    );
-  }
+    if (!providerType) {
+      reject(
+        new Error(
+          "No Pay provider available. Make sure you are running in React Native with the native module installed, or in a browser/Node.js environment with WebAssembly support.",
+        ),
+      );
+      return;
+    }
 
-  switch (providerType) {
-    case "native":
-      return createNativeProvider(config);
-    case "wasm":
-      return createWasmProvider(config);
-    default:
-      throw new Error(`Unknown provider type: ${providerType}`);
-  }
+    switch (providerType) {
+      case "native":
+        resolve(createNativeProvider(config));
+        break;
+      case "wasm":
+        resolve(loadWasmProvider(config));
+        break;
+      default:
+        reject(new Error(`Unknown provider type: ${providerType}`));
+    }
+  });
 }
 
 /**
