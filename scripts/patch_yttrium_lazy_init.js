@@ -17,24 +17,12 @@
 const fs = require("fs");
 const path = require("path");
 
-const filePath =
-  process.argv[2] ||
-  path.join(__dirname, "../packages/pay/src/providers/wasm/yttrium.js");
+// --- Patterns ---
 
-if (!fs.existsSync(filePath)) {
-  console.error(`File not found: ${filePath}`);
-  process.exit(1);
-}
-
-let code = fs.readFileSync(filePath, "utf-8");
-const original = code;
-
-// --- TextDecoder: eager init → lazy getter ---
-
-const textDecoderEager =
+const TEXT_DECODER_EAGER =
   /const cachedTextDecoder =\s*typeof TextDecoder !== "undefined"\s*\? new TextDecoder\("utf-8", \{ ignoreBOM: true, fatal: true \}\)\s*: \{\s*decode: \(\) => \{\s*throw Error\("TextDecoder not available"\);\s*\},?\s*\};\s*if \(typeof TextDecoder !== "undefined"\) \{\s*cachedTextDecoder\.decode\(\);\s*\}/;
 
-const textDecoderLazy = `let cachedTextDecoder = null;
+const TEXT_DECODER_LAZY = `let cachedTextDecoder = null;
 
 function getTextDecoder() {
   if (!cachedTextDecoder) {
@@ -47,24 +35,10 @@ function getTextDecoder() {
   return cachedTextDecoder;
 }`;
 
-if (!textDecoderEager.test(code)) {
-  console.error("WARNING: Could not find TextDecoder eager init pattern — skipping.");
-} else {
-  code = code.replace(textDecoderEager, textDecoderLazy);
-  // Replace usage sites but protect the warmup call inside getTextDecoder()
-  // by temporarily swapping it with a placeholder
-  code = code.replace("cachedTextDecoder.decode();\n  }\n  return cachedTextDecoder;", "__WARMUP_PLACEHOLDER__");
-  code = code.replace(/cachedTextDecoder\.decode\(/g, "getTextDecoder().decode(");
-  code = code.replace("__WARMUP_PLACEHOLDER__", "cachedTextDecoder.decode();\n  }\n  return cachedTextDecoder;");
-  console.log("Patched TextDecoder to lazy initialization.");
-}
-
-// --- TextEncoder: eager init + encodeString → lazy getter + function ---
-
-const textEncoderEager =
+const TEXT_ENCODER_EAGER =
   /const cachedTextEncoder =\s*typeof TextEncoder !== "undefined"\s*\? new TextEncoder\("utf-8"\)\s*: \{\s*encode: \(\) => \{\s*throw Error\("TextEncoder not available"\);\s*\},?\s*\};\s*const encodeString =\s*typeof cachedTextEncoder\.encodeInto === "function"\s*\? function \(arg, view\) \{\s*return cachedTextEncoder\.encodeInto\(arg, view\);\s*\}\s*: function \(arg, view\) \{\s*const buf = cachedTextEncoder\.encode\(arg\);\s*view\.set\(buf\);\s*return \{\s*read: arg\.length,\s*written: buf\.length,?\s*\};\s*\};/;
 
-const textEncoderLazy = `let cachedTextEncoder = null;
+const TEXT_ENCODER_LAZY = `let cachedTextEncoder = null;
 
 function getTextEncoder() {
   if (!cachedTextEncoder) {
@@ -89,17 +63,71 @@ function encodeString(arg, view) {
   };
 }`;
 
-if (!textEncoderEager.test(code)) {
-  console.error("WARNING: Could not find TextEncoder eager init pattern — skipping.");
-} else {
-  code = code.replace(textEncoderEager, textEncoderLazy);
-  code = code.replace(/cachedTextEncoder\.encode\(/g, "getTextEncoder().encode(");
-  console.log("Patched TextEncoder to lazy initialization.");
+const WARMUP_PLACEHOLDER = "__WARMUP_PLACEHOLDER__";
+const WARMUP_ORIGINAL = "cachedTextDecoder.decode();\n  }\n  return cachedTextDecoder;";
+
+// --- Core transform ---
+
+function patchYttriumSource(code) {
+  let patched = code;
+  const results = { textDecoder: false, textEncoder: false };
+
+  if (TEXT_DECODER_EAGER.test(patched)) {
+    patched = patched.replace(TEXT_DECODER_EAGER, TEXT_DECODER_LAZY);
+    patched = patched.replace(WARMUP_ORIGINAL, WARMUP_PLACEHOLDER);
+    patched = patched.replace(/cachedTextDecoder\.decode\(/g, "getTextDecoder().decode(");
+    patched = patched.replace(WARMUP_PLACEHOLDER, WARMUP_ORIGINAL);
+    results.textDecoder = true;
+  }
+
+  if (TEXT_ENCODER_EAGER.test(patched)) {
+    patched = patched.replace(TEXT_ENCODER_EAGER, TEXT_ENCODER_LAZY);
+    patched = patched.replace(/cachedTextEncoder\.encode\(/g, "getTextEncoder().encode(");
+    results.textEncoder = true;
+  }
+
+  return { code: patched, changed: patched !== code, results };
 }
 
-if (code === original) {
-  console.log("No changes needed — file already patched or patterns not found.");
-} else {
-  fs.writeFileSync(filePath, code, "utf-8");
-  console.log(`Wrote patched file: ${filePath}`);
+// --- Exports for testing ---
+
+module.exports = {
+  patchYttriumSource,
+  TEXT_DECODER_EAGER,
+  TEXT_ENCODER_EAGER,
+};
+
+// --- CLI entry point ---
+
+if (require.main === module) {
+  const filePath =
+    process.argv[2] ||
+    path.join(__dirname, "../packages/pay/src/providers/wasm/yttrium.js");
+
+  if (!fs.existsSync(filePath)) {
+    console.error(`File not found: ${filePath}`);
+    process.exit(1);
+  }
+
+  const code = fs.readFileSync(filePath, "utf-8");
+  const { code: patched, changed, results } = patchYttriumSource(code);
+
+  if (!results.textDecoder) {
+    console.error("WARNING: Could not find TextDecoder eager init pattern — skipping.");
+  } else {
+    console.log("Patched TextDecoder to lazy initialization.");
+  }
+
+  if (!results.textEncoder) {
+    console.error("WARNING: Could not find TextEncoder eager init pattern — skipping.");
+  } else {
+    console.log("Patched TextEncoder to lazy initialization.");
+  }
+
+  if (!changed) {
+    console.log("No changes needed — file already patched or patterns not found.");
+  } else {
+    fs.writeFileSync(filePath, patched, "utf-8");
+    console.log(`Wrote patched file: ${filePath}`);
+  }
 }
