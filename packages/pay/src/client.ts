@@ -35,7 +35,7 @@ export class WalletConnectPay {
   public readonly baseUrl: string;
 
   private readonly logger: Logger;
-  private readonly providerPromise: Promise<PayProvider>;
+  private readonly provider: PayProvider;
 
   /**
    * Initialize a new Pay client
@@ -68,10 +68,8 @@ export class WalletConnectPay {
       bundleId: getAppId() ?? "",
     };
 
-    this.providerPromise = createProvider(providerConfig);
-    this.providerPromise.then(() => {
-      this.logger.debug(`${LOGGER_CONTEXT} provider initialized`);
-    });
+    this.provider = createProvider(providerConfig);
+    this.logger.debug(`${LOGGER_CONTEXT} provider initialized`);
   }
 
   /**
@@ -102,8 +100,7 @@ export class WalletConnectPay {
     );
 
     try {
-      const provider = await this.providerPromise;
-      const response = await provider.getPaymentOptions(params);
+      const response = await this.provider.getPaymentOptions(params);
 
       this.logger.debug(
         { paymentId: response.paymentId, optionsCount: response.options.length },
@@ -133,8 +130,7 @@ export class WalletConnectPay {
     );
 
     try {
-      const provider = await this.providerPromise;
-      const actions = await provider.getRequiredPaymentActions(params);
+      const actions = await this.provider.getRequiredPaymentActions(params);
 
       this.logger.debug(
         { actionsCount: actions.length },
@@ -171,8 +167,7 @@ export class WalletConnectPay {
     );
 
     try {
-      const provider = await this.providerPromise;
-      const response = await provider.confirmPayment(params);
+      const response = await this.provider.confirmPayment(params);
 
       this.logger.debug(
         { status: response.status, isFinal: response.isFinal },
