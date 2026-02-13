@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+### Patch Changes
+
+- [#7166](https://github.com/WalletConnect/walletconnect-monorepo/pull/7166) [`9567ffd`](https://github.com/WalletConnect/walletconnect-monorepo/commit/9567ffd39b3806f2e04bce1c35b5d634f09d2cf7) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - fix: lazy TextDecoder/TextEncoder initialization in WASM provider for React Native debug builds
+
 ## 1.0.3
 
 ### Patch Changes
