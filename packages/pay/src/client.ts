@@ -68,7 +68,6 @@ export class WalletConnectPay {
       bundleId: getAppId() ?? "",
     };
 
-    // Create provider (auto-detects available provider)
     this.provider = createProvider(providerConfig);
     this.logger.debug(`${LOGGER_CONTEXT} provider initialized`);
   }

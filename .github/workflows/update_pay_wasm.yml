@@ -250,6 +250,10 @@ jobs:
           echo "Updated files in $DEST_DIR:"
           ls -lh "$DEST_DIR/"
 
+      - name: Patch yttrium.js for React Native compatibility
+        if: steps.compare.outputs.wasm_needs_update == 'true'
+        run: node scripts/patch_yttrium_lazy_init.js
+
       - name: Update podspec with Swift version
         if: steps.compare.outputs.swift_needs_update == 'true'
         run: |

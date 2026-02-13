@@ -2,6 +2,7 @@
  * Provider exports for WalletConnect Pay SDK
  */
 
+import { isReactNative } from "@walletconnect/utils";
 import type { PayProvider, PayProviderConfig, PayProviderType } from "../types/index.js";
 import { createNativeProvider, isNativeProviderAvailable } from "./native.js";
 import { createWasmProvider, isWasmProviderAvailable } from "./wasm.js";
@@ -14,13 +15,11 @@ export * from "./wasm.js";
  * Priority: Native (React Native) > WASM (Browser/Node.js)
  */
 export function detectProviderType(): PayProviderType | null {
-  // Check for native module (React Native) - preferred for mobile
   if (isNativeProviderAvailable()) {
     return "native";
   }
 
-  // Check for WASM support (Browser/Node.js)
-  if (isWasmProviderAvailable()) {
+  if (!isReactNative() && isWasmProviderAvailable()) {
     return "wasm";
   }
 
