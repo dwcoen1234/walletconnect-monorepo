@@ -1,7 +1,7 @@
 {
   "name": "@walletconnect/pay",
   "description": "Pay SDK for WalletConnect - TypeScript wrapper for native uniffi module",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": false,
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/walletconnect-monorepo/",
