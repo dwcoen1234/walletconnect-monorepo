@@ -333,3 +333,63 @@ export function createMockPaymentOptionsWithCollectData(): PaymentOptionsRespons
     },
   };
 }
+
+/**
+ * Create a mock response with per-option collect data fields
+ */
+export function createMockPaymentOptionsWithOptionCollectData(): PaymentOptionsResponse {
+  return {
+    paymentId: "pay_option_collect",
+    options: [
+      {
+        id: "opt_with_collect",
+        account: "eip155:8453:0x1234567890123456789012345678901234567890",
+        amount: {
+          unit: "caip19/eip155:8453/erc20:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          value: "1000000",
+          display: {
+            assetSymbol: "USDC",
+            assetName: "USD Coin",
+            decimals: 6,
+            networkName: "Base",
+          },
+        },
+        etaS: 5,
+        actions: [],
+        collectData: {
+          fields: [
+            {
+              id: "email",
+              name: "Email Address",
+              required: true,
+              fieldType: "text",
+            },
+            {
+              id: "termsAccepted",
+              name: "Accept Terms",
+              required: true,
+              fieldType: "checkbox",
+            },
+          ],
+          url: "https://example.com/collect",
+        },
+      },
+      {
+        id: "opt_without_collect",
+        account: "eip155:1:0x1234567890123456789012345678901234567890",
+        amount: {
+          unit: "caip19/eip155:1/erc20:0xUSDC",
+          value: "1000000",
+          display: {
+            assetSymbol: "USDC",
+            assetName: "USD Coin",
+            decimals: 6,
+            networkName: "Ethereum",
+          },
+        },
+        etaS: 30,
+        actions: [],
+      },
+    ],
+  };
+}
