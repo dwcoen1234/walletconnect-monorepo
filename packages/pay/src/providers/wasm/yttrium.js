@@ -8,17 +8,17 @@ function getObject(idx) {
   return heap[idx];
 }
 
-let cachedTextDecoder = null;
+const cachedTextDecoder =
+  typeof TextDecoder !== "undefined"
+    ? new TextDecoder("utf-8", { ignoreBOM: true, fatal: true })
+    : {
+        decode: () => {
+          throw Error("TextDecoder not available");
+        },
+      };
 
-function getTextDecoder() {
-  if (!cachedTextDecoder) {
-    if (typeof TextDecoder === "undefined") {
-      throw Error("TextDecoder not available");
-    }
-    cachedTextDecoder = new TextDecoder("utf-8", { ignoreBOM: true, fatal: true });
-    cachedTextDecoder.decode();
-  }
-  return cachedTextDecoder;
+if (typeof TextDecoder !== "undefined") {
+  cachedTextDecoder.decode();
 }
 
 let cachedUint8ArrayMemory0 = null;
@@ -32,7 +32,7 @@ function getUint8ArrayMemory0() {
 
 function getStringFromWasm0(ptr, len) {
   ptr = ptr >>> 0;
-  return getTextDecoder().decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+  return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
 
 let heap_next = heap.length;
@@ -77,34 +77,32 @@ function getArrayU8FromWasm0(ptr, len) {
 
 let WASM_VECTOR_LEN = 0;
 
-let cachedTextEncoder = null;
+const cachedTextEncoder =
+  typeof TextEncoder !== "undefined"
+    ? new TextEncoder("utf-8")
+    : {
+        encode: () => {
+          throw Error("TextEncoder not available");
+        },
+      };
 
-function getTextEncoder() {
-  if (!cachedTextEncoder) {
-    if (typeof TextEncoder === "undefined") {
-      throw Error("TextEncoder not available");
-    }
-    cachedTextEncoder = new TextEncoder("utf-8");
-  }
-  return cachedTextEncoder;
-}
-
-function encodeString(arg, view) {
-  const encoder = getTextEncoder();
-  if (typeof encoder.encodeInto === "function") {
-    return encoder.encodeInto(arg, view);
-  }
-  const buf = encoder.encode(arg);
-  view.set(buf);
-  return {
-    read: arg.length,
-    written: buf.length,
-  };
-}
+const encodeString =
+  typeof cachedTextEncoder.encodeInto === "function"
+    ? function (arg, view) {
+        return cachedTextEncoder.encodeInto(arg, view);
+      }
+    : function (arg, view) {
+        const buf = cachedTextEncoder.encode(arg);
+        view.set(buf);
+        return {
+          read: arg.length,
+          written: buf.length,
+        };
+      };
 
 function passStringToWasm0(arg, malloc, realloc) {
   if (realloc === undefined) {
-    const buf = getTextEncoder().encode(arg);
+    const buf = cachedTextEncoder.encode(arg);
     const ptr = malloc(buf.length, 1) >>> 0;
     getUint8ArrayMemory0()
       .subarray(ptr, ptr + buf.length)
@@ -823,15 +821,15 @@ function __wbg_get_imports() {
     const ret = false;
     return ret;
   };
-  imports.wbg.__wbindgen_closure_wrapper1265 = function (arg0, arg1, arg2) {
+  imports.wbg.__wbindgen_closure_wrapper1291 = function (arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 145, __wbg_adapter_26);
     return addHeapObject(ret);
   };
-  imports.wbg.__wbindgen_closure_wrapper1473 = function (arg0, arg1, arg2) {
+  imports.wbg.__wbindgen_closure_wrapper1499 = function (arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 168, __wbg_adapter_29);
     return addHeapObject(ret);
   };
-  imports.wbg.__wbindgen_closure_wrapper1754 = function (arg0, arg1, arg2) {
+  imports.wbg.__wbindgen_closure_wrapper1780 = function (arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 226, __wbg_adapter_32);
     return addHeapObject(ret);
   };
