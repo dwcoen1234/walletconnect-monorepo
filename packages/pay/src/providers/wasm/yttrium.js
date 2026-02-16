@@ -8,17 +8,17 @@ function getObject(idx) {
   return heap[idx];
 }
 
-const cachedTextDecoder =
-  typeof TextDecoder !== "undefined"
-    ? new TextDecoder("utf-8", { ignoreBOM: true, fatal: true })
-    : {
-        decode: () => {
-          throw Error("TextDecoder not available");
-        },
-      };
+let cachedTextDecoder = null;
 
-if (typeof TextDecoder !== "undefined") {
-  cachedTextDecoder.decode();
+function getTextDecoder() {
+  if (!cachedTextDecoder) {
+    if (typeof TextDecoder === "undefined") {
+      throw Error("TextDecoder not available");
+    }
+    cachedTextDecoder = new TextDecoder("utf-8", { ignoreBOM: true, fatal: true });
+    cachedTextDecoder.decode();
+  }
+  return cachedTextDecoder;
 }
 
 let cachedUint8ArrayMemory0 = null;
@@ -32,7 +32,7 @@ function getUint8ArrayMemory0() {
 
 function getStringFromWasm0(ptr, len) {
   ptr = ptr >>> 0;
-  return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+  return getTextDecoder().decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
 
 let heap_next = heap.length;
@@ -77,32 +77,34 @@ function getArrayU8FromWasm0(ptr, len) {
 
 let WASM_VECTOR_LEN = 0;
 
-const cachedTextEncoder =
-  typeof TextEncoder !== "undefined"
-    ? new TextEncoder("utf-8")
-    : {
-        encode: () => {
-          throw Error("TextEncoder not available");
-        },
-      };
+let cachedTextEncoder = null;
 
-const encodeString =
-  typeof cachedTextEncoder.encodeInto === "function"
-    ? function (arg, view) {
-        return cachedTextEncoder.encodeInto(arg, view);
-      }
-    : function (arg, view) {
-        const buf = cachedTextEncoder.encode(arg);
-        view.set(buf);
-        return {
-          read: arg.length,
-          written: buf.length,
-        };
-      };
+function getTextEncoder() {
+  if (!cachedTextEncoder) {
+    if (typeof TextEncoder === "undefined") {
+      throw Error("TextEncoder not available");
+    }
+    cachedTextEncoder = new TextEncoder("utf-8");
+  }
+  return cachedTextEncoder;
+}
+
+function encodeString(arg, view) {
+  const encoder = getTextEncoder();
+  if (typeof encoder.encodeInto === "function") {
+    return encoder.encodeInto(arg, view);
+  }
+  const buf = encoder.encode(arg);
+  view.set(buf);
+  return {
+    read: arg.length,
+    written: buf.length,
+  };
+}
 
 function passStringToWasm0(arg, malloc, realloc) {
   if (realloc === undefined) {
-    const buf = cachedTextEncoder.encode(arg);
+    const buf = getTextEncoder().encode(arg);
     const ptr = malloc(buf.length, 1) >>> 0;
     getUint8ArrayMemory0()
       .subarray(ptr, ptr + buf.length)
