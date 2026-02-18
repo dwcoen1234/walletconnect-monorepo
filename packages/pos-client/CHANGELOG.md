@@ -1,5 +1,15 @@
 # @walletconnect/pos-client
 
+## 1.0.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @walletconnect/utils@2.23.6
+  - @walletconnect/core@2.23.6
+  - @walletconnect/sign-client@2.23.6
+  - @walletconnect/types@2.23.6
+
 ## 1.0.5
 
 ### Patch Changes

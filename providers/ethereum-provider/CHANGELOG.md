@@ -1,5 +1,15 @@
 # @walletconnect/ethereum-provider
 
+## 2.23.6
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @walletconnect/utils@2.23.6
+  - @walletconnect/sign-client@2.23.6
+  - @walletconnect/types@2.23.6
+  - @walletconnect/universal-provider@2.23.6
+
 ## 2.23.5
 
 ### Patch Changes
