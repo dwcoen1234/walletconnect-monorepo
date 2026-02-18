@@ -10,6 +10,7 @@ import {
   createMockPaymentOptionsResponse,
   createMockPaymentOptionsWithInfo,
   createMockPaymentOptionsWithCollectData,
+  createMockPaymentOptionsWithOptionCollectData,
   createMockActions,
   createMockConfirmResponse,
 } from "./mocks/index.js";
@@ -88,6 +89,35 @@ describe("WalletConnectPay with MockProvider", () => {
       expect(result.collectData?.fields[0].required).toBe(true);
       expect(result.collectData?.fields[0].fieldType).toBe("text");
       expect(result.collectData?.fields[2].fieldType).toBe("date");
+    });
+
+    it("should return per-option collect data fields", async () => {
+      // #given
+      const mockResponse = createMockPaymentOptionsWithOptionCollectData();
+      mockProvider.setPaymentOptionsResponse("pay_option_collect", mockResponse);
+
+      const params: GetPaymentOptionsParams = {
+        paymentLink: "pay_option_collect",
+        accounts: ["eip155:8453:0xabc", "eip155:1:0xabc"],
+      };
+
+      // #when
+      const result = await mockProvider.getPaymentOptions(params);
+
+      // #then
+      const optionWithCollect = result.options.find((o) => o.id === "opt_with_collect");
+      expect(optionWithCollect).toBeDefined();
+      expect(optionWithCollect?.collectData).toBeDefined();
+      expect(optionWithCollect?.collectData?.fields).toHaveLength(2);
+      expect(optionWithCollect?.collectData?.fields[0].id).toBe("email");
+      expect(optionWithCollect?.collectData?.fields[0].fieldType).toBe("text");
+      expect(optionWithCollect?.collectData?.fields[1].id).toBe("termsAccepted");
+      expect(optionWithCollect?.collectData?.fields[1].fieldType).toBe("checkbox");
+      expect(optionWithCollect?.collectData?.url).toBe("https://example.com/collect");
+
+      const optionWithoutCollect = result.options.find((o) => o.id === "opt_without_collect");
+      expect(optionWithoutCollect).toBeDefined();
+      expect(optionWithoutCollect?.collectData).toBeUndefined();
     });
 
     it("should throw error for non-existent payment", async () => {

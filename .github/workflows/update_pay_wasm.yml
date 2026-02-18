@@ -250,10 +250,6 @@ jobs:
           echo "Updated files in $DEST_DIR:"
           ls -lh "$DEST_DIR/"
 
-      - name: Patch yttrium.js for React Native compatibility
-        if: steps.compare.outputs.wasm_needs_update == 'true'
-        run: node scripts/patch_yttrium_lazy_init.js
-
       - name: Update podspec with Swift version
         if: steps.compare.outputs.swift_needs_update == 'true'
         run: |
@@ -272,9 +268,15 @@ jobs:
           echo "Updated build.gradle: yttrium-wcpay $CURRENT -> $VERSION"
           grep "yttrium-wcpay" packages/react-native-compat/android/build.gradle
 
-      - name: Run prettier
+      - name: Run prettier on generated TS files
         if: steps.compare.outputs.wasm_needs_update == 'true'
-        run: npx prettier --write "packages/pay/src/providers/wasm/*.{ts,js}"
+        run: npx prettier --write "packages/pay/src/providers/wasm/*.ts"
+
+      - name: Patch yttrium.js for React Native compatibility
+        if: steps.compare.outputs.wasm_needs_update == 'true'
+        run: |
+          npx prettier --write packages/pay/src/providers/wasm/yttrium.js
+          node scripts/patch_yttrium_lazy_init.js
 
       - name: Add changeset for Pay WASM
         if: steps.compare.outputs.wasm_needs_update == 'true'

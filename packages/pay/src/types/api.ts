@@ -157,6 +157,8 @@ export interface PaymentOption {
   etaS: number;
   /** Actions required to complete the option */
   actions: Action[];
+  /** Option-specific data collection requirements */
+  collectData?: CollectDataAction;
 }
 
 // ==================== Method Parameters ====================
