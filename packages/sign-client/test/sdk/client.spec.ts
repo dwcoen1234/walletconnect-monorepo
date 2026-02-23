@@ -3583,6 +3583,7 @@ describe.sequential("extend", () => {
 });
 describe.sequential("session request expiry", () => {
   it("should set default request expiry to 15 minutes and respect dApp expiryTimestamp", async () => {
+    vi.useRealTimers();
     const {
       clients,
       sessionA: { topic },
@@ -3621,6 +3622,7 @@ describe.sequential("session request expiry", () => {
     await deleteClients(clients);
   });
   it("should respect dApp expiryTimestamp even when wallet uses old 5-min config", async () => {
+    vi.useRealTimers();
     // should respect dApp expiryTimestamp even when wallet uses old 5-min config
     // simulate a wallet still running the old 5-min default
     const originalReqTtl = ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl;
