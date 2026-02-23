@@ -277,13 +277,16 @@ describe("Misc", () => {
   describe("createDelayedPromise", () => {
     it("should reject with an error when the promise is expired", async () => {
       const { done } = createDelayedPromise(1);
+      let errorReceived = false;
       try {
         await done();
       } catch (_error: unknown) {
+        errorReceived = true;
         const error = _error as SDKError;
         expect(error.message).to.eq(getInternalError("EXPIRED").message);
         expect(error.code).to.eq(getInternalError("EXPIRED").code);
       }
+      expect(errorReceived).to.be.true;
     });
   });
 });

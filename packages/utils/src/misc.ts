@@ -322,7 +322,7 @@ export function createDelayedPromise<T>(
       }
       cacheTimeout = setTimeout(() => {
         const expiredError = getInternalError("EXPIRED");
-        const err = new Error(expireErrorMessage || expiredError.message) as unknown as SDKError;
+        const err = new Error(expireErrorMessage || expiredError.message) as SDKError;
         err.code = expiredError.code;
         promiseReject(err);
       }, timeout);
