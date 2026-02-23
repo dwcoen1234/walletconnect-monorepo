@@ -47,7 +47,7 @@ import {
 } from "@walletconnect/core";
 import { EngineTypes, RelayerTypes } from "@walletconnect/types";
 
-describe.concurrent("Sign Client Integration", () => {
+describe("Sign Client Integration", () => {
   it("init", async () => {
     const client = await SignClient.init({
       ...TEST_SIGN_CLIENT_OPTIONS,
