@@ -10,6 +10,9 @@ import {
   toBase64,
   openDeeplink,
   isIframe,
+  createDelayedPromise,
+  getInternalError,
+  SDKError,
 } from "../src";
 
 const RELAY_URL = "wss://relay.walletconnect.org";
@@ -269,6 +272,18 @@ describe("Misc", () => {
 
     it("should return false if window.top is equal to window", () => {
       expect(isIframe()).to.be.false;
+    });
+  });
+  describe("createDelayedPromise", () => {
+    it("should reject with an error when the promise is expired", async () => {
+      const { done } = createDelayedPromise(1);
+      try {
+        await done();
+      } catch (_error: unknown) {
+        const error = _error as SDKError;
+        expect(error.message).to.eq(getInternalError("EXPIRED").message);
+        expect(error.code).to.eq(getInternalError("EXPIRED").code);
+      }
     });
   });
 });
