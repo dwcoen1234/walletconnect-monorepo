@@ -3280,7 +3280,7 @@ describe.concurrent("Sign Client Integration", () => {
     });
   });
 
-  describe.concurrent("session requests", () => {
+  describe("session requests", () => {
     it("should set custom request expiry", async () => {
       const {
         clients,
@@ -3346,6 +3346,56 @@ describe.concurrent("Sign Client Integration", () => {
         ]);
         await deleteClients(clients);
       } finally {
+        vi.useRealTimers();
+      }
+    });
+    it("should respect dApp expiryTimestamp even when wallet uses old 5-min config", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      // simulate a wallet still running the old 5-min default
+      const originalReqTtl = ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl;
+      const originalResTtl = ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl;
+      ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl = 300; // old 5-min value
+      ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl = 300;
+      try {
+        const {
+          clients,
+          sessionA: { topic },
+        } = await initTwoPairedClients({}, {}, { logger: "error" });
+        const newExpiry = 900; // 15 minutes — the new default set by the dApp
+        const responseMessage = "response after old expiry window";
+
+        await Promise.all([
+          new Promise<void>((resolve) => {
+            (clients.B as SignClient).once("session_request", async (payload) => {
+              // wallet receives expiryTimestamp set by dApp (~15 min), not the wallet's local 5-min config
+              expect(payload.params.request.expiryTimestamp).to.be.approximately(
+                calcExpiry(newExpiry),
+                5,
+              );
+              // advance past old 5-min window but within new 15-min window
+              await vi.advanceTimersByTimeAsync(6 * 60 * 1000);
+              await clients.B.respond({
+                topic,
+                response: formatJsonRpcResult(payload.id, responseMessage),
+              });
+              resolve();
+            });
+          }),
+          new Promise<void>(async (resolve) => {
+            // dApp explicitly passes the new 15-min expiry
+            const result = await clients.A.request({
+              ...TEST_REQUEST_PARAMS,
+              topic,
+              expiry: newExpiry,
+            });
+            expect(result).to.eq(responseMessage);
+            resolve();
+          }),
+        ]);
+        await deleteClients(clients);
+      } finally {
+        ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl = originalReqTtl;
+        ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl = originalResTtl;
         vi.useRealTimers();
       }
     });
