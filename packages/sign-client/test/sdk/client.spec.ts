@@ -3594,7 +3594,9 @@ describe.sequential("session request expiry", () => {
 
     const responseMessage = "test response after 14 minutes";
 
-    vi.useFakeTimers();
+    // Only fake setTimeout/clearTimeout — leave Date.now() real so WebSocket
+    // operations don't send far-future timestamps that the relay rejects.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
     await Promise.all([
       new Promise<void>((resolve) => {
@@ -3637,7 +3639,9 @@ describe.sequential("session request expiry", () => {
     ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl = FIVE_MINUTES; // old 5-min value
     ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl = FIVE_MINUTES;
     try {
-      vi.useFakeTimers();
+      // Only fake setTimeout/clearTimeout — leave Date.now() real so WebSocket
+      // operations don't send far-future timestamps that the relay rejects.
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
       const newExpiry = originalReqTtl; // 15 minutes — the new default set by the dApp
       const responseMessage = "response after old expiry window";
