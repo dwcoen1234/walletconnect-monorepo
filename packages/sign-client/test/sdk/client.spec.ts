@@ -46,6 +46,7 @@ import {
   RELAYER_EVENTS,
 } from "@walletconnect/core";
 import { EngineTypes, RelayerTypes } from "@walletconnect/types";
+import { FIVE_MINUTES } from "@walletconnect/time";
 
 describe.sequential("Sign Client Integration", () => {
   it("init", async () => {
@@ -3589,11 +3590,11 @@ describe.sequential("session request expiry", () => {
       sessionA: { topic },
     } = await initTwoPairedClients({}, {}, { logger: "error" });
     const defaultExpiry = ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl; // FIVE_MINUTES * 3 = 900s = 15min
-    expect(defaultExpiry).to.eq(900);
+    expect(defaultExpiry).to.eq(FIVE_MINUTES * 3);
 
     const responseMessage = "test response after 14 minutes";
 
-    vi.useFakeTimers({ shouldAdvanceTime: true, shouldClearNativeTimers: true });
+    vi.useFakeTimers();
 
     await Promise.all([
       new Promise<void>((resolve) => {
@@ -3623,21 +3624,22 @@ describe.sequential("session request expiry", () => {
   });
   it("should respect dApp expiryTimestamp even when wallet uses old 5-min config", async () => {
     vi.useRealTimers();
+
+    const {
+      clients,
+      sessionA: { topic },
+    } = await initTwoPairedClients({}, {}, { logger: "error" });
+
     // should respect dApp expiryTimestamp even when wallet uses old 5-min config
     // simulate a wallet still running the old 5-min default
     const originalReqTtl = ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl;
     const originalResTtl = ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl;
-    ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl = 300; // old 5-min value
-    ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl = 300;
+    ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl = FIVE_MINUTES; // old 5-min value
+    ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl = FIVE_MINUTES;
     try {
-      const {
-        clients,
-        sessionA: { topic },
-      } = await initTwoPairedClients({}, {}, { logger: "error" });
+      vi.useFakeTimers();
 
-      vi.useFakeTimers({ shouldAdvanceTime: true, shouldClearNativeTimers: true });
-
-      const newExpiry = 900; // 15 minutes — the new default set by the dApp
+      const newExpiry = originalReqTtl; // 15 minutes — the new default set by the dApp
       const responseMessage = "response after old expiry window";
 
       await Promise.all([
