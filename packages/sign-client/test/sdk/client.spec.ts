@@ -3310,7 +3310,6 @@ describe("Sign Client Integration", () => {
       await deleteClients(clients);
     });
     it("should set default request expiry to 15 minutes", async () => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
       try {
         const {
           clients,
@@ -3320,6 +3319,8 @@ describe("Sign Client Integration", () => {
         expect(defaultExpiry).to.eq(900);
 
         const responseMessage = "test response after 14 minutes";
+
+        vi.useFakeTimers({ shouldAdvanceTime: true });
 
         await Promise.all([
           new Promise<void>((resolve) => {
@@ -3350,7 +3351,6 @@ describe("Sign Client Integration", () => {
       }
     });
     it("should respect dApp expiryTimestamp even when wallet uses old 5-min config", async () => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
       // simulate a wallet still running the old 5-min default
       const originalReqTtl = ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl;
       const originalResTtl = ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl;
@@ -3361,6 +3361,9 @@ describe("Sign Client Integration", () => {
           clients,
           sessionA: { topic },
         } = await initTwoPairedClients({}, {}, { logger: "error" });
+
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+
         const newExpiry = 900; // 15 minutes — the new default set by the dApp
         const responseMessage = "response after old expiry window";
 
