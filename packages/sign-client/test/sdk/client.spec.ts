@@ -3309,6 +3309,46 @@ describe.concurrent("Sign Client Integration", () => {
       ]);
       await deleteClients(clients);
     });
+    it("should set default request expiry to 15 minutes", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const {
+          clients,
+          sessionA: { topic },
+        } = await initTwoPairedClients({}, {}, { logger: "error" });
+        const defaultExpiry = ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl; // FIVE_MINUTES * 3 = 900s = 15min
+        expect(defaultExpiry).to.eq(900);
+
+        const responseMessage = "test response after 14 minutes";
+
+        await Promise.all([
+          new Promise<void>((resolve) => {
+            (clients.B as SignClient).once("session_request", async (payload) => {
+              expect(payload.params.request.expiryTimestamp).to.be.approximately(
+                calcExpiry(defaultExpiry),
+                5,
+              );
+              // advance clock by 14 minutes — still within the 15-min default expiry
+              await vi.advanceTimersByTimeAsync(14 * 60 * 1000);
+              await clients.B.respond({
+                topic,
+                response: formatJsonRpcResult(payload.id, responseMessage),
+              });
+              resolve();
+            });
+          }),
+          new Promise<void>(async (resolve) => {
+            // no expiry param — should use the default 15min
+            const result = await clients.A.request({ ...TEST_REQUEST_PARAMS, topic });
+            expect(result).to.eq(responseMessage);
+            resolve();
+          }),
+        ]);
+        await deleteClients(clients);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
     it("should send request on optional namespace", async () => {
       const {
         clients,

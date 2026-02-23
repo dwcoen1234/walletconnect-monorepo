@@ -64,12 +64,12 @@ export const ENGINE_RPC_OPTS: EngineTypes.RpcOptsMap = {
   },
   wc_sessionRequest: {
     req: {
-      ttl: FIVE_MINUTES,
+      ttl: FIVE_MINUTES * 3,
       prompt: true,
       tag: 1108,
     },
     res: {
-      ttl: FIVE_MINUTES,
+      ttl: FIVE_MINUTES * 3,
       prompt: false,
       tag: 1109,
     },
