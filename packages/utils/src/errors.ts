@@ -157,3 +157,7 @@ export function getSdkError(key: SdkErrorKey, context?: string | number) {
     code,
   };
 }
+
+export interface SDKError extends Error {
+  code?: number;
+}

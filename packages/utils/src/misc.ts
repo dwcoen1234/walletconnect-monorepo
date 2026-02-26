@@ -11,6 +11,8 @@ import { getWindowMetadata } from "@walletconnect/window-metadata";
 import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import { IKeyValueStorage } from "@walletconnect/keyvaluestorage";
 
+import { getInternalError, SDKError } from "./errors.js";
+
 // -- constants -----------------------------------------//
 export const REACT_NATIVE_PRODUCT = "ReactNative";
 
@@ -319,8 +321,9 @@ export function createDelayedPromise<T>(
         return promiseResolve(result);
       }
       cacheTimeout = setTimeout(() => {
-        const err = new Error(expireErrorMessage);
-        result = Promise.reject(err);
+        const expiredError = getInternalError("EXPIRED");
+        const err = new Error(expireErrorMessage || expiredError.message) as SDKError;
+        err.code = expiredError.code;
         promiseReject(err);
       }, timeout);
       cacheResolve = promiseResolve;
