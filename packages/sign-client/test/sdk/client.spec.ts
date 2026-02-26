@@ -46,8 +46,9 @@ import {
   RELAYER_EVENTS,
 } from "@walletconnect/core";
 import { EngineTypes, RelayerTypes } from "@walletconnect/types";
+import { FIVE_MINUTES } from "@walletconnect/time";
 
-describe.concurrent("Sign Client Integration", () => {
+describe.sequential("Sign Client Integration", () => {
   it("init", async () => {
     const client = await SignClient.init({
       ...TEST_SIGN_CLIENT_OPTIONS,
@@ -3280,7 +3281,7 @@ describe.concurrent("Sign Client Integration", () => {
     });
   });
 
-  describe.concurrent("session requests", () => {
+  describe("session requests", () => {
     it("should set custom request expiry", async () => {
       const {
         clients,
@@ -3505,7 +3506,7 @@ describe.concurrent("Sign Client Integration", () => {
   });
 });
 // don't use concurrency here as these tests change timeclock
-describe("extend", () => {
+describe.sequential("extend", () => {
   it("updates session expiry state initiated by client A", async () => {
     const {
       clients,
@@ -3579,5 +3580,100 @@ describe("extend", () => {
     vi.useRealTimers();
 
     await deleteClients(clients);
+  });
+});
+describe.sequential("session request expiry", () => {
+  it("should set default request expiry to 15 minutes and respect dApp expiryTimestamp", async () => {
+    vi.useRealTimers();
+    const {
+      clients,
+      sessionA: { topic },
+    } = await initTwoPairedClients({}, {}, { logger: "error" });
+    const defaultExpiry = ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl; // FIVE_MINUTES * 3 = 900s = 15min
+    expect(defaultExpiry).to.eq(FIVE_MINUTES * 3);
+
+    const responseMessage = "test response after 14 minutes";
+
+    // Use shouldAdvanceTime so real timers keep working (relay/WebSocket)
+    // while allowing vi.setSystemTime to shift Date.now() for expiry checks.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    await Promise.all([
+      new Promise<void>((resolve) => {
+        (clients.B as SignClient).once("session_request", async (payload) => {
+          expect(payload.params.request.expiryTimestamp).to.be.approximately(
+            calcExpiry(defaultExpiry),
+            5,
+          );
+          // shift Date.now() by 14 minutes — still within the 15-min default expiry
+          vi.setSystemTime(Date.now() + 14 * 60 * 1000);
+          await clients.B.respond({
+            topic,
+            response: formatJsonRpcResult(payload.id, responseMessage),
+          });
+          resolve();
+        });
+      }),
+      new Promise<void>(async (resolve) => {
+        const result = await clients.A.request({ ...TEST_REQUEST_PARAMS, topic });
+        expect(result).to.eq(responseMessage);
+        resolve();
+      }),
+    ]);
+    vi.useRealTimers();
+    await deleteClients(clients);
+  });
+  it("should respect dApp expiryTimestamp even when wallet uses old 5-min config", async () => {
+    vi.useRealTimers();
+
+    const {
+      clients,
+      sessionA: { topic },
+    } = await initTwoPairedClients({}, {}, { logger: "error" });
+
+    const originalReqTtl = ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl;
+    const originalResTtl = ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl;
+    ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl = FIVE_MINUTES; // old 5-min value
+    ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl = FIVE_MINUTES;
+    try {
+      // Use shouldAdvanceTime so real timers keep working (relay/WebSocket)
+      // while allowing vi.setSystemTime to shift Date.now() for expiry checks.
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+
+      const newExpiry = originalReqTtl; // 15 minutes — the new default set by the dApp
+      const responseMessage = "response after old expiry window";
+
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          (clients.B as SignClient).once("session_request", async (payload) => {
+            expect(payload.params.request.expiryTimestamp).to.be.approximately(
+              calcExpiry(newExpiry),
+              5,
+            );
+            // shift Date.now() past old 5-min window but within new 15-min window
+            vi.setSystemTime(Date.now() + 6 * 60 * 1000);
+            await clients.B.respond({
+              topic,
+              response: formatJsonRpcResult(payload.id, responseMessage),
+            });
+            resolve();
+          });
+        }),
+        new Promise<void>(async (resolve) => {
+          const result = await clients.A.request({
+            ...TEST_REQUEST_PARAMS,
+            topic,
+            expiry: newExpiry,
+          });
+          expect(result).to.eq(responseMessage);
+          resolve();
+        }),
+      ]);
+      vi.useRealTimers();
+      await deleteClients(clients);
+    } finally {
+      ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl = originalReqTtl;
+      ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl = originalResTtl;
+    }
   });
 });
