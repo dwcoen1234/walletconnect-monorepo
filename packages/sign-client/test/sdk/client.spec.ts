@@ -3594,9 +3594,9 @@ describe.sequential("session request expiry", () => {
 
     const responseMessage = "test response after 14 minutes";
 
-    // Only fake setTimeout/clearTimeout — leave Date.now() real so WebSocket
-    // operations don't send far-future timestamps that the relay rejects.
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    // Use shouldAdvanceTime so real timers keep working (relay/WebSocket)
+    // while allowing vi.setSystemTime to shift Date.now() for expiry checks.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
 
     await Promise.all([
       new Promise<void>((resolve) => {
@@ -3605,8 +3605,8 @@ describe.sequential("session request expiry", () => {
             calcExpiry(defaultExpiry),
             5,
           );
-          // advance clock by 14 minutes — still within the 15-min default expiry
-          await vi.advanceTimersByTimeAsync(14 * 60 * 1000);
+          // shift Date.now() by 14 minutes — still within the 15-min default expiry
+          vi.setSystemTime(Date.now() + 14 * 60 * 1000);
           await clients.B.respond({
             topic,
             response: formatJsonRpcResult(payload.id, responseMessage),
@@ -3615,7 +3615,6 @@ describe.sequential("session request expiry", () => {
         });
       }),
       new Promise<void>(async (resolve) => {
-        // no expiry param — should use the default 15min
         const result = await clients.A.request({ ...TEST_REQUEST_PARAMS, topic });
         expect(result).to.eq(responseMessage);
         resolve();
@@ -3632,16 +3631,14 @@ describe.sequential("session request expiry", () => {
       sessionA: { topic },
     } = await initTwoPairedClients({}, {}, { logger: "error" });
 
-    // should respect dApp expiryTimestamp even when wallet uses old 5-min config
-    // simulate a wallet still running the old 5-min default
     const originalReqTtl = ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl;
     const originalResTtl = ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl;
     ENGINE_RPC_OPTS.wc_sessionRequest.req.ttl = FIVE_MINUTES; // old 5-min value
     ENGINE_RPC_OPTS.wc_sessionRequest.res.ttl = FIVE_MINUTES;
     try {
-      // Only fake setTimeout/clearTimeout — leave Date.now() real so WebSocket
-      // operations don't send far-future timestamps that the relay rejects.
-      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      // Use shouldAdvanceTime so real timers keep working (relay/WebSocket)
+      // while allowing vi.setSystemTime to shift Date.now() for expiry checks.
+      vi.useFakeTimers({ shouldAdvanceTime: true });
 
       const newExpiry = originalReqTtl; // 15 minutes — the new default set by the dApp
       const responseMessage = "response after old expiry window";
@@ -3649,13 +3646,12 @@ describe.sequential("session request expiry", () => {
       await Promise.all([
         new Promise<void>((resolve) => {
           (clients.B as SignClient).once("session_request", async (payload) => {
-            // wallet receives expiryTimestamp set by dApp (~15 min), not the wallet's local 5-min config
             expect(payload.params.request.expiryTimestamp).to.be.approximately(
               calcExpiry(newExpiry),
               5,
             );
-            // advance past old 5-min window but within new 15-min window
-            await vi.advanceTimersByTimeAsync(6 * 60 * 1000);
+            // shift Date.now() past old 5-min window but within new 15-min window
+            vi.setSystemTime(Date.now() + 6 * 60 * 1000);
             await clients.B.respond({
               topic,
               response: formatJsonRpcResult(payload.id, responseMessage),
@@ -3664,7 +3660,6 @@ describe.sequential("session request expiry", () => {
           });
         }),
         new Promise<void>(async (resolve) => {
-          // dApp explicitly passes the new 15-min expiry
           const result = await clients.A.request({
             ...TEST_REQUEST_PARAMS,
             topic,
