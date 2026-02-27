@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`0b699db`](https://github.com/WalletConnect/walletconnect-monorepo/commit/0b699db1d3a0eb760f1599df7c9074f136329088)]:
+  - @walletconnect/utils@2.23.7
+  - @walletconnect/types@2.23.7
+
 ## 1.0.5
 
 ### Patch Changes
