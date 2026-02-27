@@ -1,5 +1,16 @@
 # @walletconnect/sign-client
 
+## 2.23.7
+
+### Patch Changes
+
+- [#7172](https://github.com/WalletConnect/walletconnect-monorepo/pull/7172) [`a09c7fe`](https://github.com/WalletConnect/walletconnect-monorepo/commit/a09c7fe4a89d7eb5d6376fb67cc096f72739a4cc) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Updated the default session request expiry to 15 minutes
+
+- Updated dependencies [[`0b699db`](https://github.com/WalletConnect/walletconnect-monorepo/commit/0b699db1d3a0eb760f1599df7c9074f136329088)]:
+  - @walletconnect/utils@2.23.7
+  - @walletconnect/core@2.23.7
+  - @walletconnect/types@2.23.7
+
 ## 2.23.6
 
 ### Patch Changes

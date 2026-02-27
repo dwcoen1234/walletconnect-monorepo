@@ -1,5 +1,14 @@
 # @walletconnect/utils
 
+## 2.23.7
+
+### Patch Changes
+
+- [#7175](https://github.com/WalletConnect/walletconnect-monorepo/pull/7175) [`0b699db`](https://github.com/WalletConnect/walletconnect-monorepo/commit/0b699db1d3a0eb760f1599df7c9074f136329088) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Updated `createDelayedPromise` expiry rejection to also contain a proper error code from `getInternalError("EXPIRED")` with a value of `6`
+
+- Updated dependencies []:
+  - @walletconnect/types@2.23.7
+
 ## 2.23.6
 
 ### Patch Changes

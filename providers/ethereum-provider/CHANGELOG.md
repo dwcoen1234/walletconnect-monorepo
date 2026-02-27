@@ -1,5 +1,15 @@
 # @walletconnect/ethereum-provider
 
+## 2.23.7
+
+### Patch Changes
+
+- Updated dependencies [[`0b699db`](https://github.com/WalletConnect/walletconnect-monorepo/commit/0b699db1d3a0eb760f1599df7c9074f136329088), [`a09c7fe`](https://github.com/WalletConnect/walletconnect-monorepo/commit/a09c7fe4a89d7eb5d6376fb67cc096f72739a4cc)]:
+  - @walletconnect/utils@2.23.7
+  - @walletconnect/sign-client@2.23.7
+  - @walletconnect/universal-provider@2.23.7
+  - @walletconnect/types@2.23.7
+
 ## 2.23.6
 
 ### Patch Changes
