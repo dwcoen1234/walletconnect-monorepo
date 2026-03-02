@@ -49,6 +49,7 @@ export default function createConfig(
           file: "./dist/index.cjs",
           format: "cjs",
           exports: "named",
+          interop: "auto",
           name: packageName,
           sourcemap: true,
           ...cjs,
