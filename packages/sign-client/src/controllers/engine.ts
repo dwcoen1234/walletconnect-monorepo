@@ -980,10 +980,12 @@ export class Engine extends IEngine {
         await this.client.core.relayer
           .unsubscribe(oldResponseTopic)
           .catch((e) => this.client.logger.warn(e));
-        this.client.auth.pairingTopics.delete(oldResponseTopic, {
-          message: "replaced",
-          code: 0,
-        });
+        await this.client.auth.pairingTopics
+          .delete(oldResponseTopic, {
+            message: "replaced",
+            code: 0,
+          })
+          .catch((e) => this.client.logger.warn(e));
       }
       if (oldPublicKey && this.client.core.crypto.keychain.has(oldPublicKey)) {
         await this.client.core.crypto.deleteKeyPair(oldPublicKey);
@@ -2734,12 +2736,16 @@ export class Engine extends IEngine {
   private cleanupInProgress = false;
 
   private registerSubscriptionCleanup() {
-    this.client.core.heartbeat.on("heartbeat_pulse", () => {
+    this.client.core.heartbeat.on("heartbeat_pulse", async () => {
       if (this.cleanupInProgress) return;
       this.cleanupInProgress = true;
-      this.cleanupOrphanedSubscriptions().finally(() => {
+      try {
+        await this.cleanupOrphanedSubscriptions();
+      } catch (error) {
+        this.client.logger.warn(error);
+      } finally {
         this.cleanupInProgress = false;
-      });
+      }
     });
   }
 

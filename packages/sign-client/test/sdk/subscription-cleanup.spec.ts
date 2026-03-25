@@ -127,22 +127,21 @@ describe("Subscription Cleanup", () => {
       // @ts-expect-error - pendingSessions is private
       const pendingSessions = A.engine.pendingSessions as Map<number, any>;
 
-      // If there's a pending session, verify the session topic is subscribed
-      if (pendingSessions.size > 0) {
-        const pendingSession = [...pendingSessions.values()][0];
-        const sessionTopic = pendingSession.sessionTopic;
+      expect(pendingSessions.size).to.be.greaterThan(0);
 
-        expect(A.core.relayer.subscriber.topics).to.include(sessionTopic);
+      const pendingSession = [...pendingSessions.values()][0];
+      const sessionTopic = pendingSession.sessionTopic;
 
-        // #when - simulate proposal expiry by deleting the proposal and firing expire
-        const proposalId = pendingSession.proposalId;
-        A.events.emit("proposal_expire", { id: proposalId });
-        await throttle(500);
+      expect(A.core.relayer.subscriber.topics).to.include(sessionTopic);
 
-        // #then - session topic should be unsubscribed
-        expect(A.core.relayer.subscriber.topics).to.not.include(sessionTopic);
-        expect(pendingSessions.has(proposalId)).to.be.false;
-      }
+      // #when - simulate proposal expiry by deleting the proposal and firing expire
+      const proposalId = pendingSession.proposalId;
+      A.events.emit("proposal_expire", { id: proposalId });
+      await throttle(500);
+
+      // #then - session topic should be unsubscribed
+      expect(A.core.relayer.subscriber.topics).to.not.include(sessionTopic);
+      expect(pendingSessions.has(proposalId)).to.be.false;
 
       // Clean up by catching the approval rejection
       approval().catch(() => {});
@@ -301,19 +300,19 @@ describe("Subscription Cleanup", () => {
       // @ts-expect-error - pendingSessions is private
       const pendingSessions = A.engine.pendingSessions as Map<number, any>;
 
-      if (pendingSessions.size > 0) {
-        const pendingSession = [...pendingSessions.values()][0];
-        const pendingTopic = pendingSession.sessionTopic;
+      expect(pendingSessions.size).to.be.greaterThan(0);
 
-        expect(A.core.relayer.subscriber.topics).to.include(pendingTopic);
+      const pendingSession = [...pendingSessions.values()][0];
+      const pendingTopic = pendingSession.sessionTopic;
 
-        // #when - run cleanup
-        // @ts-expect-error - cleanupOrphanedSubscriptions is private
-        await A.engine.cleanupOrphanedSubscriptions();
+      expect(A.core.relayer.subscriber.topics).to.include(pendingTopic);
 
-        // #then - pending session topic must survive cleanup
-        expect(A.core.relayer.subscriber.topics).to.include(pendingTopic);
-      }
+      // #when - run cleanup
+      // @ts-expect-error - cleanupOrphanedSubscriptions is private
+      await A.engine.cleanupOrphanedSubscriptions();
+
+      // #then - pending session topic must survive cleanup
+      expect(A.core.relayer.subscriber.topics).to.include(pendingTopic);
 
       approval().catch(() => {});
       await throttle(500);
