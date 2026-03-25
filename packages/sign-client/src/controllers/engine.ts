@@ -2773,16 +2773,9 @@ export class Engine extends IEngine {
 
       this.client.logger.info(`Cleaning up orphaned subscriber topic: ${topic}`);
       try {
-        await this.client.core.relayer.unsubscribe(topic);
+        await this.client.core.relayer.subscriber.unsubscribe(topic);
       } catch (error) {
         this.client.logger.warn(error, `Failed to clean up orphaned subscription: ${topic}`);
-        const ids = this.client.core.relayer.subscriber.topicMap.get(topic);
-        for (const id of ids) {
-          this.client.core.relayer.subscriber.subscriptions.delete(id);
-          this.client.core.relayer.subscriber.topicMap.delete(topic, id);
-        }
-        await this.client.core.relayer.subscriber["persist"]();
-        await this.client.core.relayer.messages.del(topic).catch(() => {});
       }
     }
   };

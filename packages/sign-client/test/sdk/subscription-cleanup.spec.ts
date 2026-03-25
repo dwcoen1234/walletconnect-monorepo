@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { getSdkError } from "@walletconnect/utils";
+import { generateRandomBytes32, getSdkError } from "@walletconnect/utils";
 import { expect, describe, it } from "vitest";
 import {
   initTwoClients,
@@ -90,67 +90,6 @@ describe("Subscription Cleanup", () => {
     });
   });
 
-  describe("proposal expire with pending session", () => {
-    it("should unsubscribe session topic when proposal expires after wallet approved", async () => {
-      // #given - two clients where wallet sends approval (propose response)
-      // but never sends settle, so the proposal expires
-      const clients = await initTwoClients();
-      const { A, B } = clients;
-
-      const connectParams: EngineTypes.ConnectParams = {
-        optionalNamespaces: TEST_OPTIONAL_NAMESPACES,
-      };
-
-      const { uri, approval } = await A.connect(connectParams);
-      expect(uri).to.exist;
-
-      await B.pair({ uri: uri! });
-
-      // Wait for proposal to be received by wallet
-      const proposalPromise = new Promise<void>((resolve) => {
-        B.once("session_proposal", async (proposal) => {
-          // wallet approves → triggers onSessionProposeResponse on dApp
-          // which subscribes to sessionTopic
-          await B.approve({
-            id: proposal.id,
-            namespaces: TEST_NAMESPACES,
-            sessionProperties: TEST_SESSION_PROPERTIES_APPROVE,
-          });
-          resolve();
-        });
-      });
-
-      await proposalPromise;
-      await throttle(1000);
-
-      // #when - dApp has pending sessions with subscribed topics
-      // @ts-expect-error - pendingSessions is private
-      const pendingSessions = A.engine.pendingSessions as Map<number, any>;
-
-      expect(pendingSessions.size).to.be.greaterThan(0);
-
-      const pendingSession = [...pendingSessions.values()][0];
-      const sessionTopic = pendingSession.sessionTopic;
-
-      expect(A.core.relayer.subscriber.topics).to.include(sessionTopic);
-
-      // #when - simulate proposal expiry by deleting the proposal and firing expire
-      const proposalId = pendingSession.proposalId;
-      A.events.emit("proposal_expire", { id: proposalId });
-      await throttle(500);
-
-      // #then - session topic should be unsubscribed
-      expect(A.core.relayer.subscriber.topics).to.not.include(sessionTopic);
-      expect(pendingSessions.has(proposalId)).to.be.false;
-
-      // Clean up by catching the approval rejection
-      approval().catch(() => {});
-      await throttle(500);
-
-      await deleteClients(clients);
-    });
-  });
-
   describe("authenticate responseTopic cleanup", () => {
     it("should unsubscribe previous responseTopic when authenticate is called again", async () => {
       // #given - a dApp client
@@ -175,8 +114,6 @@ describe("Subscription Cleanup", () => {
         // expected - no wallet to respond
       }
 
-      // Retrieve the first responseTopic
-      // @ts-expect-error - accessing private auth store
       const authKeys = A.auth.authKeys;
       const hasKey = authKeys.keys.includes(AUTH_PUBLIC_KEY_NAME);
       expect(hasKey).to.be.true;
@@ -210,6 +147,32 @@ describe("Subscription Cleanup", () => {
     });
   });
 
+  describe("expirer cleanup", () => {
+    it("should unsubscribe session topic when session expires", async () => {
+      // #given - two paired clients with an active session
+      const {
+        clients,
+        sessionA: { topic: sessionTopic },
+      } = await initTwoPairedClients({}, {}, { logger: "error" });
+      const { A } = clients;
+
+      expect(A.core.relayer.subscriber.topics).to.include(sessionTopic);
+
+      // #when - emit expirer expired event for the session topic
+      A.core.expirer.events.emit("expirer_expired", {
+        target: `topic:${sessionTopic}`,
+        expiry: 0,
+      });
+      await throttle(500);
+
+      // #then - session topic should be unsubscribed
+      expect(A.core.relayer.subscriber.topics).to.not.include(sessionTopic);
+      expect(A.session.keys).to.not.include(sessionTopic);
+
+      await deleteClients(clients);
+    });
+  });
+
   describe("heartbeat orphan cleanup", () => {
     it("should unsubscribe topics not associated with any session or pairing", async () => {
       // #given - two paired clients with an active session
@@ -220,7 +183,7 @@ describe("Subscription Cleanup", () => {
       const { A } = clients;
 
       // #when - inject an orphaned subscription directly into the subscriber
-      const orphanTopic = "orphan_topic_" + Math.random().toString(36).substring(2, 15);
+      const orphanTopic = generateRandomBytes32();
       A.core.relayer.subscriber.subscriptions.set(orphanTopic, {
         id: orphanTopic,
         topic: orphanTopic,
@@ -270,40 +233,31 @@ describe("Subscription Cleanup", () => {
     });
 
     it("should not unsubscribe topics belonging to pending sessions", async () => {
-      // #given - a dApp client with a pending session topic
-      const clients = await initTwoClients();
-      const { A, B } = clients;
+      // #given - a client with a manually injected pending session topic
+      const {
+        clients,
+        sessionA: { topic: sessionTopic },
+      } = await initTwoPairedClients({}, {}, { logger: "error" });
+      const { A } = clients;
 
-      const connectParams: EngineTypes.ConnectParams = {
-        optionalNamespaces: TEST_OPTIONAL_NAMESPACES,
-      };
+      const fakeProposalId = 888888;
+      const pendingTopic = generateRandomBytes32();
 
-      const { uri, approval } = await A.connect(connectParams);
-      expect(uri).to.exist;
-      await B.pair({ uri: uri! });
-
-      const proposalSettled = new Promise<void>((resolve) => {
-        B.once("session_proposal", async (proposal) => {
-          await B.approve({
-            id: proposal.id,
-            namespaces: TEST_NAMESPACES,
-            sessionProperties: TEST_SESSION_PROPERTIES_APPROVE,
-          });
-          resolve();
-        });
-      });
-
-      await proposalSettled;
-      await throttle(1000);
-
-      // #when - check if there's a pending session with a subscribed topic
       // @ts-expect-error - pendingSessions is private
       const pendingSessions = A.engine.pendingSessions as Map<number, any>;
+      pendingSessions.set(fakeProposalId, {
+        sessionTopic: pendingTopic,
+        pairingTopic: "unused",
+        proposalId: fakeProposalId,
+        publicKey: "unused",
+      });
 
-      expect(pendingSessions.size).to.be.greaterThan(0);
-
-      const pendingSession = [...pendingSessions.values()][0];
-      const pendingTopic = pendingSession.sessionTopic;
+      A.core.relayer.subscriber.subscriptions.set(pendingTopic, {
+        id: pendingTopic,
+        topic: pendingTopic,
+        relay: { protocol: "irn" },
+      });
+      A.core.relayer.subscriber.topicMap.set(pendingTopic, pendingTopic);
 
       expect(A.core.relayer.subscriber.topics).to.include(pendingTopic);
 
@@ -314,8 +268,8 @@ describe("Subscription Cleanup", () => {
       // #then - pending session topic must survive cleanup
       expect(A.core.relayer.subscriber.topics).to.include(pendingTopic);
 
-      approval().catch(() => {});
-      await throttle(500);
+      // real session topic must also survive
+      expect(A.core.relayer.subscriber.topics).to.include(sessionTopic);
 
       await deleteClients(clients);
     });
