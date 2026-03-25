@@ -351,9 +351,9 @@ export class Engine extends IEngine {
         const pendingSession = this.pendingSessions.get(proposal.id);
         if (pendingSession) {
           const { sessionTopic, publicKey } = pendingSession;
-          this.client.core.relayer.unsubscribe(sessionTopic).catch((e) =>
-            this.client.logger.warn(e),
-          );
+          this.client.core.relayer
+            .unsubscribe(sessionTopic)
+            .catch((e) => this.client.logger.warn(e));
           if (this.client.core.crypto.keychain.has(sessionTopic)) {
             this.client.core.crypto.deleteSymKey(sessionTopic);
           }
@@ -978,9 +978,9 @@ export class Engine extends IEngine {
       const { responseTopic: oldResponseTopic } =
         this.client.auth.authKeys.get(AUTH_PUBLIC_KEY_NAME);
       if (oldResponseTopic) {
-        await this.client.core.relayer.unsubscribe(oldResponseTopic).catch((e) =>
-          this.client.logger.warn(e),
-        );
+        await this.client.core.relayer
+          .unsubscribe(oldResponseTopic)
+          .catch((e) => this.client.logger.warn(e));
         this.client.auth.pairingTopics.delete(oldResponseTopic, {
           message: "replaced",
           code: 0,
