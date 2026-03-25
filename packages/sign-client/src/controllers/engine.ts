@@ -351,15 +351,15 @@ export class Engine extends IEngine {
         const pendingSession = this.pendingSessions.get(proposal.id);
         if (pendingSession) {
           const { sessionTopic, publicKey } = pendingSession;
-          this.client.core.relayer
-            .unsubscribe(sessionTopic)
-            .catch((e) => this.client.logger.warn(e));
-          if (this.client.core.crypto.keychain.has(sessionTopic)) {
-            this.client.core.crypto.deleteSymKey(sessionTopic);
-          }
-          if (this.client.core.crypto.keychain.has(publicKey)) {
-            this.client.core.crypto.deleteKeyPair(publicKey);
-          }
+          Promise.all([
+            this.client.core.relayer.unsubscribe(sessionTopic),
+            this.client.core.crypto.keychain.has(sessionTopic)
+              ? this.client.core.crypto.deleteSymKey(sessionTopic)
+              : Promise.resolve(),
+            this.client.core.crypto.keychain.has(publicKey)
+              ? this.client.core.crypto.deleteKeyPair(publicKey)
+              : Promise.resolve(),
+          ]).catch((e) => this.client.logger.warn(e));
         }
         this.pendingSessions.delete(proposal.id);
         this.events.emit(sessionConnectTarget, {
@@ -973,9 +973,8 @@ export class Engine extends IEngine {
       pairing: { topic: pairingTopic, uri: connectionUri },
     });
 
-    // Unsubscribe from previous auth responseTopic if one exists
     if (this.client.auth.authKeys.keys.includes(AUTH_PUBLIC_KEY_NAME)) {
-      const { responseTopic: oldResponseTopic } =
+      const { responseTopic: oldResponseTopic, publicKey: oldPublicKey } =
         this.client.auth.authKeys.get(AUTH_PUBLIC_KEY_NAME);
       if (oldResponseTopic) {
         await this.client.core.relayer
@@ -985,6 +984,9 @@ export class Engine extends IEngine {
           message: "replaced",
           code: 0,
         });
+      }
+      if (oldPublicKey && this.client.core.crypto.keychain.has(oldPublicKey)) {
+        await this.client.core.crypto.deleteKeyPair(oldPublicKey);
       }
     }
 
@@ -2729,9 +2731,15 @@ export class Engine extends IEngine {
   }
 
   // ---------- Subscription Cleanup ---------------------------------- //
+  private cleanupInProgress = false;
+
   private registerSubscriptionCleanup() {
     this.client.core.heartbeat.on("heartbeat_pulse", () => {
-      this.cleanupOrphanedSubscriptions();
+      if (this.cleanupInProgress) return;
+      this.cleanupInProgress = true;
+      this.cleanupOrphanedSubscriptions().finally(() => {
+        this.cleanupInProgress = false;
+      });
     });
   }
 
@@ -2762,13 +2770,13 @@ export class Engine extends IEngine {
         await this.client.core.relayer.unsubscribe(topic);
       } catch (error) {
         this.client.logger.warn(error, `Failed to clean up orphaned subscription: ${topic}`);
-        // Forcefully remove from local subscriber state if relay unsubscribe fails
-        // (e.g. topic was never registered on the relay or came from stale storage)
         const ids = this.client.core.relayer.subscriber.topicMap.get(topic);
         for (const id of ids) {
           this.client.core.relayer.subscriber.subscriptions.delete(id);
           this.client.core.relayer.subscriber.topicMap.delete(topic, id);
         }
+        await this.client.core.relayer.subscriber["persist"]();
+        await this.client.core.relayer.messages.del(topic).catch(() => {});
       }
     }
   };
