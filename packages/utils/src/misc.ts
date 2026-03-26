@@ -551,12 +551,22 @@ export function isIframe() {
 }
 
 export function toBase64(input: string, removePadding = false): string {
-  const encoded = Buffer.from(input).toString("base64");
+  const bytes = new TextEncoder().encode(input);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const encoded = btoa(binary);
   return removePadding ? encoded.replace(/[=]/g, "") : encoded;
 }
 
 export function fromBase64(encodedString: string): string {
-  return Buffer.from(encodedString, "base64").toString("utf-8");
+  const binary = atob(encodedString);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 export function sleep(ms: number) {

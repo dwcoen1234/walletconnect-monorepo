@@ -49,7 +49,13 @@ export function addSignatureToExtrinsic({
 export function deriveExtrinsicHash(signedExtrinsicHex: string): string {
   const bytes = hexToBytes(signedExtrinsicHex);
   const hash = blake2b(bytes, undefined, 32);
-  return "0x" + Buffer.from(hash).toString("hex");
+  return "0x" + bytesToHex(hash);
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function hexToBytes(hex: string): Uint8Array {
@@ -118,11 +124,11 @@ export function buildSignedExtrinsicHash(payload: {
   };
   signature: string;
 }) {
-  const signature = Uint8Array.from(Buffer.from(payload.signature, "hex"));
+  const signature = hexToBytes(payload.signature);
 
   const publicKey = ss58AddressToPublicKey(payload.transaction.address);
   const signed = addSignatureToExtrinsic({ publicKey, signature, payload: payload.transaction });
-  const hexSigned = Buffer.from(signed).toString("hex");
+  const hexSigned = bytesToHex(signed);
   const hash = deriveExtrinsicHash(hexSigned);
 
   return hash;

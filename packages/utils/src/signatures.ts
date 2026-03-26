@@ -10,10 +10,36 @@ import { parseChainId } from "./caip.js";
 
 const DEFAULT_RPC_URL = "https://rpc.walletconnect.org/v1";
 
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function concatBytes(arrays: Uint8Array[]): Uint8Array {
+  const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const arr of arrays) {
+    result.set(arr, offset);
+    offset += arr.length;
+  }
+  return result;
+}
+
 export function hashEthereumMessage(message: string) {
   const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
   const prefixedMessage = new TextEncoder().encode(prefix + message);
-  return "0x" + Buffer.from(keccak_256(prefixedMessage)).toString("hex");
+  return "0x" + bytesToHex(keccak_256(prefixedMessage));
 }
 
 export async function verifySignature(
@@ -127,43 +153,33 @@ export function extractSolanaTransactionId(solanaTransaction: string): string {
     bytes[i] = binary.charCodeAt(i);
   }
 
-  // Check signature count (first byte)
   const signatureCount = bytes[0];
   if (signatureCount === 0) {
     throw new Error("No signatures found");
   }
 
-  // Verify we have enough bytes for all signatures
-  // Each signature is 64 bytes
   const signatureEndPos = 1 + signatureCount * 64;
   if (bytes.length < signatureEndPos) {
     throw new Error("Transaction data too short for claimed signature count");
   }
 
-  // A transaction must have at least some minimum length
   if (bytes.length < 100) {
     throw new Error("Transaction too short");
   }
 
-  const transactionBuffer = Buffer.from(solanaTransaction, "base64");
-
-  const signatureBuffer = transactionBuffer.slice(1, 65);
-
-  return base58.encode(signatureBuffer);
+  const signatureBytes = bytes.slice(1, 65);
+  return base58.encode(signatureBytes);
 }
 
 export function getSuiDigest(transaction: string) {
-  const txBytes = new Uint8Array(Buffer.from(transaction, "base64"));
-
-  const typeTagBytes = Array.from(`TransactionData::`).map((e) => e.charCodeAt(0));
+  const txBytes = base64ToBytes(transaction);
+  const typeTagBytes = new TextEncoder().encode("TransactionData::");
 
   const dataWithTag = new Uint8Array(typeTagBytes.length + txBytes.length);
-
   dataWithTag.set(typeTagBytes);
   dataWithTag.set(txBytes, typeTagBytes.length);
 
   const hash = blake2b(dataWithTag, { dkLen: 32 });
-
   return base58.encode(hash);
 }
 
@@ -188,7 +204,7 @@ export function getNearUint8ArrayFromBytes(bytes: unknown) {
 }
 
 export function getAlgorandTransactionId(transaction: string) {
-  const signedTxnBytes = Buffer.from(transaction, "base64");
+  const signedTxnBytes = base64ToBytes(transaction);
 
   const decoded = msgpackDecode(signedTxnBytes) as any;
 
@@ -199,17 +215,14 @@ export function getAlgorandTransactionId(transaction: string) {
 
   const serializedUnsignedTxn = msgpackEncode(unsignedTxn);
 
-  // Prepend "TX" prefix
-  const txPrefix = Buffer.from("TX");
-  const toHash = Buffer.concat([txPrefix, Buffer.from(serializedUnsignedTxn)]);
+  const txPrefix = new TextEncoder().encode("TX");
+  const toHash = concatBytes([txPrefix, new Uint8Array(serializedUnsignedTxn)]);
 
   const hash = sha512_256(toHash);
-
-  // Encode to base32 and remove padding
   return base32.encode(hash).replace(/=+$/, "");
 }
 
-function encodeVarint(value: number | bigint): Buffer {
+function encodeVarint(value: number | bigint): Uint8Array {
   const result: number[] = [];
   let v = BigInt(value);
   while (v >= 0x80n) {
@@ -217,7 +230,7 @@ function encodeVarint(value: number | bigint): Buffer {
     v >>= 7n;
   }
   result.push(Number(v));
-  return Buffer.from(result);
+  return new Uint8Array(result);
 }
 
 export function getSignDirectHash(payload: {
@@ -235,28 +248,28 @@ export function getSignDirectHash(payload: {
     signature: string;
   };
 }) {
-  const bodyBytes = Buffer.from(payload.signed.bodyBytes, "base64");
-  const authInfoBytes = Buffer.from(payload.signed.authInfoBytes, "base64");
-  const signature = Buffer.from(payload.signature.signature, "base64");
+  const bodyBytes = base64ToBytes(payload.signed.bodyBytes);
+  const authInfoBytes = base64ToBytes(payload.signed.authInfoBytes);
+  const signature = base64ToBytes(payload.signature.signature);
 
-  const chunks: Buffer[] = [];
+  const chunks: Uint8Array[] = [];
 
-  chunks.push(Buffer.from([0x0a]));
+  chunks.push(new Uint8Array([0x0a]));
   chunks.push(encodeVarint(bodyBytes.length));
   chunks.push(bodyBytes);
 
-  chunks.push(Buffer.from([0x12]));
+  chunks.push(new Uint8Array([0x12]));
   chunks.push(encodeVarint(authInfoBytes.length));
   chunks.push(authInfoBytes);
 
-  chunks.push(Buffer.from([0x1a]));
+  chunks.push(new Uint8Array([0x1a]));
   chunks.push(encodeVarint(signature.length));
   chunks.push(signature);
 
-  const txRawBytes = Buffer.concat(chunks);
+  const txRawBytes = concatBytes(chunks);
   const hashBytes = sha256(txRawBytes);
 
-  return Buffer.from(hashBytes).toString("hex").toUpperCase();
+  return bytesToHex(hashBytes).toUpperCase();
 }
 
 export function getWalletSendCallsHashes(

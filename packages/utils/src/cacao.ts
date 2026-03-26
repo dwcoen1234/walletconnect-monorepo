@@ -225,11 +225,22 @@ export function getReCapActions(abilities: any[]) {
 }
 
 export function base64Encode(input: unknown): string {
-  return Buffer.from(JSON.stringify(input)).toString("base64");
+  const json = JSON.stringify(input);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 export function base64Decode(encodedString: string): string {
-  return JSON.parse(Buffer.from(encodedString, "base64").toString("utf-8"));
+  const binary = atob(encodedString);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
 }
 
 export function isValidRecap(recap: any) {
