@@ -437,6 +437,12 @@ export class Relayer extends IRelayer {
       }
     } finally {
       this.connectionAttemptInProgress = false;
+      // Step A's finally clears reconnectTimeout, so any timeout scheduled by
+      // onProviderDisconnect during the retry loop will never fire its callback
+      // that resets reconnectInProgress. Clean up the stale state here.
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = undefined;
+      this.reconnectInProgress = false;
     }
   }
 
