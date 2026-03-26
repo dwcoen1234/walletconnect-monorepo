@@ -598,12 +598,23 @@ describe("Relayer", () => {
         });
 
         let errorReceived = false;
+        let connectReceived = false;
+        const timer = Date.now();
         relayer.on(RELAYER_EVENTS.error, (payload) => {
           expect(payload.message).to.include("Unauthorized: origin not allowed");
           errorReceived = true;
         });
+        relayer.on(RELAYER_EVENTS.connect, () => {
+          connectReceived = true;
+        });
         await relayer.transportOpen().catch((e) => {});
         await throttle(1000);
+        console.log("first check time taken", connectReceived, errorReceived, Date.now() - timer);
+        if (!connectReceived || !errorReceived) {
+          await throttle(1000);
+          console.log("second check time taken", Date.now() - timer);
+        }
+        expect(connectReceived).to.be.true;
         expect(errorReceived).to.be.true;
       });
 
