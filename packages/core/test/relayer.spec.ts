@@ -925,6 +925,36 @@ describe("Relayer", () => {
       expect(restartStub.callCount).to.equal(2);
     });
 
+    it("should not spawn runaway concurrent connect calls on repeated failures", async () => {
+      restartStub.restore();
+
+      // #given - stub signJWT to track how many times createProvider is called
+      const signJWTSpy = Sinon.spy(core.crypto, "signJWT");
+
+      // make provider.connect() always fail so every attempt in the retry loop fails
+      const originalCreateProvider = (relayer as any).createProvider.bind(relayer);
+      const createProviderStub = Sinon.stub(relayer as any, "createProvider").callsFake(
+        async function (this: any) {
+          await originalCreateProvider.call(this);
+          Sinon.stub(relayer.provider, "connect").rejects(new Error("simulated network failure"));
+        },
+      );
+
+      // #when - trigger a connection attempt that will fail all 5 retries
+      await relayer.transportOpen().catch(() => {});
+
+      // wait long enough for any stalled restart / heartbeat to fire
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      // #then - signJWT should be called at most 5 times (one per retry attempt),
+      // NOT exponentially growing (25, 125, etc.)
+      expect(signJWTSpy.callCount).to.be.lessThanOrEqual(5);
+
+      signJWTSpy.restore();
+      createProviderStub.restore();
+      await relayer.transportClose();
+    });
+
     it("should reset backoff after explicit transportClose", async () => {
       // #given - trigger first stalled restart (immediate, backoff goes 0 → 1)
       relayer.events.emit(RELAYER_EVENTS.connection_stalled);
