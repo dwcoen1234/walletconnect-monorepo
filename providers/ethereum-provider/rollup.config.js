@@ -1,5 +1,5 @@
 import pkg from "./package.json" with { type: "json" };
-import createConfig, { input, plugins } from "../../rollup.config.js";
+import createConfig, { input, plugins, isExternal } from "../../rollup.config.js";
 import alias from "@rollup/plugin-alias";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -25,7 +25,7 @@ export default createConfig(pkg.name, externalDependencies, options, options, op
       }),
       ...plugins,
     ],
-    external: externalDependencies,
+    external: isExternal(externalDependencies),
     output: {
       file: "./dist/index.native.js",
       format: "cjs",
