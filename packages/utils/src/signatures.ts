@@ -12,7 +12,8 @@ import { parseChainId } from "./caip.js";
 const DEFAULT_RPC_URL = "https://rpc.walletconnect.org/v1";
 
 function base64ToBytes(b64: string): Uint8Array {
-  const binary = atob(b64);
+  const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+  const binary = atob(padded);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
