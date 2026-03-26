@@ -722,6 +722,6 @@ export class Relayer extends IRelayer {
       await this.connectPromise;
       return;
     }
-    await this.transportOpen();
+    await this.connect();
   }
 }
