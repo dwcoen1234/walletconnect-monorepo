@@ -373,77 +373,72 @@ export class Relayer extends IRelayer {
     this.connectionAttemptInProgress = true;
     this.transportExplicitlyClosed = false;
     let attempt = 1;
-    try {
-      while (attempt < 6) {
-        try {
-          if (this.transportExplicitlyClosed) {
-            break;
-          }
-          this.logger.debug({}, `Connecting to ${this.relayUrl}, attempt: ${attempt}...`);
-          await this.createProvider();
-
-          // Step A: establish WebSocket connection
-          await new Promise<void>((resolve, reject) => {
-            const onDisconnect = () => {
-              reject(new Error(`Connection interrupted while trying to connect`));
-            };
-            this.provider.once(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
-            createExpiringPromise(
-              this.provider.connect(),
-              this.connectTimeout,
-              `Socket stalled when trying to connect to ${this.relayUrl}`,
-            )
-              .then(() => resolve())
-              .catch(reject)
-              .finally(() => {
-                this.provider.off(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
-                clearTimeout(this.reconnectTimeout);
-              });
-          });
-
-          // Step B: re-subscribe (only reached if Step A resolved)
-          await new Promise<void>((resolve, reject) => {
-            const onDisconnect = () => {
-              reject(new Error(`Connection interrupted while trying to subscribe`));
-            };
-            this.provider.once(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
-            this.subscriber
-              .start()
-              .then(resolve)
-              .catch(reject)
-              .finally(() => {
-                this.provider.off(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
-              });
-          });
-
-          this.hasExperiencedNetworkDisruption = false;
-        } catch (e) {
-          await this.subscriber.stop();
-          const error = e as Error;
-          this.logger.warn({}, error.message);
-          this.hasExperiencedNetworkDisruption = true;
-        }
-
-        if (this.connected) {
-          this.logger.debug(
-            {},
-            `Connected to ${this.relayUrl} successfully on attempt: ${attempt}`,
-          );
+    while (attempt < 6) {
+      try {
+        if (this.transportExplicitlyClosed) {
           break;
         }
+        this.logger.debug({}, `Connecting to ${this.relayUrl}, attempt: ${attempt}...`);
+        await this.createProvider();
 
-        await new Promise((resolve) => setTimeout(resolve, toMiliseconds(attempt * 1)));
-        attempt++;
+        // Step A: establish WebSocket connection
+        await new Promise<void>((resolve, reject) => {
+          const onDisconnect = () => {
+            reject(new Error(`Connection interrupted while trying to connect`));
+          };
+          this.provider.once(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
+          createExpiringPromise(
+            this.provider.connect(),
+            this.connectTimeout,
+            `Socket stalled when trying to connect to ${this.relayUrl}`,
+          )
+            .then(() => resolve())
+            .catch(reject)
+            .finally(() => {
+              this.provider.off(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
+              clearTimeout(this.reconnectTimeout);
+            });
+        });
+
+        // Step B: re-subscribe (only reached if Step A resolved)
+        await new Promise<void>((resolve, reject) => {
+          const onDisconnect = () => {
+            reject(new Error(`Connection interrupted while trying to subscribe`));
+          };
+          this.provider.once(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
+          this.subscriber
+            .start()
+            .then(resolve)
+            .catch(reject)
+            .finally(() => {
+              this.provider.off(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
+            });
+        });
+
+        this.hasExperiencedNetworkDisruption = false;
+      } catch (e) {
+        await this.subscriber.stop();
+        const error = e as Error;
+        this.logger.warn({}, error.message);
+        this.hasExperiencedNetworkDisruption = true;
+      } finally {
+        this.connectionAttemptInProgress = false;
       }
-    } finally {
-      this.connectionAttemptInProgress = false;
-      // Step A's finally clears reconnectTimeout, so any timeout scheduled by
-      // onProviderDisconnect during the retry loop will never fire its callback
-      // that resets reconnectInProgress. Clean up the stale state here.
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = undefined;
-      this.reconnectInProgress = false;
+
+      if (this.connected) {
+        this.logger.debug(
+          {},
+          `Connected to ${this.relayUrl} successfully on attempt: ${attempt}`,
+        );
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, toMiliseconds(attempt * 1)));
+      attempt++;
     }
+    clearTimeout(this.reconnectTimeout);
+    this.reconnectTimeout = undefined;
+    this.reconnectInProgress = false;
   }
 
   /*
