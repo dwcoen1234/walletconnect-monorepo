@@ -198,21 +198,25 @@ export class Relayer extends IRelayer {
         resolvePromise = resolve;
         this.subscriber.on(SUBSCRIBER_EVENTS.created, onSubCreated);
       }),
-      new Promise<void>(async (resolve, reject) => {
-        const result = await this.subscriber
+      new Promise<void>((resolve, reject) => {
+        this.subscriber
           .subscribe(topic, {
             internal: {
               throwOnFailedPublish: shouldThrowOnFailure,
             },
             ...opts,
           })
+          .then((result) => {
+            id = result || id;
+            resolve();
+          })
           .catch((error) => {
             if (shouldThrowOnFailure) {
               reject(error);
+            } else {
+              resolve();
             }
           });
-        id = result || id;
-        resolve();
       }),
     ]);
     return id;
@@ -688,11 +692,14 @@ export class Relayer extends IRelayer {
   private async onProviderDisconnect() {
     clearTimeout(this.pingTimeout);
     this.events.emit(RELAYER_EVENTS.disconnect);
-    this.connectionAttemptInProgress = false;
     if (this.reconnectInProgress) return;
 
     this.reconnectInProgress = true;
-    await this.subscriber.stop();
+    try {
+      await this.subscriber.stop();
+    } catch (e) {
+      this.logger.warn(e, "subscriber.stop() failed during disconnect");
+    }
 
     if (!this.subscriber.hasAnyTopics || this.transportExplicitlyClosed) {
       this.reconnectInProgress = false;

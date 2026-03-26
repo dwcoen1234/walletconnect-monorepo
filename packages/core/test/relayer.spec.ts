@@ -609,10 +609,20 @@ describe("Relayer", () => {
         });
         await relayer.transportOpen().catch((e) => {});
         await throttle(1000);
-        console.log("first check time taken", connectReceived, errorReceived, Date.now() - timer);
         if (!connectReceived || !errorReceived) {
+          console.warn(
+            "first check time taken",
+            connectReceived,
+            errorReceived,
+            Date.now() - timer,
+          );
           await throttle(1000);
-          console.log("second check time taken", Date.now() - timer);
+          console.warn(
+            "second check time taken",
+            connectReceived,
+            errorReceived,
+            Date.now() - timer,
+          );
         }
         expect(connectReceived).to.be.true;
         expect(errorReceived).to.be.true;
@@ -739,6 +749,11 @@ describe("Relayer", () => {
       });
       await relayer.transportOpen();
     });
+    afterEach(async () => {
+      // @ts-expect-error - private property
+      clearTimeout(relayer.reconnectTimeout);
+      await disconnectSocket(relayer);
+    });
 
     it("should reset reconnectInProgress when no topics exist on disconnect", async () => {
       // #given - clear all topics so onProviderDisconnect hits the early return
@@ -813,9 +828,6 @@ describe("Relayer", () => {
 
     it("should block restartTransport during active connection attempts", async () => {
       // #given
-      const restartSpy = vi.fn();
-      const originalRestart = relayer.restartTransport.bind(relayer);
-
       await relayer.transportOpen();
       expect(relayer.connected).to.be.true;
 
