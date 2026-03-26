@@ -113,8 +113,8 @@ export class Relayer extends IRelayer {
     this.subscriber = new Subscriber(this, this.logger);
     this.publisher = new Publisher(this, this.logger);
 
-    this.projectId = opts?.projectId;
-    this.relayUrl = opts?.relayUrl || RELAYER_DEFAULT_RELAY_URL;
+    this.projectId = opts.projectId;
+    this.relayUrl = opts.relayUrl || RELAYER_DEFAULT_RELAY_URL;
 
     if (isAndroid()) {
       this.packageName = getAppId();
@@ -141,15 +141,14 @@ export class Relayer extends IRelayer {
 
   get connected() {
     // @ts-expect-error
-    return this.provider?.connection?.socket?.readyState === 1 || false;
+    return this.provider?.connection?.socket?.readyState === 1;
   }
 
   get connecting() {
     return (
       // @ts-expect-error
       this.provider?.connection?.socket?.readyState === 0 ||
-      this.connectPromise !== undefined ||
-      false
+      this.connectPromise !== undefined
     );
   }
 
@@ -178,11 +177,7 @@ export class Relayer extends IRelayer {
     if (!opts?.transportType || opts?.transportType === "relay") {
       await this.toEstablishConnection();
     }
-    // throw unless explicitly set to false
-    const shouldThrowOnFailure =
-      typeof opts?.internal?.throwOnFailedPublish === "undefined"
-        ? true
-        : opts?.internal?.throwOnFailedPublish;
+    const shouldThrowOnFailure = opts?.internal?.throwOnFailedPublish ?? true;
 
     let id = this.subscriber.topicMap.get(topic)?.[0] || "";
     let resolvePromise: () => void;
@@ -395,9 +390,7 @@ export class Relayer extends IRelayer {
             };
             this.provider.once(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
             createExpiringPromise(
-              new Promise((resolve, reject) => {
-                this.provider.connect().then(resolve).catch(reject);
-              }),
+              this.provider.connect(),
               this.connectTimeout,
               `Socket stalled when trying to connect to ${this.relayUrl}`,
             )
@@ -459,12 +452,9 @@ export class Relayer extends IRelayer {
     if (!isNode()) return;
     try {
       //@ts-expect-error - Types are divergent between the node and browser WS API
-      if (this.provider?.connection?.socket) {
-        //@ts-expect-error
-        this.provider?.connection?.socket?.on("ping", () => {
-          this.resetPingTimeout();
-        });
-      }
+      this.provider?.connection?.socket?.on("ping", () => {
+        this.resetPingTimeout();
+      });
       this.resetPingTimeout();
     } catch (e) {
       this.logger.warn(e, (e as Error)?.message);
@@ -488,10 +478,16 @@ export class Relayer extends IRelayer {
   private async createProvider() {
     if (this.provider.connection) {
       this.unregisterProviderListeners();
-      try {
-        await createExpiringPromise(this.provider.disconnect(), 1000, "Closing previous provider");
-      } catch {
-        // best-effort cleanup of old socket
+      if (this.connected) {
+        try {
+          await createExpiringPromise(
+            this.provider.disconnect(),
+            1000,
+            "Closing previous provider",
+          );
+        } catch {
+          // best-effort cleanup of old socket
+        }
       }
     }
     const auth = await this.core.crypto.signJWT(this.relayUrl);
