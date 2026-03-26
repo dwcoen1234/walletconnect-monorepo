@@ -289,12 +289,8 @@ describe("URI", () => {
 
     it("should mergeEncodedRecaps with unpadded base64", () => {
       // #given
-      const recap1 = encodeRecap(
-        createRecap("eip155", "request", ["personal_sign"]),
-      );
-      const recap2 = encodeRecap(
-        createRecap("eip155", "request", ["eth_sendTransaction"]),
-      );
+      const recap1 = encodeRecap(createRecap("eip155", "request", ["personal_sign"]));
+      const recap2 = encodeRecap(createRecap("eip155", "request", ["eth_sendTransaction"]));
 
       // #when
       const merged = mergeEncodedRecaps(recap1, recap2);
