@@ -716,6 +716,113 @@ describe("Relayer", () => {
     },
   );
 
+  describe("reconnectInProgress guard", () => {
+    beforeEach(async () => {
+      core = new Core(TEST_CORE_OPTIONS);
+      relayer = core.relayer;
+      await core.start();
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+      await relayer.transportOpen();
+    });
+
+    it("should reset reconnectInProgress when no topics exist on disconnect", async () => {
+      // #given - clear all topics so onProviderDisconnect hits the early return
+      expect(relayer.connected).to.be.true;
+      relayer.subscriber.subscriptions.clear();
+      relayer.subscriber.topicMap.clear();
+      relayer.subscriber.pending.clear();
+
+      // #when
+      // @ts-expect-error - private method
+      await relayer.onProviderDisconnect();
+
+      // #then - flag must be reset to allow future reconnection
+      // @ts-expect-error - private property
+      expect(relayer.reconnectInProgress).to.be.false;
+    });
+
+    it("should reset reconnectInProgress when transportExplicitlyClosed on disconnect", async () => {
+      // #given
+      expect(relayer.connected).to.be.true;
+      relayer.transportExplicitlyClosed = true;
+
+      // #when
+      // @ts-expect-error - private method
+      await relayer.onProviderDisconnect();
+
+      // #then
+      // @ts-expect-error - private property
+      expect(relayer.reconnectInProgress).to.be.false;
+    });
+
+    it("should allow reconnection after early return from onProviderDisconnect", async () => {
+      // #given - trigger early return (no topics)
+      relayer.subscriber.subscriptions.clear();
+      relayer.subscriber.topicMap.clear();
+      relayer.subscriber.pending.clear();
+      // @ts-expect-error - private method
+      await relayer.onProviderDisconnect();
+      // @ts-expect-error - private property
+      expect(relayer.reconnectInProgress).to.be.false;
+
+      // #when - re-add topics and trigger another disconnect
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+      // @ts-expect-error - private method
+      await relayer.onProviderDisconnect();
+
+      // #then - should NOT be blocked by a stuck flag — reconnect timeout should be scheduled
+      // @ts-expect-error - private property
+      expect(relayer.reconnectTimeout).to.not.be.undefined;
+      // @ts-expect-error - private property
+      expect(relayer.reconnectInProgress).to.be.true;
+
+      await relayer.transportClose();
+    });
+  });
+
+  describe("connectionAttemptInProgress guard", () => {
+    beforeEach(async () => {
+      core = new Core(TEST_CORE_OPTIONS);
+      relayer = core.relayer;
+      await core.start();
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+    });
+
+    it("should block restartTransport during active connection attempts", async () => {
+      // #given
+      const restartSpy = vi.fn();
+      const originalRestart = relayer.restartTransport.bind(relayer);
+
+      await relayer.transportOpen();
+      expect(relayer.connected).to.be.true;
+
+      // #when - simulate connectionAttemptInProgress being true
+      // @ts-expect-error - private property
+      relayer.connectionAttemptInProgress = true;
+
+      // #then - restartTransport should return early
+      await relayer.restartTransport();
+      // If restartTransport didn't return early, it would have disconnected us
+      expect(relayer.connected).to.be.true;
+
+      // @ts-expect-error - private property
+      relayer.connectionAttemptInProgress = false;
+      await relayer.transportClose();
+    });
+  });
+
   describe("connection_stalled", () => {
     let restartStub: Sinon.SinonStub;
 
