@@ -598,12 +598,33 @@ describe("Relayer", () => {
         });
 
         let errorReceived = false;
+        let connectReceived = false;
+        const timer = Date.now();
         relayer.on(RELAYER_EVENTS.error, (payload) => {
           expect(payload.message).to.include("Unauthorized: origin not allowed");
           errorReceived = true;
         });
+        relayer.on(RELAYER_EVENTS.connect, () => {
+          connectReceived = true;
+        });
         await relayer.transportOpen().catch((e) => {});
         await throttle(1000);
+        if (!connectReceived || !errorReceived) {
+          console.warn(
+            "first check time taken",
+            connectReceived,
+            errorReceived,
+            Date.now() - timer,
+          );
+          await throttle(1000);
+          console.warn(
+            "second check time taken",
+            connectReceived,
+            errorReceived,
+            Date.now() - timer,
+          );
+        }
+        expect(connectReceived).to.be.true;
         expect(errorReceived).to.be.true;
       });
 
@@ -716,6 +737,115 @@ describe("Relayer", () => {
     },
   );
 
+  describe("reconnectInProgress guard", () => {
+    beforeEach(async () => {
+      core = new Core(TEST_CORE_OPTIONS);
+      relayer = core.relayer;
+      await core.start();
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+      await relayer.transportOpen();
+    });
+    afterEach(async () => {
+      // @ts-expect-error - private property
+      clearTimeout(relayer.reconnectTimeout);
+      await disconnectSocket(relayer);
+    });
+
+    it("should reset reconnectInProgress when no topics exist on disconnect", async () => {
+      // #given - clear all topics so onProviderDisconnect hits the early return
+      expect(relayer.connected).to.be.true;
+      relayer.subscriber.subscriptions.clear();
+      relayer.subscriber.topicMap.clear();
+      relayer.subscriber.pending.clear();
+
+      // #when
+      // @ts-expect-error - private method
+      await relayer.onProviderDisconnect();
+
+      // #then - flag must be reset to allow future reconnection
+      // @ts-expect-error - private property
+      expect(relayer.reconnectInProgress).to.be.false;
+    });
+
+    it("should reset reconnectInProgress when transportExplicitlyClosed on disconnect", async () => {
+      // #given
+      expect(relayer.connected).to.be.true;
+      relayer.transportExplicitlyClosed = true;
+
+      // #when
+      // @ts-expect-error - private method
+      await relayer.onProviderDisconnect();
+
+      // #then
+      // @ts-expect-error - private property
+      expect(relayer.reconnectInProgress).to.be.false;
+    });
+
+    it("should allow reconnection after early return from onProviderDisconnect", async () => {
+      // #given - trigger early return (no topics)
+      relayer.subscriber.subscriptions.clear();
+      relayer.subscriber.topicMap.clear();
+      relayer.subscriber.pending.clear();
+      // @ts-expect-error - private method
+      await relayer.onProviderDisconnect();
+      // @ts-expect-error - private property
+      expect(relayer.reconnectInProgress).to.be.false;
+
+      // #when - re-add topics and trigger another disconnect
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+      // @ts-expect-error - private method
+      await relayer.onProviderDisconnect();
+
+      // #then - should NOT be blocked by a stuck flag — reconnect timeout should be scheduled
+      // @ts-expect-error - private property
+      expect(relayer.reconnectTimeout).to.not.be.undefined;
+      // @ts-expect-error - private property
+      expect(relayer.reconnectInProgress).to.be.true;
+
+      await relayer.transportClose();
+    });
+  });
+
+  describe("connectionAttemptInProgress guard", () => {
+    beforeEach(async () => {
+      core = new Core(TEST_CORE_OPTIONS);
+      relayer = core.relayer;
+      await core.start();
+      relayer.subscriber.subscriptions.set(randomTopic, {
+        topic: randomTopic,
+        id: randomTopic,
+        relay: { protocol: "irn" },
+      });
+    });
+
+    it("should block restartTransport during active connection attempts", async () => {
+      // #given
+      await relayer.transportOpen();
+      expect(relayer.connected).to.be.true;
+
+      // #when - simulate connectionAttemptInProgress being true
+      // @ts-expect-error - private property
+      relayer.connectionAttemptInProgress = true;
+
+      // #then - restartTransport should return early
+      await relayer.restartTransport();
+      // If restartTransport didn't return early, it would have disconnected us
+      expect(relayer.connected).to.be.true;
+
+      // @ts-expect-error - private property
+      relayer.connectionAttemptInProgress = false;
+      await relayer.transportClose();
+    });
+  });
+
   describe("connection_stalled", () => {
     let restartStub: Sinon.SinonStub;
 
@@ -779,20 +909,50 @@ describe("Relayer", () => {
       expect(restartStub.callCount).to.equal(2);
     });
 
-    it("should NOT reset backoff on successful connection", async () => {
+    it("should reset backoff on successful connection", async () => {
       // #given - trigger first stalled restart (immediate, backoff goes 0 → 1)
       relayer.events.emit(RELAYER_EVENTS.connection_stalled);
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(restartStub.callCount).to.equal(1);
 
-      // #when - simulate successful connection
+      // #when - simulate successful connection (resets backoff to 0)
       // @ts-expect-error - private method
       relayer.onConnectHandler();
 
-      // #then - next stalled event should NOT be immediate (backoff=1 → 2s delay)
+      // #then - next stalled event should be immediate again (backoff reset to 0)
       relayer.events.emit(RELAYER_EVENTS.connection_stalled);
       await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(restartStub.callCount).to.equal(1);
+      expect(restartStub.callCount).to.equal(2);
+    });
+
+    it("should not spawn runaway concurrent connect calls on repeated failures", async () => {
+      restartStub.restore();
+
+      // #given - stub signJWT to track how many times createProvider is called
+      const signJWTSpy = Sinon.spy(core.crypto, "signJWT");
+
+      // make provider.connect() always fail so every attempt in the retry loop fails
+      const originalCreateProvider = (relayer as any).createProvider.bind(relayer);
+      const createProviderStub = Sinon.stub(relayer as any, "createProvider").callsFake(
+        async function (this: any) {
+          await originalCreateProvider.call(this);
+          Sinon.stub(relayer.provider, "connect").rejects(new Error("simulated network failure"));
+        },
+      );
+
+      // #when - trigger a connection attempt that will fail all 5 retries
+      await relayer.transportOpen().catch(() => {});
+
+      // wait long enough for any stalled restart / heartbeat to fire
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      // #then - signJWT should be called at most 5 times (one per retry attempt),
+      // NOT exponentially growing (25, 125, etc.)
+      expect(signJWTSpy.callCount).to.be.lessThanOrEqual(5);
+
+      signJWTSpy.restore();
+      createProviderStub.restore();
+      await relayer.transportClose();
     });
 
     it("should reset backoff after explicit transportClose", async () => {

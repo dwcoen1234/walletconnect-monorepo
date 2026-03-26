@@ -113,8 +113,8 @@ export class Relayer extends IRelayer {
     this.subscriber = new Subscriber(this, this.logger);
     this.publisher = new Publisher(this, this.logger);
 
-    this.projectId = opts?.projectId;
-    this.relayUrl = opts?.relayUrl || RELAYER_DEFAULT_RELAY_URL;
+    this.projectId = opts.projectId;
+    this.relayUrl = opts.relayUrl || RELAYER_DEFAULT_RELAY_URL;
 
     if (isAndroid()) {
       this.packageName = getAppId();
@@ -141,15 +141,13 @@ export class Relayer extends IRelayer {
 
   get connected() {
     // @ts-expect-error
-    return this.provider?.connection?.socket?.readyState === 1 || false;
+    return this.provider?.connection?.socket?.readyState === 1;
   }
 
   get connecting() {
     return (
       // @ts-expect-error
-      this.provider?.connection?.socket?.readyState === 0 ||
-      this.connectPromise !== undefined ||
-      false
+      this.provider?.connection?.socket?.readyState === 0 || this.connectPromise !== undefined
     );
   }
 
@@ -178,11 +176,7 @@ export class Relayer extends IRelayer {
     if (!opts?.transportType || opts?.transportType === "relay") {
       await this.toEstablishConnection();
     }
-    // throw unless explicitly set to false
-    const shouldThrowOnFailure =
-      typeof opts?.internal?.throwOnFailedPublish === "undefined"
-        ? true
-        : opts?.internal?.throwOnFailedPublish;
+    const shouldThrowOnFailure = opts?.internal?.throwOnFailedPublish ?? true;
 
     let id = this.subscriber.topicMap.get(topic)?.[0] || "";
     let resolvePromise: () => void;
@@ -198,21 +192,25 @@ export class Relayer extends IRelayer {
         resolvePromise = resolve;
         this.subscriber.on(SUBSCRIBER_EVENTS.created, onSubCreated);
       }),
-      new Promise<void>(async (resolve, reject) => {
-        const result = await this.subscriber
+      new Promise<void>((resolve, reject) => {
+        this.subscriber
           .subscribe(topic, {
             internal: {
               throwOnFailedPublish: shouldThrowOnFailure,
             },
             ...opts,
           })
+          .then((result) => {
+            id = result || id;
+            resolve();
+          })
           .catch((error) => {
             if (shouldThrowOnFailure) {
               reject(error);
+            } else {
+              resolve();
             }
           });
-        id = result || id;
-        resolve();
       }),
     ]);
     return id;
@@ -294,13 +292,8 @@ export class Relayer extends IRelayer {
       await this.connectPromise;
       this.logger.debug({}, `Existing connection attempt resolved`);
     } else {
-      this.connectPromise = new Promise(async (resolve, reject) => {
-        await this.connect(relayUrl)
-          .then(resolve)
-          .catch(reject)
-          .finally(() => {
-            this.connectPromise = undefined;
-          });
+      this.connectPromise = this.connect(relayUrl).finally(() => {
+        this.connectPromise = undefined;
       });
       await this.connectPromise;
     }
@@ -377,71 +370,76 @@ export class Relayer extends IRelayer {
       await this.transportDisconnect();
     }
 
-    this.connectionAttemptInProgress = true;
     this.transportExplicitlyClosed = false;
     let attempt = 1;
-    while (attempt < 6) {
-      try {
-        if (this.transportExplicitlyClosed) {
-          break;
-        }
-        this.logger.debug({}, `Connecting to ${this.relayUrl}, attempt: ${attempt}...`);
-        // Always create new socket instance when trying to connect because if the socket was dropped due to `socket hang up` exception
-        // It wont be able to reconnect
-        await this.createProvider();
+    try {
+      while (attempt < 6) {
+        this.connectionAttemptInProgress = true;
+        try {
+          if (this.transportExplicitlyClosed) {
+            break;
+          }
+          this.logger.debug({}, `Connecting to ${this.relayUrl}, attempt: ${attempt}...`);
+          await this.createProvider();
 
-        await new Promise<void>(async (resolve, reject) => {
-          const onDisconnect = () => {
-            reject(new Error(`Connection interrupted while trying to connect`));
-          };
-          this.provider.once(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
+          // Step A: establish WebSocket connection
+          await new Promise<void>((resolve, reject) => {
+            const onDisconnect = () => {
+              reject(new Error(`Connection interrupted while trying to connect`));
+            };
+            this.provider.once(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
+            createExpiringPromise(
+              this.provider.connect(),
+              this.connectTimeout,
+              `Socket stalled when trying to connect to ${this.relayUrl}`,
+            )
+              .then(() => resolve())
+              .catch(reject)
+              .finally(() => {
+                this.provider.off(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
+                clearTimeout(this.reconnectTimeout);
+              });
+          });
 
-          await createExpiringPromise(
-            new Promise((resolve, reject) => {
-              this.provider.connect().then(resolve).catch(reject);
-            }),
-            this.connectTimeout,
-            `Socket stalled when trying to connect to ${this.relayUrl}`,
-          )
-            .catch((e) => {
-              reject(e);
-            })
-            .finally(() => {
-              this.provider.off(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
-              clearTimeout(this.reconnectTimeout);
-            });
-          await new Promise(async (_resolve, _reject) => {
+          // Step B: re-subscribe (only reached if Step A resolved)
+          await new Promise<void>((resolve, reject) => {
             const onDisconnect = () => {
               reject(new Error(`Connection interrupted while trying to subscribe`));
             };
             this.provider.once(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
-            await this.subscriber
+            this.subscriber
               .start()
-              .then(_resolve)
-              .catch(_reject)
+              .then(resolve)
+              .catch(reject)
               .finally(() => {
                 this.provider.off(RELAYER_PROVIDER_EVENTS.disconnect, onDisconnect);
               });
           });
+
           this.hasExperiencedNetworkDisruption = false;
-          resolve();
-        });
-      } catch (e) {
-        await this.subscriber.stop();
-        const error = e as Error;
-        this.logger.warn({}, error.message);
-        this.hasExperiencedNetworkDisruption = true;
-      } finally {
-        this.connectionAttemptInProgress = false;
-      }
+        } catch (e) {
+          await this.subscriber.stop();
+          const error = e as Error;
+          this.logger.warn({}, error.message);
+          this.hasExperiencedNetworkDisruption = true;
+        }
 
-      if (this.connected) {
-        this.logger.debug({}, `Connected to ${this.relayUrl} successfully on attempt: ${attempt}`);
-        break;
-      }
+        if (this.connected) {
+          this.logger.debug(
+            {},
+            `Connected to ${this.relayUrl} successfully on attempt: ${attempt}`,
+          );
+          break;
+        }
 
-      await new Promise((resolve) => setTimeout(resolve, toMiliseconds(attempt * 1)));
-      attempt++;
+        await new Promise((resolve) => setTimeout(resolve, toMiliseconds(attempt * 1)));
+        attempt++;
+      }
+    } finally {
+      this.connectionAttemptInProgress = false;
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = undefined;
+      this.reconnectInProgress = false;
     }
   }
 
@@ -456,12 +454,9 @@ export class Relayer extends IRelayer {
     if (!isNode()) return;
     try {
       //@ts-expect-error - Types are divergent between the node and browser WS API
-      if (this.provider?.connection?.socket) {
-        //@ts-expect-error
-        this.provider?.connection?.socket?.on("ping", () => {
-          this.resetPingTimeout();
-        });
-      }
+      this.provider?.connection?.socket?.on("ping", () => {
+        this.resetPingTimeout();
+      });
       this.resetPingTimeout();
     } catch (e) {
       this.logger.warn(e, (e as Error)?.message);
@@ -485,6 +480,17 @@ export class Relayer extends IRelayer {
   private async createProvider() {
     if (this.provider.connection) {
       this.unregisterProviderListeners();
+      if (this.connected) {
+        try {
+          await createExpiringPromise(
+            this.provider.disconnect(),
+            1000,
+            "Closing previous provider",
+          );
+        } catch {
+          // best-effort cleanup of old socket
+        }
+      }
     }
     const auth = await this.core.crypto.signJWT(this.relayUrl);
 
@@ -585,6 +591,7 @@ export class Relayer extends IRelayer {
   private onConnectHandler = () => {
     this.logger.warn({}, "Relayer connected 🛜");
     this.startPingTimeout();
+    this.stalledRestartBackoff = 0;
     this.events.emit(RELAYER_EVENTS.connect);
   };
 
@@ -684,14 +691,19 @@ export class Relayer extends IRelayer {
   private async onProviderDisconnect() {
     clearTimeout(this.pingTimeout);
     this.events.emit(RELAYER_EVENTS.disconnect);
-    this.connectionAttemptInProgress = false;
     if (this.reconnectInProgress) return;
 
     this.reconnectInProgress = true;
-    await this.subscriber.stop();
+    try {
+      await this.subscriber.stop();
+    } catch (e) {
+      this.logger.warn(e, "subscriber.stop() failed during disconnect");
+    }
 
-    if (!this.subscriber.hasAnyTopics) return;
-    if (this.transportExplicitlyClosed) return;
+    if (!this.subscriber.hasAnyTopics || this.transportExplicitlyClosed) {
+      this.reconnectInProgress = false;
+      return;
+    }
 
     this.reconnectTimeout = setTimeout(async () => {
       await this.transportOpen().catch((error) =>
@@ -716,6 +728,9 @@ export class Relayer extends IRelayer {
       await this.connectPromise;
       return;
     }
-    await this.connect();
+    this.connectPromise = this.connect().finally(() => {
+      this.connectPromise = undefined;
+    });
+    await this.connectPromise;
   }
 }
