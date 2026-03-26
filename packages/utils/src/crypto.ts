@@ -246,11 +246,7 @@ export function verifyP256Jwt<T>(token: string, keyData: P256KeyDataType) {
   const messageHash = sha256(signingInput);
   const publicKey = getCryptoKeyFromKeyData(keyData);
 
-  const isValid = p256.verify(
-    concat([r, s]),
-    messageHash,
-    publicKey,
-  );
+  const isValid = p256.verify(concat([r, s]), messageHash, publicKey);
 
   if (!isValid) {
     throw new Error("Invalid signature");
