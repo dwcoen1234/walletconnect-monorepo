@@ -147,8 +147,7 @@ export class Relayer extends IRelayer {
   get connecting() {
     return (
       // @ts-expect-error
-      this.provider?.connection?.socket?.readyState === 0 ||
-      this.connectPromise !== undefined
+      this.provider?.connection?.socket?.readyState === 0 || this.connectPromise !== undefined
     );
   }
 
