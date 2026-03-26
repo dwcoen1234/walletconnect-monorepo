@@ -1,5 +1,6 @@
 import { base58 } from "@scure/base";
 import { blake2b } from "blakejs";
+import { toString } from "uint8arrays";
 
 export function ss58AddressToPublicKey(address: string): Uint8Array {
   const decoded = base58.decode(address);
@@ -49,7 +50,7 @@ export function addSignatureToExtrinsic({
 export function deriveExtrinsicHash(signedExtrinsicHex: string): string {
   const bytes = hexToBytes(signedExtrinsicHex);
   const hash = blake2b(bytes, undefined, 32);
-  return "0x" + Buffer.from(hash).toString("hex");
+  return "0x" + toString(hash, "base16");
 }
 
 function hexToBytes(hex: string): Uint8Array {
@@ -118,11 +119,11 @@ export function buildSignedExtrinsicHash(payload: {
   };
   signature: string;
 }) {
-  const signature = Uint8Array.from(Buffer.from(payload.signature, "hex"));
+  const signature = hexToBytes(payload.signature);
 
   const publicKey = ss58AddressToPublicKey(payload.transaction.address);
   const signed = addSignatureToExtrinsic({ publicKey, signature, payload: payload.transaction });
-  const hexSigned = Buffer.from(signed).toString("hex");
+  const hexSigned = toString(signed, "base16");
   const hash = deriveExtrinsicHash(hexSigned);
 
   return hash;

@@ -12,6 +12,7 @@ import {
   isValidRecap,
   mergeRecaps,
   populateAuthPayload,
+  mergeEncodedRecaps,
 } from "../src";
 
 describe("URI", () => {
@@ -253,6 +254,68 @@ describe("URI", () => {
     expect(message).to.include("Nonce: 32891756");
     expect(message).to.include(`URI: ${request.aud}`);
   });
+  describe("encodeRecap / decodeRecap with unpadded base64", () => {
+    it("should roundtrip recap whose base64 requires padding", () => {
+      // #given - a recap whose JSON length produces base64 needing padding (length % 4 !== 0)
+      const recap = createRecap("eip155", "request", ["personal_sign"]);
+      const encoded = encodeRecap(recap);
+
+      // #when - encodeRecap strips padding per spec
+      const base64Part = encoded.replace("urn:recap:", "");
+      expect(base64Part).to.not.include("=");
+
+      // #then - decodeRecap must handle the unpadded input
+      const decoded = decodeRecap(encoded);
+      expect(decoded).to.eql(recap);
+    });
+
+    it("should decode recap with base64 length mod 4 !== 0", () => {
+      // #given - crafted recap producing unpadded base64
+      const recap = {
+        att: {
+          "https://notify.walletconnect.com": { "manage/all-apps-notifications": [{}] },
+        },
+      };
+      const encoded = encodeRecap(recap);
+      const base64Part = encoded.replace("urn:recap:", "");
+
+      // #when - verify padding was stripped and length is not divisible by 4
+      expect(base64Part.length % 4).to.not.eql(0);
+
+      // #then
+      const decoded = decodeRecap(encoded);
+      expect(decoded).to.eql(recap);
+    });
+
+    it("should mergeEncodedRecaps with unpadded base64", () => {
+      // #given
+      const recap1 = encodeRecap(createRecap("eip155", "request", ["personal_sign"]));
+      const recap2 = encodeRecap(createRecap("eip155", "request", ["eth_sendTransaction"]));
+
+      // #when
+      const merged = mergeEncodedRecaps(recap1, recap2);
+
+      // #then
+      const decoded = decodeRecap(merged);
+      expect(decoded.att.eip155).to.have.property("request/personal_sign");
+      expect(decoded.att.eip155).to.have.property("request/eth_sendTransaction");
+    });
+
+    it("should getMethodsFromRecap with unpadded base64", () => {
+      // #given
+      const encoded = encodeRecap(
+        createRecap("eip155", "request", ["personal_sign", "eth_chainId"]),
+      );
+
+      // #when
+      const methods = getMethodsFromRecap(encoded);
+
+      // #then
+      expect(methods).to.include("personal_sign");
+      expect(methods).to.include("eth_chainId");
+    });
+  });
+
   describe("resources", () => {
     it("should not add resources to siwe message when missing from request", () => {
       const request = {

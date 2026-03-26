@@ -224,43 +224,29 @@ export function isTypeTwoEnvelope(
 }
 
 export function getCryptoKeyFromKeyData(keyData: P256KeyDataType): Uint8Array {
-  const xBuffer = Buffer.from(keyData.x, "base64");
-  const yBuffer = Buffer.from(keyData.y, "base64");
+  const xBytes = fromString(fromBase64URL(keyData.x), BASE64);
+  const yBytes = fromString(fromBase64URL(keyData.y), BASE64);
 
-  // Concatenate x and y coordinates with 0x04 prefix (uncompressed point format)
-  return concat([new Uint8Array([0x04]), xBuffer, yBuffer]);
+  return concat([new Uint8Array([0x04]), xBytes, yBytes]);
 }
 
 export function verifyP256Jwt<T>(token: string, keyData: P256KeyDataType) {
   const [headerBase64Url, payloadBase64Url, signatureBase64Url] = token.split(".");
 
-  // Decode the signature
-  const signatureBuffer = Buffer.from(fromBase64URL(signatureBase64Url), "base64");
+  const signatureBytes = fromString(fromBase64URL(signatureBase64Url), BASE64);
 
-  // Check if signature length is correct (64 bytes for P-256)
-  if (signatureBuffer.length !== 64) {
+  if (signatureBytes.length !== 64) {
     throw new Error("Invalid signature length");
   }
 
-  // Extract r and s from the signature
-  const r = signatureBuffer.slice(0, 32);
-  const s = signatureBuffer.slice(32, 64);
+  const r = signatureBytes.slice(0, 32);
+  const s = signatureBytes.slice(32, 64);
 
-  // Create the signing input
   const signingInput = `${headerBase64Url}.${payloadBase64Url}`;
-
-  // Hash the signing input
   const messageHash = sha256(signingInput);
-
-  // Get the public key in uncompressed point format
   const publicKey = getCryptoKeyFromKeyData(keyData);
 
-  // Verify the signature using noble/curves p256
-  const isValid = p256.verify(
-    concat([r, s]), // signature bytes
-    messageHash, // message hash
-    publicKey, // public key in uncompressed format
-  );
+  const isValid = p256.verify(concat([r, s]), messageHash, publicKey);
 
   if (!isValid) {
     throw new Error("Invalid signature");
