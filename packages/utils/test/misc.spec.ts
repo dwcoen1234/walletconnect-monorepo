@@ -8,6 +8,7 @@ import {
   hasOverlap,
   isExpired,
   toBase64,
+  fromBase64,
   openDeeplink,
   isIframe,
   createDelayedPromise,
@@ -287,6 +288,71 @@ describe("Misc", () => {
         expect(error.code).to.eq(getInternalError("EXPIRED").code);
       }
       expect(errorReceived).to.be.true;
+    });
+  });
+
+  describe("toBase64 / fromBase64", () => {
+    it("should roundtrip with padded base64", () => {
+      // #given - input whose base64 length is a multiple of 4
+      const input = "abc";
+
+      // #when
+      const encoded = toBase64(input);
+      const decoded = fromBase64(encoded);
+
+      // #then
+      expect(decoded).to.eql(input);
+    });
+
+    it("should roundtrip with unpadded base64 (removePadding=true)", () => {
+      // #given - Telegram deeplink scenario: toBase64 strips padding
+      const input = "requestId=123&sessionTopic=randomSessionTopic";
+      const encoded = toBase64(input, true);
+
+      // #when
+      expect(encoded).to.not.include("=");
+      const decoded = fromBase64(encoded);
+
+      // #then
+      expect(decoded).to.eql(input);
+    });
+
+    it("should decode unpadded base64 where length mod 4 is 2", () => {
+      // #given - atob() throws on unpadded input with length % 4 !== 0
+      const input = "a";
+      const encoded = toBase64(input, true);
+      expect(encoded.length % 4).to.eql(2);
+
+      // #when
+      const decoded = fromBase64(encoded);
+
+      // #then
+      expect(decoded).to.eql(input);
+    });
+
+    it("should decode unpadded base64 where length mod 4 is 3", () => {
+      // #given
+      const input = "ab";
+      const encoded = toBase64(input, true);
+      expect(encoded.length % 4).to.eql(3);
+
+      // #when
+      const decoded = fromBase64(encoded);
+
+      // #then
+      expect(decoded).to.eql(input);
+    });
+
+    it("should handle unicode content", () => {
+      // #given
+      const input = "hello 🌍 wörld";
+
+      // #when
+      const encoded = toBase64(input);
+      const decoded = fromBase64(encoded);
+
+      // #then
+      expect(decoded).to.eql(input);
     });
   });
 });
