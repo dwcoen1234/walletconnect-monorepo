@@ -6,10 +6,15 @@
  */
 
 import { readFileSync, existsSync } from "fs";
-import { join, resolve } from "path";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
-const ROOT = resolve(import.meta.dirname, "..");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+// Provider bundles (ethereum-provider, universal-provider) are excluded because
+// they bundle large third-party trees (@reown/appkit-*) that use their own
+// guarded Buffer patterns (e.g. `globalThis.Buffer ? ... : fallback`), which
+// would cause false positives here.
 const UMD_BUNDLES = [
   "packages/utils/dist/index.umd.js",
   "packages/core/dist/index.umd.js",

@@ -552,11 +552,11 @@ export function isIframe() {
 
 export function toBase64(input: string, removePadding = false): string {
   const bytes = new TextEncoder().encode(input);
-  let binary = "";
+  const chars = new Array<string>(bytes.length);
   for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
+    chars[i] = String.fromCharCode(bytes[i]);
   }
-  const encoded = btoa(binary);
+  const encoded = btoa(chars.join(""));
   return removePadding ? encoded.replace(/[=]/g, "") : encoded;
 }
 

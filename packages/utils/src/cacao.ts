@@ -227,11 +227,11 @@ export function getReCapActions(abilities: any[]) {
 export function base64Encode(input: unknown): string {
   const json = JSON.stringify(input);
   const bytes = new TextEncoder().encode(json);
-  let binary = "";
+  const chars = new Array<string>(bytes.length);
   for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
+    chars[i] = String.fromCharCode(bytes[i]);
   }
-  return btoa(binary);
+  return btoa(chars.join(""));
 }
 
 export function base64Decode(encodedString: string): string {

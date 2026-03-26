@@ -4,17 +4,12 @@ import { sha256, sha512_256 } from "@noble/hashes/sha2";
 import { blake2b } from "@noble/hashes/blake2";
 import { encode as msgpackEncode, decode as msgpackDecode } from "@msgpack/msgpack";
 import { base32, base58 } from "@scure/base";
+import { concat, toString } from "uint8arrays";
 import { AuthTypes } from "@walletconnect/types";
 
 import { parseChainId } from "./caip.js";
 
 const DEFAULT_RPC_URL = "https://rpc.walletconnect.org/v1";
-
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
 
 function base64ToBytes(b64: string): Uint8Array {
   const binary = atob(b64);
@@ -25,21 +20,10 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
-function concatBytes(arrays: Uint8Array[]): Uint8Array {
-  const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const arr of arrays) {
-    result.set(arr, offset);
-    offset += arr.length;
-  }
-  return result;
-}
-
 export function hashEthereumMessage(message: string) {
   const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
   const prefixedMessage = new TextEncoder().encode(prefix + message);
-  return "0x" + bytesToHex(keccak_256(prefixedMessage));
+  return "0x" + toString(keccak_256(prefixedMessage), "base16");
 }
 
 export async function verifySignature(
@@ -147,11 +131,7 @@ function generateJsonRpcId() {
 }
 
 export function extractSolanaTransactionId(solanaTransaction: string): string {
-  const binary = atob(solanaTransaction);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
+  const bytes = base64ToBytes(solanaTransaction);
 
   const signatureCount = bytes[0];
   if (signatureCount === 0) {
@@ -216,7 +196,7 @@ export function getAlgorandTransactionId(transaction: string) {
   const serializedUnsignedTxn = msgpackEncode(unsignedTxn);
 
   const txPrefix = new TextEncoder().encode("TX");
-  const toHash = concatBytes([txPrefix, new Uint8Array(serializedUnsignedTxn)]);
+  const toHash = concat([txPrefix, new Uint8Array(serializedUnsignedTxn)]);
 
   const hash = sha512_256(toHash);
   return base32.encode(hash).replace(/=+$/, "");
@@ -266,10 +246,10 @@ export function getSignDirectHash(payload: {
   chunks.push(encodeVarint(signature.length));
   chunks.push(signature);
 
-  const txRawBytes = concatBytes(chunks);
+  const txRawBytes = concat(chunks);
   const hashBytes = sha256(txRawBytes);
 
-  return bytesToHex(hashBytes).toUpperCase();
+  return toString(hashBytes, "base16").toUpperCase();
 }
 
 export function getWalletSendCallsHashes(
