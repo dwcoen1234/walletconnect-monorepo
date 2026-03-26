@@ -217,11 +217,12 @@ export class Subscriber extends ISubscriber {
     this.logger.debug(`Unsubscribing Topic`);
     this.logger.trace({ type: "method", method: "unsubscribe", params: { topic, id, opts } });
     try {
+      // optimistically remove the subscription from the local state
+      const reason = getSdkError("USER_DISCONNECTED", `${this.name}, ${topic}`);
+      await this.onUnsubscribe(topic, id, reason);
       const relay = getRelayProtocolName(opts);
       await this.restartToComplete({ topic, id, relay });
       await this.rpcUnsubscribe(topic, id, relay);
-      const reason = getSdkError("USER_DISCONNECTED", `${this.name}, ${topic}`);
-      await this.onUnsubscribe(topic, id, reason);
       this.logger.debug(`Successfully Unsubscribed Topic`);
       this.logger.trace({ type: "method", method: "unsubscribe", params: { topic, id, opts } });
     } catch (e) {

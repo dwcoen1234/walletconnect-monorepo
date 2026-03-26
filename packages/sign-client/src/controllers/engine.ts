@@ -182,6 +182,7 @@ export class Engine extends IEngine {
       this.registerRelayerEvents();
       this.registerExpirerEvents();
       this.registerPairingEvents();
+      this.registerSubscriptionCleanup();
       await this.registerLinkModeListeners();
       this.client.core.pairing.register({ methods: Object.keys(ENGINE_RPC_OPTS) });
       this.initialized = true;
@@ -347,8 +348,20 @@ export class Engine extends IEngine {
     const proposalExpireHandler = ({ id }: { id: number }) => {
       if (id === proposal.id) {
         this.client.events.off("proposal_expire", proposalExpireHandler);
+        const pendingSession = this.pendingSessions.get(proposal.id);
+        if (pendingSession) {
+          const { sessionTopic, publicKey } = pendingSession;
+          Promise.all([
+            this.client.core.relayer.unsubscribe(sessionTopic),
+            this.client.core.crypto.keychain.has(sessionTopic)
+              ? this.client.core.crypto.deleteSymKey(sessionTopic)
+              : Promise.resolve(),
+            this.client.core.crypto.keychain.has(publicKey)
+              ? this.client.core.crypto.deleteKeyPair(publicKey)
+              : Promise.resolve(),
+          ]).catch((e) => this.client.logger.warn(e));
+        }
         this.pendingSessions.delete(proposal.id);
-        // emit the event to trigger reject, this approach automatically cleans up the .once listener below
         this.events.emit(sessionConnectTarget, {
           error: { message: PROPOSAL_EXPIRY_MESSAGE, code: 0 },
         });
@@ -960,6 +973,25 @@ export class Engine extends IEngine {
       pairing: { topic: pairingTopic, uri: connectionUri },
     });
 
+    if (this.client.auth.authKeys.keys.includes(AUTH_PUBLIC_KEY_NAME)) {
+      const { responseTopic: oldResponseTopic, publicKey: oldPublicKey } =
+        this.client.auth.authKeys.get(AUTH_PUBLIC_KEY_NAME);
+      if (oldResponseTopic) {
+        await this.client.core.relayer
+          .unsubscribe(oldResponseTopic)
+          .catch((e) => this.client.logger.warn(e));
+        await this.client.auth.pairingTopics
+          .delete(oldResponseTopic, {
+            message: "replaced",
+            code: 0,
+          })
+          .catch((e) => this.client.logger.warn(e));
+      }
+      if (oldPublicKey && this.client.core.crypto.keychain.has(oldPublicKey)) {
+        await this.client.core.crypto.deleteKeyPair(oldPublicKey);
+      }
+    }
+
     const publicKey = await this.client.core.crypto.generateKeyPair();
     const responseTopic = hashKey(publicKey);
 
@@ -968,7 +1000,6 @@ export class Engine extends IEngine {
       this.client.auth.pairingTopics.set(responseTopic, { topic: responseTopic, pairingTopic }),
     ]);
 
-    // Subscribe to response topic
     await this.client.core.relayer.subscribe(responseTopic, { transportType });
 
     this.client.logger.info(`sending request to new pairing topic: ${pairingTopic}`);
@@ -2263,7 +2294,7 @@ export class Engine extends IEngine {
       await this.client.session.update(topic, { acknowledged: true });
       this.events.emit(engineEvent("session_approve", id), {});
     } else if (isJsonRpcError(payload)) {
-      await this.client.session.delete(topic, getSdkError("USER_DISCONNECTED"));
+      await this.deleteSession({ topic, emitEvent: false });
       this.events.emit(engineEvent("session_approve", id), { error: payload.error });
     }
   };
@@ -2700,6 +2731,54 @@ export class Engine extends IEngine {
       }
     });
   }
+
+  // ---------- Subscription Cleanup ---------------------------------- //
+  private cleanupInProgress = false;
+
+  private registerSubscriptionCleanup() {
+    this.client.core.heartbeat.on("heartbeat_pulse", async () => {
+      if (this.cleanupInProgress) return;
+      this.cleanupInProgress = true;
+      try {
+        await this.cleanupOrphanedSubscriptions();
+      } catch (error) {
+        this.client.logger.warn(error);
+      } finally {
+        this.cleanupInProgress = false;
+      }
+    });
+  }
+
+  private cleanupOrphanedSubscriptions = async () => {
+    const subscriberTopics = this.client.core.relayer.subscriber.topics;
+    if (subscriberTopics.length === 0) return;
+
+    const sessionTopics = new Set(this.client.session.keys);
+    const pairingTopics = new Set(this.client.core.pairing.pairings.keys);
+    const pendingSessionTopics = new Set(
+      [...this.pendingSessions.values()].map((s) => s.sessionTopic),
+    );
+
+    let authResponseTopic: string | undefined;
+    if (this.client.auth.authKeys.keys.includes(AUTH_PUBLIC_KEY_NAME)) {
+      const { responseTopic } = this.client.auth.authKeys.get(AUTH_PUBLIC_KEY_NAME);
+      authResponseTopic = responseTopic;
+    }
+
+    for (const topic of subscriberTopics) {
+      if (sessionTopics.has(topic)) continue;
+      if (pairingTopics.has(topic)) continue;
+      if (pendingSessionTopics.has(topic)) continue;
+      if (topic === authResponseTopic) continue;
+
+      this.client.logger.info(`Cleaning up orphaned subscriber topic: ${topic}`);
+      try {
+        await this.client.core.relayer.subscriber.unsubscribe(topic);
+      } catch (error) {
+        this.client.logger.warn(error, `Failed to clean up orphaned subscription: ${topic}`);
+      }
+    }
+  };
 
   // ---------- Pairing Events ---------------------------------------- //
   private registerPairingEvents() {
