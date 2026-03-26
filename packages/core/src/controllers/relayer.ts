@@ -426,10 +426,7 @@ export class Relayer extends IRelayer {
       }
 
       if (this.connected) {
-        this.logger.debug(
-          {},
-          `Connected to ${this.relayUrl} successfully on attempt: ${attempt}`,
-        );
+        this.logger.debug({}, `Connected to ${this.relayUrl} successfully on attempt: ${attempt}`);
         break;
       }
 
