@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.8
+
+### Patch Changes
+
+- Updated dependencies [[`bb4869f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/bb4869f44f493973cef190c4100d28b321284e03)]:
+  - @walletconnect/utils@2.23.9
+  - @walletconnect/types@2.23.9
+
 ## 1.0.7
 
 ### Patch Changes

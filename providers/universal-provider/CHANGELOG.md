@@ -1,5 +1,14 @@
 # @walletconnect/universal-provider
 
+## 2.23.9
+
+### Patch Changes
+
+- Updated dependencies [[`bb4869f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/bb4869f44f493973cef190c4100d28b321284e03), [`6e4a34d`](https://github.com/WalletConnect/walletconnect-monorepo/commit/6e4a34d37bf28e96aa65737508f63da701b11969)]:
+  - @walletconnect/utils@2.23.9
+  - @walletconnect/sign-client@2.23.9
+  - @walletconnect/types@2.23.9
+
 ## 2.23.8
 
 ### Patch Changes
