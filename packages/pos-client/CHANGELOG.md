@@ -1,5 +1,15 @@
 # @walletconnect/pos-client
 
+## 1.0.9
+
+### Patch Changes
+
+- Updated dependencies [[`431e43b`](https://github.com/WalletConnect/walletconnect-monorepo/commit/431e43b6f49139b6151e712bc40b518bc74a6123), [`bb4869f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/bb4869f44f493973cef190c4100d28b321284e03), [`ed0fa42`](https://github.com/WalletConnect/walletconnect-monorepo/commit/ed0fa424f86a0a36fe6235bb4535b92c36ca94bd), [`6e4a34d`](https://github.com/WalletConnect/walletconnect-monorepo/commit/6e4a34d37bf28e96aa65737508f63da701b11969)]:
+  - @walletconnect/core@2.23.9
+  - @walletconnect/utils@2.23.9
+  - @walletconnect/sign-client@2.23.9
+  - @walletconnect/types@2.23.9
+
 ## 1.0.8
 
 ### Patch Changes

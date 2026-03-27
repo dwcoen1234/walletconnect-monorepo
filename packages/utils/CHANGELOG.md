@@ -1,5 +1,16 @@
 # @walletconnect/utils
 
+## 2.23.9
+
+### Patch Changes
+
+- [#7205](https://github.com/WalletConnect/walletconnect-monorepo/pull/7205) [`bb4869f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/bb4869f44f493973cef190c4100d28b321284e03) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - fix: replace Node.js Buffer with browser-safe alternatives to fix "Buffer is not defined" in browser environments
+  - Replace `Buffer.from`/`Buffer.concat` with `Uint8Array`, `btoa`/`atob`, `TextEncoder`/`TextDecoder`, and `uint8arrays` helpers across `misc.ts`, `crypto.ts`, `cacao.ts`, `signatures.ts`, and `polkadot.ts`
+  - Add `scripts/verify-no-buffer.mjs` to verify UMD bundles contain no unguarded Buffer usage
+
+- Updated dependencies []:
+  - @walletconnect/types@2.23.9
+
 ## 2.23.8
 
 ### Patch Changes

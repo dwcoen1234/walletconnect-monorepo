@@ -1,5 +1,27 @@
 # @walletconnect/core
 
+## 2.23.9
+
+### Patch Changes
+
+- [#7204](https://github.com/WalletConnect/walletconnect-monorepo/pull/7204) [`431e43b`](https://github.com/WalletConnect/walletconnect-monorepo/commit/431e43b6f49139b6151e712bc40b518bc74a6123) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - fix: prevent Node.js crypto module from leaking into browser bundles
+  - Fix Rollup external config to handle subpath imports (e.g. `uint8arrays/from-string`), preventing transitive bundling of `multiformats` and its Node.js `crypto` import in ESM/CJS outputs
+  - Add browser field override plugin to redirect `multiformats` internal `sha2.js` to `sha2-browser.js` (Web Crypto API) in UMD bundles
+  - Add build-time guard that fails the UMD build if any Node.js built-in module is referenced
+
+- [#7206](https://github.com/WalletConnect/walletconnect-monorepo/pull/7206) [`ed0fa42`](https://github.com/WalletConnect/walletconnect-monorepo/commit/ed0fa424f86a0a36fe6235bb4535b92c36ca94bd) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - fix: prevent infinite loop and memory exhaustion in relayer reconnection
+  - Eliminate `new Promise(async executor)` antipattern in `connect()` and `subscribe()` so background tasks no longer spawn unsupervised connection attempts
+  - Serialize connection attempts via `connectPromise` in both `transportOpen()` and `toEstablishConnection()` to prevent concurrent `connect()` calls
+  - Keep `connectionAttemptInProgress` guard up during the entire retry loop to block `restartTransport()` from spawning parallel connections
+  - Reset `reconnectInProgress` on early returns in `onProviderDisconnect()` to prevent the flag from getting permanently stuck
+  - Close old WebSocket in `createProvider()` before creating a new one to prevent connection and listener leaks
+  - Wrap `subscriber.stop()` in try/catch in `onProviderDisconnect()` to prevent `reconnectInProgress` from getting stuck on throw
+  - Reset `stalledRestartBackoff` on successful connection so recovery latency doesn't degrade after repeated stall/recover cycles
+
+- Updated dependencies [[`bb4869f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/bb4869f44f493973cef190c4100d28b321284e03)]:
+  - @walletconnect/utils@2.23.9
+  - @walletconnect/types@2.23.9
+
 ## 2.23.8
 
 ### Patch Changes

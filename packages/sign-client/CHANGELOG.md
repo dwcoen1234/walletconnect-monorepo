@@ -1,5 +1,20 @@
 # @walletconnect/sign-client
 
+## 2.23.9
+
+### Patch Changes
+
+- [#7201](https://github.com/WalletConnect/walletconnect-monorepo/pull/7201) [`6e4a34d`](https://github.com/WalletConnect/walletconnect-monorepo/commit/6e4a34d37bf28e96aa65737508f63da701b11969) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - fix: clean up orphaned subscriber topics to prevent indefinite persistence
+  - Fix `onSessionSettleResponse` error path to fully clean up session topic (unsubscribe, delete keys, remove expiry)
+  - Fix `proposalExpireHandler` to unsubscribe session topic when proposal expires after wallet approval
+  - Fix `authenticate()` to unsubscribe previous auth response topic before subscribing to a new one
+  - Add heartbeat-based reconciliation that removes subscriber topics not associated with any active session, pairing, or pending session
+
+- Updated dependencies [[`431e43b`](https://github.com/WalletConnect/walletconnect-monorepo/commit/431e43b6f49139b6151e712bc40b518bc74a6123), [`bb4869f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/bb4869f44f493973cef190c4100d28b321284e03), [`ed0fa42`](https://github.com/WalletConnect/walletconnect-monorepo/commit/ed0fa424f86a0a36fe6235bb4535b92c36ca94bd)]:
+  - @walletconnect/core@2.23.9
+  - @walletconnect/utils@2.23.9
+  - @walletconnect/types@2.23.9
+
 ## 2.23.8
 
 ### Patch Changes
