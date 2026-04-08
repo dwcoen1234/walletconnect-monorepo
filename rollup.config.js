@@ -29,6 +29,18 @@ const browserFieldOverrides = {
   },
 };
 
+// Strip bare `new TextEncoder,new TextDecoder;` side-effect expressions that
+// originate from multiformats (transitive dep of uint8arrays) after minification.
+// These crash React Native / Hermes where TextDecoder is not a native global.
+// See: https://github.com/WalletConnect/walletconnect-monorepo/issues/7214
+const stripBareTextCodecs = {
+  name: "strip-bare-text-codecs",
+  renderChunk(code) {
+    const stripped = code.replace(/new TextEncoder,new TextDecoder;?/g, "");
+    return stripped !== code ? { code: stripped, map: null } : null;
+  },
+};
+
 export const plugins = [
   browserFieldOverrides,
   nodeResolve({ preferBuiltins: false, browser: true, exportConditions: ["browser"] }),
@@ -41,6 +53,7 @@ export const plugins = [
       ".json": "json",
     },
   }),
+  stripBareTextCodecs,
   visualizer(),
 ];
 
