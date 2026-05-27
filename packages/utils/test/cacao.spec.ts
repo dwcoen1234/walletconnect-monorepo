@@ -13,6 +13,7 @@ import {
   mergeRecaps,
   populateAuthPayload,
   mergeEncodedRecaps,
+  validateSignedCacao,
 } from "../src";
 
 describe("URI", () => {
@@ -279,6 +280,49 @@ describe("URI", () => {
     expect(formatMessage({ ...baseRequest, statement: "I accept the terms" }, iss)).to.include(
       "I accept the terms",
     );
+  });
+
+  it("should reject recap-derived statements containing line breaks", () => {
+    const iss = "did:pkh:eip155:1:0x3613699A6c5D8BC97a08805876c8005543125F09";
+    // recap content is untrusted: a malicious resource name with a newline must not be
+    // able to smuggle forged fields into the statement via formatStatementFromRecap.
+    const maliciousRecap = {
+      att: {
+        "eip155\nURI: https://evil.com": { "request/personal_sign": [{}] },
+      },
+    };
+    const request = {
+      type: "caip122",
+      aud: "https://app.web3inbox.com/login",
+      domain: "app.web3inbox",
+      version: "1",
+      nonce: "32891756",
+      iat: "2024-03-13T09:00:43.888Z",
+      resources: [encodeRecap(maliciousRecap)],
+    };
+
+    expect(() => formatMessage(request, iss)).to.throw("Statement must not contain line breaks");
+  });
+
+  it("should return false from validateSignedCacao for statements with line breaks", async () => {
+    // formatMessage throws for malformed statements; validateSignedCacao must remap that to
+    // a boolean `false` rather than propagating the exception to callers.
+    const cacao = {
+      h: { t: "caip122" },
+      p: {
+        iss: "did:pkh:eip155:1:0x3613699A6c5D8BC97a08805876c8005543125F09",
+        domain: "app.web3inbox",
+        aud: "https://app.web3inbox.com/login",
+        version: "1",
+        nonce: "32891756",
+        iat: "2024-03-13T09:00:43.888Z",
+        statement: "I accept\nURI: https://evil.com",
+      },
+      s: { t: "eip191" as const, s: "0x" },
+    };
+
+    const isValid = await validateSignedCacao({ cacao });
+    expect(isValid).to.eql(false);
   });
 
   describe("encodeRecap / decodeRecap with unpadded base64", () => {
