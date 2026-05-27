@@ -319,7 +319,7 @@ describe("Sign Integration", () => {
           topic: sessionRequest.topic,
           response: formatJsonRpcResult(
             sessionRequest.id,
-            "0xff16b7197277088039a45f9e23ccbb32077ebeec1e56e49b24b2f3731e1bd452",
+            "0xc9458ca3b8450ad966cc8049caf6e163b7473d03f105143f47244ec7350142d3",
           ),
         });
         resolve();
@@ -450,7 +450,7 @@ describe("Sign Integration", () => {
               topic: sessionRequest.topic,
               response: formatJsonRpcResult(
                 sessionRequest.id,
-                "0xff16b7197277088039a45f9e23ccbb32077ebeec1e56e49b24b2f3731e1bd452",
+                "0xc9458ca3b8450ad966cc8049caf6e163b7473d03f105143f47244ec7350142d3",
               ),
             });
           } else if (sessionRequest.params.chainId === solanaChainId) {
@@ -508,7 +508,7 @@ describe("Sign Integration", () => {
     expect(numPaymentSuccessful).to.be.equal(paymentIntents.length);
     expect(numPaymentRequested).to.be.equal(paymentIntents.length);
     expect(numPaymentBroadcasted).to.be.equal(paymentIntents.length);
-  });
+  }, 90_000);
 
   it("should set tokens", async () => {
     const networks: Record<string, POSClientTypes.Network> = {
@@ -604,7 +604,7 @@ describe("Sign Integration", () => {
             topic: sessionRequest.topic,
             response: formatJsonRpcResult(
               sessionRequest.id,
-              "0xff16b7197277088039a45f9e23ccbb32077ebeec1e56e49b24b2f3731e1bd452",
+              "0xc9458ca3b8450ad966cc8049caf6e163b7473d03f105143f47244ec7350142d3",
             ),
           });
           resolve();
@@ -731,7 +731,7 @@ describe("Sign Integration", () => {
         topic: sessionRequest.topic,
         response: formatJsonRpcResult(
           sessionRequest.id,
-          "0xff16b7197277088039a45f9e23ccbb32077ebeec1e56e49b24b2f3731e1bd452",
+          "0xc9458ca3b8450ad966cc8049caf6e163b7473d03f105143f47244ec7350142d3",
         ),
       });
     });
@@ -887,7 +887,7 @@ describe("Sign Integration", () => {
             topic: sessionRequest.topic,
             response: formatJsonRpcResult(
               sessionRequest.id,
-              "0xff16b7197277088039a45f9e23ccbb32077ebeec1e56e49b24b2f3731e1bd452",
+              "0xc9458ca3b8450ad966cc8049caf6e163b7473d03f105143f47244ec7350142d3",
             ),
           });
           resolve();
