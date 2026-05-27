@@ -79,6 +79,11 @@ export const formatMessage = (cacao: AuthTypes.FormatMessageParams, iss: string)
   }
 
   let statement = cacao.statement || undefined;
+  // Per EIP-4361 the statement is a single line and must not contain line breaks.
+  // Reject embedded newlines to prevent forging other fields (URI, Nonce, etc.) in the signed message.
+  if (statement && /\r|\n/.test(statement)) {
+    throw new Error("Statement must not contain line breaks (`\\r` or `\\n`)");
+  }
   const uri = `URI: ${cacao.aud || cacao.uri}`;
   const version = `Version: ${cacao.version}`;
   const chainId = `Chain ID: ${getDidChainId(iss)}`;

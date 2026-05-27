@@ -254,6 +254,33 @@ describe("URI", () => {
     expect(message).to.include("Nonce: 32891756");
     expect(message).to.include(`URI: ${request.aud}`);
   });
+
+  it("should reject statements containing line breaks (EIP-4361)", () => {
+    const baseRequest = {
+      type: "caip122",
+      aud: "https://app.web3inbox.com/login",
+      domain: "app.web3inbox",
+      version: "1",
+      nonce: "32891756",
+      iat: "2024-03-13T09:00:43.888Z",
+    };
+    const iss = "did:pkh:eip155:1:0x3613699A6c5D8BC97a08805876c8005543125F09";
+
+    // a statement smuggling extra SIWE fields via newlines must be rejected
+    expect(() =>
+      formatMessage({ ...baseRequest, statement: "I accept\nURI: https://evil.com" }, iss),
+    ).to.throw("Statement must not contain line breaks");
+
+    expect(() =>
+      formatMessage({ ...baseRequest, statement: "I accept\r\nthe terms" }, iss),
+    ).to.throw("Statement must not contain line breaks");
+
+    // a well-formed single-line statement is still accepted
+    expect(formatMessage({ ...baseRequest, statement: "I accept the terms" }, iss)).to.include(
+      "I accept the terms",
+    );
+  });
+
   describe("encodeRecap / decodeRecap with unpadded base64", () => {
     it("should roundtrip recap whose base64 requires padding", () => {
       // #given - a recap whose JSON length produces base64 needing padding (length % 4 !== 0)
