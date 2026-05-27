@@ -31,6 +31,7 @@ describe("Sign Integration", () => {
   });
 
   it("should reuse existing session to send multiple payments", async () => {
+    process.env.DISABLE_GLOBAL_CORE = "true";
     const databaseName = generateDatabaseName();
     const pos = await POSClient.init({
       projectId,
@@ -111,7 +112,7 @@ describe("Sign Integration", () => {
         topic: sessionRequest.topic,
         response: formatJsonRpcResult(
           sessionRequest.id,
-          "0xff16b7197277088039a45f9e23ccbb32077ebeec1e56e49b24b2f3731e1bd452",
+          "0xc9458ca3b8450ad966cc8049caf6e163b7473d03f105143f47244ec7350142d3",
         ),
       });
     };
