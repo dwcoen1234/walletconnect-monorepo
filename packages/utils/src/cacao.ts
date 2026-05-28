@@ -53,7 +53,15 @@ export const getDidAddress = (iss: string) => {
 export async function validateSignedCacao(params: { cacao: AuthTypes.Cacao; projectId?: string }) {
   const { cacao, projectId } = params;
   const { s: signature, p: payload } = cacao;
-  const reconstructed = formatMessage(payload, payload.iss);
+  let reconstructed: string;
+  try {
+    // A malformed payload (e.g. a statement with line breaks) makes the message
+    // impossible to reconstruct — treat it as invalid rather than throwing, since
+    // the public contract of `validateSignedCacao` is a boolean validity check.
+    reconstructed = formatMessage(payload, payload.iss);
+  } catch (error) {
+    return false;
+  }
   const walletAddress = getDidAddress(payload.iss) as string;
   const isValid = await verifySignature(
     walletAddress,
@@ -94,6 +102,14 @@ export const formatMessage = (cacao: AuthTypes.FormatMessageParams, iss: string)
   if (recap) {
     const decoded = decodeRecap(recap);
     statement = formatStatementFromRecap(statement, decoded);
+  }
+
+  // Per EIP-4361 the statement is a single line and must not contain line breaks.
+  // Validate the final statement (after recap formatting) so that neither a caller-supplied
+  // statement nor untrusted recap-derived text can forge other fields (URI, Nonce, etc.) in
+  // the signed message via embedded `\r`/`\n`.
+  if (statement && /\r|\n/.test(statement)) {
+    throw new Error("Statement must not contain line breaks (`\\r` or `\\n`)");
   }
 
   const message = [
