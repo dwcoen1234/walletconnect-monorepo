@@ -2321,7 +2321,7 @@ export class Engine extends IEngine {
         this.sendError({ id, topic, error: getSdkError("INVALID_UPDATE_REQUEST") });
         return;
       }
-      this.isValidUpdate({ topic, ...params });
+      await this.isValidUpdate({ topic, ...params });
       // only the session controller (peer) is allowed to update the session.
       // reject updates coming from a non-controller peer (e.g. a dApp using a custom SDK)
       const session = this.client.session.get(topic);
@@ -2378,7 +2378,7 @@ export class Engine extends IEngine {
   ) => {
     const { id } = payload;
     try {
-      this.isValidExtend({ topic });
+      await this.isValidExtend({ topic });
       await this.setExpiry(topic, calcExpiry(SESSION_EXPIRY));
       await this.sendResult<"wc_sessionExtend">({
         id,
