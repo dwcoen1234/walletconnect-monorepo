@@ -3254,7 +3254,7 @@ describe.sequential("Sign Client Integration", () => {
           events: ["accountsChanged"],
         },
       };
-      const { acknowledged } = await clients.A.update({
+      const { acknowledged } = await clients.B.update({
         topic,
         namespaces: namespacesAfter,
       });
