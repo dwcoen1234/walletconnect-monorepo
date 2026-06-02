@@ -3264,7 +3264,7 @@ describe.sequential("Sign Client Integration", () => {
       await deleteClients(clients);
     });
 
-    it("should reject update & extend from non-controller peer", async () => {
+    it("should reject update from non-controller peer", async () => {
       // client A is the dapp, client B is the wallet (controller)
       const {
         clients,
@@ -3302,35 +3302,6 @@ describe.sequential("Sign Client Integration", () => {
         expect.objectContaining({
           message: "Unauthorized update request.",
           code: 3003,
-        }),
-      );
-
-      // --- extend ---
-      const expiryBefore = clients.B.session.get(topic).expiry;
-      clients.B.core.history.set(topic, {
-        id: 2,
-        jsonrpc: "2.0",
-        method: "wc_sessionExtend",
-        params: {},
-      });
-      let sessionExtendReceived = false;
-      clients.B.on("session_extend", () => {
-        sessionExtendReceived = true;
-      });
-
-      // @ts-expect-error - private method
-      await clients.B.engine.onSessionExtendRequest(topic, {
-        id: 2,
-        params: {},
-      });
-      expect(sessionExtendReceived).to.be.false;
-      // the session expiry must remain untouched by the rejected extend
-      expect(clients.B.session.get(topic).expiry).to.eql(expiryBefore);
-      // the unauthorized error should have been logged with the 3004 sdk error
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: "Unauthorized extend request.",
-          code: 3004,
         }),
       );
 

@@ -667,12 +667,6 @@ export class Engine extends IEngine {
     }
 
     const { topic } = params;
-    // only the session controller is allowed to extend the session
-    const session = this.client.session.get(topic);
-    if (session.self.publicKey !== session.controller) {
-      const { message } = getSdkError("UNAUTHORIZED_EXTEND_REQUEST");
-      throw new Error(message);
-    }
     const clientRpcId = payloadId();
     const {
       done: acknowledged,
@@ -2385,12 +2379,6 @@ export class Engine extends IEngine {
     const { id } = payload;
     try {
       this.isValidExtend({ topic });
-      // only the session controller (peer) is allowed to extend the session.
-      // reject extends coming from a non-controller peer (e.g. a dApp using a custom SDK)
-      const session = this.client.session.get(topic);
-      if (session.peer.publicKey !== session.controller) {
-        throw getSdkError("UNAUTHORIZED_EXTEND_REQUEST");
-      }
       await this.setExpiry(topic, calcExpiry(SESSION_EXPIRY));
       await this.sendResult<"wc_sessionExtend">({
         id,
