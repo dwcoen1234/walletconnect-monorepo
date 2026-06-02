@@ -106,6 +106,7 @@ import {
   getSignDirectHash,
   LimitedSet,
   getWalletSendCallsHashes,
+  getCantonTransactionHashes,
   getNamespacesChains,
   getNamespacesMethods,
   getNamespacesEvents,
@@ -3540,6 +3541,10 @@ export class Engine extends IEngine {
 
       if (method === "wallet_sendCalls") {
         return getWalletSendCallsHashes(result);
+      }
+
+      if (method === "canton_prepareSignExecute") {
+        return getCantonTransactionHashes(request.params, result);
       }
 
       // result = 0x...

@@ -11,4 +11,5 @@ export * from "./network.js";
 export * from "./memoryStore.js";
 export * from "./signatures.js";
 export * from "./polkadot.js";
+export * from "./canton.js";
 export * from "./logger.js";
