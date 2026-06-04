@@ -1941,21 +1941,23 @@ export class Engine extends IEngine {
       : ({ responseTopic: undefined, publicKey: undefined } as any);
 
     try {
+      try {
+        // TYPE_2 payloads should only be handled in link mode
+        if (
+          transportType !== TRANSPORT_TYPES.link_mode &&
+          this.client.core.crypto.getPayloadType(message, BASE64URL) === TYPE_2
+        ) {
+          this.client.logger.warn(
+            `onRelayMessage() -> non-link mode TYPE_2 payload ignored: ${message}`,
+          );
+          return;
+        }
+      } catch {}
+
       const payload = await this.client.core.crypto.decode(topic, message, {
         receiverPublicKey: publicKey,
         encoding: transportType === TRANSPORT_TYPES.link_mode ? BASE64URL : BASE64,
       });
-
-      // TYPE_2 payloads should only be handled in link mode
-      if (
-        this.client.core.crypto.getPayloadType(message) === TYPE_2 &&
-        transportType !== TRANSPORT_TYPES.link_mode
-      ) {
-        this.client.logger.warn(
-          `onRelayMessage() -> non-link mode TYPE_2 payload ignored: ${message}`,
-        );
-        return;
-      }
 
       if (isJsonRpcRequest(payload)) {
         this.client.core.history.set(topic, payload);
@@ -1979,7 +1981,7 @@ export class Engine extends IEngine {
       this.client.logger.error(
         `onRelayMessage() -> failed to process an inbound message: ${message}`,
       );
-      this.client.logger.error(error);
+      this.client.logger.error((error as Error)?.message);
     }
   }
 

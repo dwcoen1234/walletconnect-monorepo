@@ -26,6 +26,7 @@ import {
   parseExpirerTarget,
   TYPE_1,
   TYPE_2,
+  BASE64URL,
 } from "@walletconnect/utils";
 import {
   formatJsonRpcRequest,
@@ -327,13 +328,15 @@ export class Pairing implements IPairing {
       // Do not handle link-mode messages
       if (transportType === TRANSPORT_TYPES.link_mode) return;
 
-      // TYPE_2 payloads should only be handled in link mode
-      if (this.core.crypto.getPayloadType(message) === TYPE_2) {
-        this.logger.warn(
-          `registerRelayerEvents() -> non-link mode TYPE_2 payload ignored: ${message}`,
-        );
-        return;
-      }
+      try {
+        // TYPE_2 payloads should only be handled in link mode
+        if (this.core.crypto.getPayloadType(message, BASE64URL) === TYPE_2) {
+          this.logger.warn(
+            `registerRelayerEvents() -> non-link mode TYPE_2 payload ignored: ${message}`,
+          );
+          return;
+        }
+      } catch {}
 
       // messages of certain types should be ignored as they are handled by their respective SDKs
       if (this.ignoredPayloadTypes.includes(this.core.crypto.getPayloadType(message))) return;
