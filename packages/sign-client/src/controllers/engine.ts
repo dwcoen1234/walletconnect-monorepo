@@ -1946,6 +1946,17 @@ export class Engine extends IEngine {
         encoding: transportType === TRANSPORT_TYPES.link_mode ? BASE64URL : BASE64,
       });
 
+      // TYPE_2 payloads should only be handled in link mode
+      if (
+        this.client.core.crypto.getPayloadType(message) === TYPE_2 &&
+        transportType !== TRANSPORT_TYPES.link_mode
+      ) {
+        this.client.logger.warn(
+          `onRelayMessage() -> non-link mode TYPE_2 payload ignored: ${message}`,
+        );
+        return;
+      }
+
       if (isJsonRpcRequest(payload)) {
         this.client.core.history.set(topic, payload);
         await this.onRelayEventRequest({
