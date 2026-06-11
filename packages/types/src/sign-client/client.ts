@@ -156,6 +156,10 @@ export abstract class ISignClient {
   public abstract disconnect: IEngine["disconnect"];
   public abstract find: IEngine["find"];
   public abstract getPendingSessionRequests: IEngine["getPendingSessionRequests"];
+  /**
+   * @deprecated `authenticate` is deprecated and will be removed in a future release.
+   * Use `connect()`'s `authentication` instead to establish an authenticated session.
+   */
   public abstract authenticate: IEngine["authenticate"];
   public abstract formatAuthMessage: IEngine["formatAuthMessage"];
   public abstract approveSessionAuthenticate: IEngine["approveSessionAuthenticate"];

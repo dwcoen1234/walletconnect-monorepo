@@ -483,6 +483,10 @@ export abstract class IEngine {
 
   public abstract getPendingSessionRequests: () => PendingRequestTypes.Struct[];
 
+  /**
+   * @deprecated `authenticate` is deprecated and will be removed in a future release.
+   * Use `connect()`'s `authentication` instead to establish an authenticated session.
+   */
   public abstract authenticate: (
     params: AuthTypes.SessionAuthenticateParams,
     walletUniversalLink?: string,
