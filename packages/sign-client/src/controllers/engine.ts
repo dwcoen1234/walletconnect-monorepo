@@ -612,6 +612,12 @@ export class Engine extends IEngine {
       throw error;
     }
     const { topic, namespaces } = params;
+    // only the session controller is allowed to update the session
+    const session = this.client.session.get(topic);
+    if (session.self.publicKey !== session.controller) {
+      const { message } = getSdkError("UNAUTHORIZED_UPDATE_REQUEST");
+      throw new Error(message);
+    }
 
     const {
       done: acknowledged,
@@ -2315,7 +2321,13 @@ export class Engine extends IEngine {
         this.sendError({ id, topic, error: getSdkError("INVALID_UPDATE_REQUEST") });
         return;
       }
-      this.isValidUpdate({ topic, ...params });
+      await this.isValidUpdate({ topic, ...params });
+      // only the session controller (peer) is allowed to update the session.
+      // reject updates coming from a non-controller peer (e.g. a dApp using a custom SDK)
+      const session = this.client.session.get(topic);
+      if (session.peer.publicKey !== session.controller) {
+        throw getSdkError("UNAUTHORIZED_UPDATE_REQUEST");
+      }
       try {
         MemoryStore.set(memoryKey, id);
         await this.client.session.update(topic, { namespaces: params.namespaces });
@@ -2366,7 +2378,7 @@ export class Engine extends IEngine {
   ) => {
     const { id } = payload;
     try {
-      this.isValidExtend({ topic });
+      await this.isValidExtend({ topic });
       await this.setExpiry(topic, calcExpiry(SESSION_EXPIRY));
       await this.sendResult<"wc_sessionExtend">({
         id,
@@ -3112,7 +3124,8 @@ export class Engine extends IEngine {
       "update()",
     );
     if (conformingNamespacesError) throw new Error(conformingNamespacesError.message);
-    // TODO(ilja) - check if wallet
+    // controller authorization (self/peer === controller) is enforced by the
+    // update() caller and onSessionUpdateRequest() handler respectively
   };
 
   private isValidExtend: EnginePrivate["isValidExtend"] = async (params) => {
