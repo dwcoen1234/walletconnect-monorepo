@@ -202,8 +202,15 @@ export class SignClient extends ISignClient {
     }
   };
 
+  /**
+   * @deprecated `authenticate` is deprecated and will be removed in a future release.
+   * Use `connect()`'s `authentication` instead to establish an authenticated session.
+   */
   public authenticate: ISignClient["authenticate"] = async (params, walletUniversalLink) => {
     try {
+      console.warn(
+        "[WalletConnect] `authenticate` is deprecated and will be removed in a future release. Use `connect()`'s `authentication` instead to establish an authenticated session.",
+      );
       return await this.engine.authenticate(params, walletUniversalLink);
     } catch (error: any) {
       this.logger.error(error.message);
