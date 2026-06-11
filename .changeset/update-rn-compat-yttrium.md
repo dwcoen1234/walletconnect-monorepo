@@ -3,6 +3,5 @@
 ---
 
 chore: update yttrium native dependencies
-  - Update YttriumWrapper (iOS) to 0.10.54
-  - Update yttrium-wcpay (Android) to 0.10.55
+  - Update yttrium-wcpay (Android) to 0.10.58
 
