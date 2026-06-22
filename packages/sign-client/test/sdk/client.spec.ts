@@ -3254,13 +3254,58 @@ describe.sequential("Sign Client Integration", () => {
           events: ["accountsChanged"],
         },
       };
-      const { acknowledged } = await clients.A.update({
+      const { acknowledged } = await clients.B.update({
         topic,
         namespaces: namespacesAfter,
       });
       await acknowledged();
       const result = clients.A.session.get(topic).namespaces;
       expect(result).to.eql(namespacesAfter);
+      await deleteClients(clients);
+    });
+
+    it("should reject update from non-controller peer", async () => {
+      // client A is the dapp, client B is the wallet (controller)
+      const {
+        clients,
+        sessionA: { topic },
+      } = await initTwoPairedClients({}, {}, { logger: "error" });
+
+      // the engine logs the rejected request via `this.client.logger.error(err)`,
+      // which is the same logger instance exposed on the client
+      const loggerErrorSpy = vi.spyOn(clients.B.logger, "error");
+
+      // --- update ---
+      clients.B.core.history.set(topic, {
+        id: 1,
+        jsonrpc: "2.0",
+        method: "wc_sessionUpdate",
+        params: {
+          namespaces: {},
+        },
+      });
+      let sessionUpdateReceived = false;
+      clients.B.on("session_update", () => {
+        sessionUpdateReceived = true;
+      });
+
+      // @ts-expect-error - private method
+      await clients.B.engine.onSessionUpdateRequest(topic, {
+        id: 1,
+        params: {
+          namespaces: TEST_NAMESPACES,
+        },
+      });
+      expect(sessionUpdateReceived).to.be.false;
+      // the unauthorized error should have been logged with the 3003 sdk error
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Unauthorized update request.",
+          code: 3003,
+        }),
+      );
+
+      loggerErrorSpy.mockRestore();
       await deleteClients(clients);
     });
   });
