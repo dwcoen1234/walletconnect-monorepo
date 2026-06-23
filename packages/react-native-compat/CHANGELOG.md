@@ -1,5 +1,12 @@
 # @walletconnect/react-native-compat
 
+## 2.23.10
+
+### Patch Changes
+
+- [#7250](https://github.com/WalletConnect/walletconnect-monorepo/pull/7250) [`fcaaf3f`](https://github.com/WalletConnect/walletconnect-monorepo/commit/fcaaf3f1bd4e8719f5f0252f9484da3e9664cf59) Thanks [@github-actions](https://github.com/apps/github-actions)! - chore: update yttrium native dependencies
+  - Update yttrium-wcpay (Android) to 0.10.58
+
 ## 2.23.9
 
 ## 2.23.8

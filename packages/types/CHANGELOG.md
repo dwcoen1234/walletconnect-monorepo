@@ -1,5 +1,11 @@
 # @walletconnect/types
 
+## 2.23.10
+
+### Patch Changes
+
+- [#7253](https://github.com/WalletConnect/walletconnect-monorepo/pull/7253) [`63ff999`](https://github.com/WalletConnect/walletconnect-monorepo/commit/63ff999cb096f77bb9ea9ae940cbf5dd2d7a0b6d) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Deprecate the `authenticate` method on Sign Client. It is marked `@deprecated` in the type definitions and logs a runtime warning when called. Use `connect()`'s `authentication` parameter instead to establish an authenticated session.
+
 ## 2.23.9
 
 ## 2.23.8
