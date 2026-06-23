@@ -230,4 +230,9 @@ export const TVF_METHODS = {
   cosmos_signDirect: {
     key: "",
   },
+
+  // canton
+  canton_prepareSignExecute: {
+    key: "",
+  },
 };
