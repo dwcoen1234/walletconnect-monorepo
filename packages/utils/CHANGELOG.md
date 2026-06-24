@@ -1,5 +1,16 @@
 # @walletconnect/utils
 
+## 2.23.10
+
+### Patch Changes
+
+- [#7252](https://github.com/WalletConnect/walletconnect-monorepo/pull/7252) [`cd32ff1`](https://github.com/WalletConnect/walletconnect-monorepo/commit/cd32ff1ebccc6a186ca5890827ab96a0552f9c58) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Add TVF extraction for Canton's `canton_prepareSignExecute`.
+
+- [#7247](https://github.com/WalletConnect/walletconnect-monorepo/pull/7247) [`3ea740e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/3ea740ed9b8abd0e6724f409b025a0c926a75106) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Reject SIWE/CAIP-122 statements containing line breaks in `formatMessage`. Per EIP-4361 the statement is a single line, and embedded `\r`/`\n` (from a caller-supplied statement or untrusted recap-derived text) could forge other fields (URI, Nonce, etc.) in the signed message. The check runs on the final statement after recap formatting, and `validateSignedCacao` now returns `false` for such malformed payloads instead of throwing.
+
+- Updated dependencies [[`63ff999`](https://github.com/WalletConnect/walletconnect-monorepo/commit/63ff999cb096f77bb9ea9ae940cbf5dd2d7a0b6d)]:
+  - @walletconnect/types@2.23.10
+
 ## 2.23.9
 
 ### Patch Changes

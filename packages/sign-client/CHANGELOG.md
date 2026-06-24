@@ -1,5 +1,22 @@
 # @walletconnect/sign-client
 
+## 2.23.10
+
+### Patch Changes
+
+- [#7252](https://github.com/WalletConnect/walletconnect-monorepo/pull/7252) [`cd32ff1`](https://github.com/WalletConnect/walletconnect-monorepo/commit/cd32ff1ebccc6a186ca5890827ab96a0552f9c58) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Add TVF extraction for Canton's `canton_prepareSignExecute`.
+
+- [#7253](https://github.com/WalletConnect/walletconnect-monorepo/pull/7253) [`63ff999`](https://github.com/WalletConnect/walletconnect-monorepo/commit/63ff999cb096f77bb9ea9ae940cbf5dd2d7a0b6d) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Deprecate the `authenticate` method on Sign Client. It is marked `@deprecated` in the type definitions and logs a runtime warning when called. Use `connect()`'s `authentication` parameter instead to establish an authenticated session.
+
+- [#7255](https://github.com/WalletConnect/walletconnect-monorepo/pull/7255) [`3233b47`](https://github.com/WalletConnect/walletconnect-monorepo/commit/3233b479fdd9864c60a4ed21c782a7e9194e581e) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Reject plaintext TYPE_2 envelopes delivered over the relay transport. TYPE_2 payloads are now only handled in link mode in the sign engine (`onRelayMessage`) and pairing (`registerRelayerEvents`) relay handlers.
+
+- [#7254](https://github.com/WalletConnect/walletconnect-monorepo/pull/7254) [`4af4524`](https://github.com/WalletConnect/walletconnect-monorepo/commit/4af452446a5e83a465c76a5075d9db0b086e6851) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Enforce controller authorization on session update. Incoming `wc_sessionUpdate` requests are now rejected (`UNAUTHORIZED_UPDATE_REQUEST`) unless the sending peer is the session controller, and the public `update()` method now throws when called by a non-controller. This prevents a non-controller peer (e.g. a dApp using a custom SDK) from mutating a session's namespaces.
+
+- Updated dependencies [[`cd32ff1`](https://github.com/WalletConnect/walletconnect-monorepo/commit/cd32ff1ebccc6a186ca5890827ab96a0552f9c58), [`63ff999`](https://github.com/WalletConnect/walletconnect-monorepo/commit/63ff999cb096f77bb9ea9ae940cbf5dd2d7a0b6d), [`3233b47`](https://github.com/WalletConnect/walletconnect-monorepo/commit/3233b479fdd9864c60a4ed21c782a7e9194e581e), [`3ea740e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/3ea740ed9b8abd0e6724f409b025a0c926a75106), [`da98172`](https://github.com/WalletConnect/walletconnect-monorepo/commit/da98172e1478620d4f8c9e8f833a8ad13520bfeb)]:
+  - @walletconnect/utils@2.23.10
+  - @walletconnect/types@2.23.10
+  - @walletconnect/core@2.23.10
+
 ## 2.23.9
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @walletconnect/core
 
+## 2.23.10
+
+### Patch Changes
+
+- [#7255](https://github.com/WalletConnect/walletconnect-monorepo/pull/7255) [`3233b47`](https://github.com/WalletConnect/walletconnect-monorepo/commit/3233b479fdd9864c60a4ed21c782a7e9194e581e) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Reject plaintext TYPE_2 envelopes delivered over the relay transport. TYPE_2 payloads are now only handled in link mode in the sign engine (`onRelayMessage`) and pairing (`registerRelayerEvents`) relay handlers.
+
+- [#7218](https://github.com/WalletConnect/walletconnect-monorepo/pull/7218) [`da98172`](https://github.com/WalletConnect/walletconnect-monorepo/commit/da98172e1478620d4f8c9e8f833a8ad13520bfeb) Thanks [@ganchoradkov](https://github.com/ganchoradkov)! - Strip bare `new TextEncoder,new TextDecoder;` side-effect from UMD bundles that crashed React Native / Hermes on import
+
+- Updated dependencies [[`cd32ff1`](https://github.com/WalletConnect/walletconnect-monorepo/commit/cd32ff1ebccc6a186ca5890827ab96a0552f9c58), [`63ff999`](https://github.com/WalletConnect/walletconnect-monorepo/commit/63ff999cb096f77bb9ea9ae940cbf5dd2d7a0b6d), [`3ea740e`](https://github.com/WalletConnect/walletconnect-monorepo/commit/3ea740ed9b8abd0e6724f409b025a0c926a75106)]:
+  - @walletconnect/utils@2.23.10
+  - @walletconnect/types@2.23.10
+
 ## 2.23.9
 
 ### Patch Changes
